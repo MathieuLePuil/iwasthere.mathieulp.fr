@@ -47,8 +47,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 20, options: ['default' => 'friends'])]
     private string $defaultEventVisibility = 'friends';
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notificationsEnabled = false;
+    #[ORM\Column(options: ['default' => true])]
+    private bool $notificationsEnabled = true;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $notifCompletionEnabled = false;

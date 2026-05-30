@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -27,12 +29,25 @@ class SettingsController extends AbstractController
         return $this->render('settings/index.html.twig');
     }
 
+    #[Route('/check-username', name: 'app_settings_check_username', methods: ['GET'])]
+    public function checkUsername(Request $request, UserRepository $userRepo): JsonResponse
+    {
+        $username = strtolower(trim($request->query->get('username', '')));
+        if (strlen($username) < 3) {
+            return $this->json(['available' => null]);
+        }
+        if ($username === $this->getUser()->getUserIdentifier()) {
+            return $this->json(['available' => 'current']);
+        }
+        $taken = $userRepo->findOneBy(['username' => $username]) !== null;
+        return $this->json(['available' => !$taken]);
+    }
+
     #[Route('/notifications', name: 'app_settings_notifications', methods: ['POST'])]
     public function saveNotifications(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        $user->setNotificationsEnabled($request->request->getBoolean('notifications_enabled'))
-            ->setNotifCompletionEnabled($request->request->getBoolean('notif_completion_enabled'))
+        $user->setNotifCompletionEnabled($request->request->getBoolean('notif_completion_enabled'))
             ->setNotifCompletionTime($request->request->get('notif_completion_time', '08:00'))
             ->setNotifPresenceEnabled($request->request->getBoolean('notif_presence_enabled'))
             ->setNotifFriendRequestEnabled($request->request->getBoolean('notif_friend_request_enabled'));
@@ -53,17 +68,30 @@ class SettingsController extends AbstractController
     }
 
     #[Route('/profile', name: 'app_settings_profile', methods: ['POST'])]
-    public function saveProfile(Request $request, EntityManagerInterface $em): Response
+    public function saveProfile(Request $request, EntityManagerInterface $em, UserRepository $userRepo): Response
     {
         $user = $this->getUser();
-        $displayName = trim($request->request->get('display_name', ''));
-        $bio = trim($request->request->get('bio', ''));
 
+        $displayName = trim($request->request->get('display_name', ''));
         if ($displayName) {
             $user->setDisplayName($displayName);
         }
-        if ($bio !== null) {
-            $user->setBio($bio ?: null);
+
+        $bio = trim($request->request->get('bio', ''));
+        $user->setBio($bio ?: null);
+
+        $newUsername = strtolower(trim($request->request->get('username', '')));
+        if ($newUsername && $newUsername !== $user->getUserIdentifier()) {
+            if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
+                $this->addFlash('error', 'Le pseudo doit faire 3 à 30 caractères (lettres minuscules, chiffres, _).');
+                return $this->redirectToRoute('app_settings');
+            }
+            $existing = $userRepo->findOneBy(['username' => $newUsername]);
+            if ($existing !== null) {
+                $this->addFlash('error', 'Ce pseudo est déjà utilisé.');
+                return $this->redirectToRoute('app_settings');
+            }
+            $user->setUsername($newUsername);
         }
 
         $em->flush();

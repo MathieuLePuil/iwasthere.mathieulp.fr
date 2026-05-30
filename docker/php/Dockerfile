@@ -4,6 +4,7 @@ RUN apk add --no-cache \
     bash \
     curl \
     git \
+    gmp-dev \
     icu-dev \
     icu-libs \
     libzip-dev \
@@ -11,6 +12,7 @@ RUN apk add --no-cache \
 
 RUN docker-php-ext-configure intl && \
     docker-php-ext-install -j$(nproc) \
+        gmp \
         intl \
         opcache \
         pdo \

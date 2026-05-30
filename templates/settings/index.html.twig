@@ -18,6 +18,23 @@
                     <input type="text" name="display_name" value="{{ app.user.displayName }}"
                            class="input-field" placeholder="Votre nom" required>
                 </div>
+                <div data-controller="username-check"
+                     data-username-check-endpoint-value="{{ path('app_settings_check_username') }}">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Pseudo (@)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm pointer-events-none" style="color: var(--fg-4)">@</span>
+                        <input type="text" name="username"
+                               value="{{ app.user.username }}"
+                               class="input-field pl-7"
+                               data-username-check-target="input"
+                               data-action="input->username-check#check"
+                               minlength="3" maxlength="30"
+                               autocomplete="off"
+                               placeholder="ton_pseudo">
+                    </div>
+                    <div data-username-check-target="feedback"></div>
+                    <p class="text-xs mt-1" style="color: var(--fg-4)">Lettres minuscules, chiffres et _ uniquement</p>
+                </div>
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Bio</label>
                     <textarea name="bio" rows="3" class="input-field resize-none"
@@ -28,49 +45,49 @@
         </form>
     </div>
 
-    {# ── Notifications section ── #}
+    {# ── Push notifications section ── #}
+    {% if vapid_public_key %}
+    <div class="card"
+         data-controller="push-settings"
+         data-push-settings-public-key-value="{{ vapid_public_key }}">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
+        <p class="text-xs mb-4" data-push-settings-target="status" style="color: var(--fg-4)">Vérification…</p>
+        <button data-push-settings-target="btn"
+                data-action="click->push-settings#toggle"
+                class="btn-primary w-full py-3">…</button>
+    </div>
+    {% endif %}
+
+    {# ── In-app notification preferences ── #}
     <div class="card">
-        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Notifications</h2>
+        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Préférences de notifications</h2>
         <form method="post" action="{{ path('app_settings_notifications') }}">
-            <div class="space-y-4">
+            <div class="space-y-3">
                 <label class="flex items-center justify-between">
-                    <div>
-                        <p class="font-medium text-sm" style="color: var(--fg-1)">Activer les notifications</p>
-                        <p class="text-xs mt-0.5" style="color: var(--fg-4)">Receive all in-app notifications</p>
-                    </div>
-                    <input type="checkbox" name="notifications_enabled" value="1"
+                    <p class="text-sm" style="color: var(--fg-2)">Rappel de complétion d'événement</p>
+                    <input type="checkbox" name="notif_completion_enabled" value="1"
                            class="w-5 h-5 rounded accent-[#3DDC97]"
-                           {{ app.user.notificationsEnabled ? 'checked' : '' }}>
+                           {{ app.user.notifCompletionEnabled ? 'checked' : '' }}>
                 </label>
-
-                <div class="pt-4 space-y-3" style="border-top: 1px solid var(--border-subtle)">
-                    <label class="flex items-center justify-between">
-                        <p class="text-sm" style="color: var(--fg-2)">Rappel de complétion</p>
-                        <input type="checkbox" name="notif_completion_enabled" value="1"
-                               class="w-5 h-5 rounded accent-[#3DDC97]"
-                               {{ app.user.notifCompletionEnabled ? 'checked' : '' }}>
-                    </label>
-                    <div>
-                        <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure de rappel</label>
-                        <input type="time" name="notif_completion_time"
-                               value="{{ app.user.notifCompletionTime ?? '08:00' }}"
-                               class="input-field w-auto">
-                    </div>
-                    <label class="flex items-center justify-between">
-                        <p class="text-sm" style="color: var(--fg-2)">Confirmation de présence</p>
-                        <input type="checkbox" name="notif_presence_enabled" value="1"
-                               class="w-5 h-5 rounded accent-[#3DDC97]"
-                               {{ app.user.notifPresenceEnabled ? 'checked' : '' }}>
-                    </label>
-                    <label class="flex items-center justify-between">
-                        <p class="text-sm" style="color: var(--fg-2)">Demandes d'ami</p>
-                        <input type="checkbox" name="notif_friend_request_enabled" value="1"
-                               class="w-5 h-5 rounded accent-[#3DDC97]"
-                               {{ app.user.notifFriendRequestEnabled ? 'checked' : '' }}>
-                    </label>
+                <div>
+                    <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure de rappel</label>
+                    <input type="time" name="notif_completion_time"
+                           value="{{ app.user.notifCompletionTime ?? '08:00' }}"
+                           class="input-field w-auto">
                 </div>
-
-                <button type="submit" class="btn-primary w-full py-3">Sauvegarder</button>
+                <label class="flex items-center justify-between">
+                    <p class="text-sm" style="color: var(--fg-2)">Confirmation de présence</p>
+                    <input type="checkbox" name="notif_presence_enabled" value="1"
+                           class="w-5 h-5 rounded accent-[#3DDC97]"
+                           {{ app.user.notifPresenceEnabled ? 'checked' : '' }}>
+                </label>
+                <label class="flex items-center justify-between">
+                    <p class="text-sm" style="color: var(--fg-2)">Demandes d'ami</p>
+                    <input type="checkbox" name="notif_friend_request_enabled" value="1"
+                           class="w-5 h-5 rounded accent-[#3DDC97]"
+                           {{ app.user.notifFriendRequestEnabled ? 'checked' : '' }}>
+                </label>
+                <button type="submit" class="btn-primary w-full py-3 mt-2">Sauvegarder</button>
             </div>
         </form>
     </div>

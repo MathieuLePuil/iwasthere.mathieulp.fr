@@ -1,51 +1,78 @@
 import { Controller } from '@hotwired/stimulus';
 
+/**
+ * Profile-page opt-in card.
+ * Hides itself when push is already enabled or unsupported/denied.
+ */
 export default class extends Controller {
     static values = { publicKey: String };
 
-    connect() {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            this.element.style.display = 'none';
-            return;
-        }
-        if (Notification.permission === 'denied') {
+    async connect() {
+        if (!this.#supported() || Notification.permission === 'denied') {
             this.element.style.display = 'none';
             return;
         }
         if (Notification.permission === 'granted') {
-            navigator.serviceWorker.ready
-                .then(reg => reg.pushManager.getSubscription())
-                .then(sub => { if (sub) this.element.style.display = 'none'; })
-                .catch(() => {});
+            const sub = await this.#getSub();
+            if (sub) this.element.style.display = 'none';
         }
     }
 
     async enable() {
-        const permission = await Notification.requestPermission();
+        const btn = this.element.querySelector('button');
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
-        if (permission !== 'granted') {
-            if (permission === 'denied') this.element.style.display = 'none';
+        const perm = await Notification.requestPermission();
+
+        if (perm === 'denied') { this.element.style.display = 'none'; return; }
+        if (perm !== 'granted') {
+            if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
             return;
         }
 
         try {
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: this._b64(this.publicKeyValue),
-            });
-            await fetch('/push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sub.toJSON()),
-            });
+            await this.#subscribe();
             this.element.style.display = 'none';
         } catch (e) {
-            console.warn('Push:', e);
+            console.warn('Push subscribe error:', e);
+            if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
         }
     }
 
-    _b64(s) {
+    // ── Private ─────────────────────────────────────────────────────────────
+
+    async #subscribe() {
+        const reg = await this.#swReady();
+        const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: this.#b64(this.publicKeyValue),
+        });
+        await fetch('/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub.toJSON()),
+        });
+    }
+
+    async #getSub() {
+        try {
+            const reg = await this.#swReady();
+            return await reg.pushManager.getSubscription();
+        } catch { return null; }
+    }
+
+    #swReady() {
+        return Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, r) => setTimeout(() => r(new Error('SW timeout')), 5000)),
+        ]);
+    }
+
+    #supported() {
+        return 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+    }
+
+    #b64(s) {
         const pad = '='.repeat((4 - s.length % 4) % 4);
         const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
         return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
