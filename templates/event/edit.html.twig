@@ -1,0 +1,193 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Modifier — {{ event.artistName ?? event.tournamentName }} — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_event_show', {id: event.id})) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Modifier la fiche</h1>
+    </div>
+
+    <form method="post" class="space-y-5">
+
+        {# Heure de début #}
+        <div>
+            <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Heure de début</label>
+            <input type="time" name="start_time" class="input-field" value="{{ event.startTime }}">
+        </div>
+
+        {# Rating — toujours affiché (statut déduit de la date) #}
+        <div class="card">
+            <p class="section-title mb-3">Mon ressenti</p>
+            <div class="flex gap-2 justify-center" data-controller="star-rating">
+                {% for i in 1..5 %}
+                <label class="cursor-pointer">
+                    <input type="radio" name="rating" value="{{ i }}" class="sr-only"
+                           {% if participation.rating == i %}checked{% endif %}>
+                    <svg class="w-10 h-10 transition-colors rating-star"
+                         style="color: {{ participation.rating >= i ? 'var(--positive)' : 'var(--bg-3)' }}"
+                         fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                </label>
+                {% endfor %}
+            </div>
+            <textarea name="comment" rows="3" class="input-field resize-none mt-4"
+                      placeholder="Ton ressenti, les moments forts...">{{ participation.comment }}</textarea>
+        </div>
+
+        {# Setlist (music only) #}
+        {% if event.category == 'music' %}
+        <div class="card" data-controller="setlist-editor">
+            <div class="flex items-center justify-between mb-3">
+                <p class="section-title">Setlist</p>
+                {% if event.setlistSource == 'setlist_fm' %}
+                <span class="text-xs px-2 py-0.5 rounded-full" style="background: rgba(96,165,250,0.12); color: #60A5FA">Setlist.fm</span>
+                {% endif %}
+            </div>
+            {% if event.setlistSource == 'setlist_fm' %}
+            <p class="text-xs mb-3" style="color: var(--fg-4)">Importée automatiquement. Tu peux la modifier.</p>
+            {% endif %}
+            <div data-setlist-editor-target="list" class="space-y-2 mb-3">
+                {% for song in event.setlist ?? [] %}
+                <div class="flex items-center gap-2">
+                    <input type="text" name="setlist[]" value="{{ song }}" class="input-field text-sm" placeholder="Titre">
+                    <button type="button" data-action="setlist-editor#remove" class="p-1" style="color: var(--fg-4)">×</button>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" data-action="setlist-editor#add"
+                    class="text-sm font-medium" style="color: var(--positive)">+ Ajouter un titre</button>
+        </div>
+        {% endif %}
+
+        {# Sport specific #}
+        {% if event.category == 'sport' %}
+        <div class="card space-y-4">
+            <p class="section-title">Résultats</p>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Score final</label>
+                <input type="text" name="final_score" class="input-field"
+                       placeholder="ex: 3-1, 6/4 7/5" value="{{ participation.finalScore }}">
+            </div>
+            <div>
+                <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</label>
+                <input type="text" name="winner" class="input-field"
+                       placeholder="Nom de l'équipe ou du joueur vainqueur" value="{{ participation.winner }}">
+            </div>
+        </div>
+        {% endif %}
+
+        {# Duration #}
+        <div>
+            <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Durée (min)</label>
+            <input type="number" name="duration" class="input-field"
+                   placeholder="120" min="0" value="{{ participation.duration }}">
+        </div>
+
+        {# Factual event data — sport & tournament only, no artist #}
+        {% if event.category == 'sport' or event.tournamentName %}
+        <details class="card cursor-pointer">
+            <summary class="font-medium text-sm list-none flex items-center justify-between" style="color: var(--fg-2)">
+                Données factuelles de l'événement
+                <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </summary>
+            <div class="mt-4 space-y-3">
+                <p class="text-xs" style="color: var(--fg-4)">Ces modifications s'appliquent à tous les participants.</p>
+                {% if event.category == 'sport' %}
+                <div>
+                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Tournoi</label>
+                    <input type="text" name="tournament_name" class="input-field text-sm" value="{{ event.tournamentName }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Équipes</label>
+                    <input type="text" name="teams" class="input-field text-sm" value="{{ event.teams }}">
+                </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endif %}
+
+        {# ── Avec des amis ? ── #}
+        {% set savedFriends = participation.friends %}
+        {% set savedAppIds = savedFriends|filter(f => f.type == 'app')|map(f => f.userId) %}
+        <div data-controller="event-friends">
+            <button type="button"
+                    data-event-friends-target="toggle"
+                    data-action="click->event-friends#toggle"
+                    aria-expanded="false"
+                    class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all"
+                    style="border-color: var(--border-default); background: var(--bg-2)">
+                <span class="flex items-center gap-2 text-sm font-medium" style="color: var(--fg-2)">
+                    <span class="text-lg">👥</span>
+                    J'y étais avec des amis
+                    {% if savedFriends|length > 0 %}
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--positive-soft); color: var(--positive)">{{ savedFriends|length }}</span>
+                    {% endif %}
+                </span>
+                <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+                </svg>
+            </button>
+
+            <div data-event-friends-target="panel" class="hidden mt-3 space-y-4">
+                {% if confirmed_friends|length > 0 %}
+                <div>
+                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Amis sur IWasThere</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for rel in confirmed_friends %}
+                        {% set f = rel.owner == app.user ? rel.friendUser : rel.owner %}
+                        {% if f %}
+                        <label class="cursor-pointer select-none">
+                            <input type="checkbox" name="friends_app[]" value="{{ f.id }}"
+                                   class="sr-only"
+                                   data-event-friends-target="appCheckbox"
+                                   {% if f.id ~ '' in savedAppIds %}checked{% endif %}>
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all text-sm font-medium"
+                                 style="border-color: var(--border-default); background: var(--bg-2); color: var(--fg-2)">
+                                {% if f.avatarUrl %}
+                                    <img src="{{ f.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt="">
+                                {% else %}
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                         style="background: var(--positive-soft); color: var(--positive)">{{ f.displayName|first|upper }}</div>
+                                {% endif %}
+                                <span>{{ f.displayName }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% for f in savedFriends|filter(f => f.type == 'external') %}
+                    <input type="hidden" data-prefill-external value="{{ f.name }}">
+                {% endfor %}
+
+                <div>
+                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Autres personnes (non inscrites)</p>
+                    <div class="flex gap-2">
+                        <input type="text"
+                               data-event-friends-target="nameInput"
+                               data-action="keydown->event-friends#handleEnter"
+                               placeholder="Prénom ou pseudo..."
+                               class="input-field flex-1">
+                        <button type="button"
+                                data-action="click->event-friends#addExternal"
+                                class="btn-secondary px-4 shrink-0">Ajouter</button>
+                    </div>
+                    <div data-event-friends-target="tagList" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary w-full py-4 text-base">Enregistrer</button>
+
+    </form>
+</div>
+{% endblock %}

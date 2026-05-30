@@ -1,0 +1,120 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Musique — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">Musique</h1>
+        <a href="{{ path('app_event_new', {category: 'music'}) }}"
+           class="iwt-icon-btn text-lg font-bold leading-none" style="color: var(--positive)">+</a>
+    </div>
+
+    {# Segmented tab #}
+    <div class="iwt-segmented mb-4">
+        <a href="{{ path('app_music', app.request.query.all|merge({tab: 'past'})) }}"
+           class="{{ tab == 'past' ? 'active' : '' }}">
+            Passés · {{ past_count }}
+        </a>
+        <a href="{{ path('app_music', app.request.query.all|merge({tab: 'upcoming'})) }}"
+           class="{{ tab == 'upcoming' ? 'active' : '' }}">
+            À venir · {{ upcoming_count }}
+        </a>
+    </div>
+
+    {# Pill filters #}
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-3" style="scrollbar-width: none">
+        <a href="{{ path('app_music', app.request.query.all|merge({type: '', page: null})) }}"
+           class="iwt-pill{{ filter_type == '' ? ' active' : '' }}">Tous</a>
+        <a href="{{ path('app_music', app.request.query.all|merge({type: 'concert'})) }}"
+           class="iwt-pill{{ filter_type == 'concert' ? ' active' : '' }}">🎤 Concerts</a>
+        <a href="{{ path('app_music', app.request.query.all|merge({type: 'festival'})) }}"
+           class="iwt-pill{{ filter_type == 'festival' ? ' active' : '' }}">🎪 Festivals</a>
+        {% for year in years %}
+        <a href="{{ path('app_music', app.request.query.all|merge({year: year})) }}"
+           class="iwt-pill{{ filter_year == year ~ '' ? ' active' : '' }}">{{ year }}</a>
+        {% endfor %}
+    </div>
+
+    {# Sort (past only) #}
+    {% if tab == 'past' and participations|length > 0 %}
+    <div class="flex gap-2 mb-4 items-center">
+        <span class="section-title">Trier :</span>
+        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'date'})) }}"
+           class="iwt-pill{{ sort_by == 'date' ? ' active' : '' }}">Date</a>
+        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'rating'})) }}"
+           class="iwt-pill{{ sort_by == 'rating' ? ' active' : '' }}">Note</a>
+        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'duration'})) }}"
+           class="iwt-pill{{ sort_by == 'duration' ? ' active' : '' }}">Durée</a>
+    </div>
+    {% endif %}
+
+    {# Events list #}
+    {% if participations|length == 0 %}
+        {{ m.empty_state(
+            tab == 'upcoming' ? '📅' : '🎵',
+            tab == 'upcoming' ? 'Aucun événement à venir' : 'Aucun souvenir musical',
+            tab == 'upcoming' ? 'Ajoute un concert ou festival à venir !' : 'Commence à archiver tes concerts et festivals',
+            path('app_event_new', {category: 'music'}),
+            '+ Ajouter un événement'
+        ) }}
+    {% else %}
+        {# Group by year for past events sorted by date #}
+        {% if tab == 'past' and sort_by == 'date' %}
+            {% set current_year = null %}
+            {% for p in participations %}
+                {% set event_year = p.event.date|date('Y') %}
+                {% if event_year != current_year %}
+                    {% if current_year is not null %}</div>{% endif %}
+                    <div class="iwt-year">
+                        <span class="iwt-year-num">{{ event_year }}</span>
+                    </div>
+                    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 16px">
+                    {% set current_year = event_year %}
+                {% endif %}
+
+                {{ _self.event_card(p) }}
+
+                {% if loop.last %}</div>{% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="card" style="padding: 0; overflow: hidden">
+                {% for p in participations %}
+                    {{ _self.event_card(p) }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+{# Event card macro #}
+{% macro event_card(p) %}
+    {% import 'components/_macros.html.twig' as m %}
+    <a href="{{ path('app_event_show', {id: p.event.id}) }}"
+       class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
+       style="border-bottom: 1px solid var(--border-subtle)"
+>
+        <div class="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
+            <div class="w-full h-full poster-{{ p.event.type ?? 'concert' }} flex items-center justify-center">
+                <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
+                    {{ p.event.date|date('d') }}<br><span style="font-size:9px; opacity:0.6">{{ p.event.date|date('M')|upper }}</span>
+                </span>
+            </div>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ p.event.artistName ?? 'Artiste inconnu' }}</p>
+            <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                {% if p.event.venue %}{{ p.event.venue.name }}{% if p.event.venue.city %} · {{ p.event.venue.city }}{% endif %}{% endif %}
+            </p>
+        </div>
+        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+            {{ m.event_badge(p.event.type) }}
+            {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
+        </div>
+    </a>
+{% endmacro %}
+
+{% endblock %}

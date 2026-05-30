@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Admin{% endblock %} — IWasThere Admin</title>
+    {% block stylesheets %}{% endblock %}
+    {% block javascripts %}{{ importmap('app') }}{% endblock %}
+</head>
+<body class="min-h-screen" style="background: var(--bg-0)">
+
+    <nav style="background: var(--bg-1); border-bottom: 1px solid var(--border-subtle)" class="px-6 py-3 flex items-center gap-1 sticky top-0 z-50">
+        <a href="{{ path('app_admin_dashboard') }}" class="font-black mr-4" style="color: var(--fg-1)">IW <span style="color: var(--positive)">Admin</span></a>
+        <a href="{{ path('app_admin_dashboard') }}"
+           class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'font-medium' : '' }}"
+           style="color: {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'var(--bg-2)' : 'transparent' }}">
+            Dashboard
+        </a>
+        <a href="{{ path('app_admin_users') }}"
+           class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') starts with 'app_admin_user' ? 'font-medium' : '' }}"
+           style="color: {{ app.request.attributes.get('_route') starts with 'app_admin_user' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') starts with 'app_admin_user' ? 'var(--bg-2)' : 'transparent' }}">
+            Utilisateurs
+        </a>
+        <a href="{{ path('app_admin_events') }}"
+           class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') starts with 'app_admin_event' ? 'font-medium' : '' }}"
+           style="color: {{ app.request.attributes.get('_route') starts with 'app_admin_event' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') starts with 'app_admin_event' ? 'var(--bg-2)' : 'transparent' }}">
+            Événements
+        </a>
+        <a href="{{ path('app_admin_venues') }}"
+           class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') starts with 'app_admin_venue' ? 'font-medium' : '' }}"
+           style="color: {{ app.request.attributes.get('_route') starts with 'app_admin_venue' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') starts with 'app_admin_venue' ? 'var(--bg-2)' : 'transparent' }}">
+            Lieux
+        </a>
+        <a href="{{ path('app_admin_audit') }}"
+           class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') == 'app_admin_audit' ? 'font-medium' : '' }}"
+           style="color: {{ app.request.attributes.get('_route') == 'app_admin_audit' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') == 'app_admin_audit' ? 'var(--bg-2)' : 'transparent' }}">
+            Journal d'audit
+        </a>
+        <div class="ml-auto flex items-center gap-3">
+            <span class="text-xs" style="color: var(--fg-3)">{{ app.user.displayName }}</span>
+            <a href="{{ path('app_logout') }}" class="text-sm px-3 py-1.5 rounded-lg transition-colors"
+               style="color: var(--fg-3)">
+                Déconnexion
+            </a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+            <div class="mb-4 p-3 rounded-xl text-sm font-medium"
+                 style="{% if type == 'success' %}background: var(--positive-soft); color: var(--positive); border: 1px solid rgba(61,220,151,0.2){% elseif type == 'error' %}background: var(--negative-soft); color: var(--negative); border: 1px solid rgba(232,155,142,0.2){% else %}background: rgba(96,165,250,0.1); color: #60A5FA; border: 1px solid rgba(96,165,250,0.15){% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endfor %}
+        {% block body %}{% endblock %}
+    </main>
+
+</body>
+</html>

@@ -1,0 +1,91 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Rechercher des amis — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-5">
+        {{ m.back_button(path('app_profile')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Trouver des amis</h1>
+    </div>
+
+    <form method="get" class="mb-5">
+        <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" name="q" value="{{ query }}"
+                   placeholder="Rechercher par @pseudo ou nom"
+                   autofocus
+                   class="input-field pl-10">
+        </div>
+    </form>
+
+    {% if query and results|length == 0 %}
+        <div class="text-center py-12">
+            <p class="text-4xl mb-3">🔍</p>
+            <p class="font-medium" style="color: var(--fg-1)">Aucun résultat</p>
+            <p class="text-sm mt-1" style="color: var(--fg-3)">Essaie un autre pseudo ou nom</p>
+        </div>
+    {% elseif results|length > 0 %}
+        <div class="space-y-3">
+            {% for user in results %}
+            {% set rel = relationships[user.id ~ ''] ?? null %}
+            {% set relStatus = rel ? rel.status : null %}
+            {% set isSentByMe = rel and rel.owner == app.user %}
+            <div class="card flex items-center gap-3">
+                <a href="{{ path('app_profile_view', {username: user.username}) }}" class="flex items-center gap-3 flex-1 min-w-0 no-underline">
+                    {{ m.avatar(user, 'md') }}
+                    <div class="min-w-0">
+                        <p class="font-medium text-sm" style="color: var(--fg-1)">{{ user.displayName }}</p>
+                        <p class="text-xs" style="color: var(--fg-3)">@{{ user.username }}</p>
+                    </div>
+                </a>
+
+                {# Relationship-aware action button #}
+                {% if relStatus == 'confirmed' %}
+                    {# Already friends — show checkmark chip, no action needed #}
+                    <span class="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg" style="background: rgba(61,220,151,0.12); color: var(--positive)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        Amis
+                    </span>
+                {% elseif relStatus == 'pending' and isSentByMe %}
+                    {# Pending request sent by current user — cancel option #}
+                    <form method="post" action="{{ path('app_friend_cancel', {id: rel.id}) }}">
+                        <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg" style="background: rgba(251,191,36,0.12); color: #FBBF24">
+                            En attente · Annuler
+                        </button>
+                    </form>
+                {% elseif relStatus == 'pending' and not isSentByMe %}
+                    {# Pending request received — accept or refuse inline #}
+                    <div class="flex gap-1.5">
+                        <form method="post" action="{{ path('app_friend_accept', {id: rel.id}) }}">
+                            <button type="submit" class="btn-primary text-xs py-1.5 px-3">Accepter</button>
+                        </form>
+                        <form method="post" action="{{ path('app_friend_refuse', {id: rel.id}) }}">
+                            <button type="submit" class="btn-secondary text-xs py-1.5 px-3">Refuser</button>
+                        </form>
+                    </div>
+                {% else %}
+                    {# No relation — add friend #}
+                    <form method="post" action="{{ path('app_friend_add', {id: user.id}) }}">
+                        <button type="submit" class="btn-primary text-xs py-1.5 px-3">
+                            + Ajouter
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% elseif not query %}
+        <div class="text-center py-12">
+            <p class="text-4xl mb-3">👥</p>
+            <p class="font-medium" style="color: var(--fg-1)">Cherche tes amis</p>
+            <p class="text-sm mt-1" style="color: var(--fg-3)">Tape un pseudo ou un nom pour commencer</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

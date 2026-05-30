@@ -1,5 +1,27 @@
 import { startStimulusApp } from '@symfony/stimulus-bundle';
+import EventTypeController from './controllers/event_type_controller.js';
+import VenueSearchController from './controllers/venue_search_controller.js';
+import EventSearchController from './controllers/event_search_controller.js';
+import SetlistEditorController from './controllers/setlist_editor_controller.js';
+import FlashMessageController from './controllers/flash_message_controller.js';
+import CountdownController from './controllers/countdown_controller.js';
+import StarRatingController from './controllers/star_rating_controller.js';
+import SportParticipantsController from './controllers/sport_participants_controller.js';
+import UsernameCheckController from './controllers/username_check_controller.js';
+import EventFriendsController from './controllers/event_friends_controller.js';
+import NotificationBadgeController from './controllers/notification_badge_controller.js';
+import PushNotificationController from './controllers/push_notification_controller.js';
 
 const app = startStimulusApp();
-// register any custom, 3rd party controllers here
-// app.register('some_controller_name', SomeImportedController);
+app.register('event-type', EventTypeController);
+app.register('venue-search', VenueSearchController);
+app.register('event-search', EventSearchController);
+app.register('setlist-editor', SetlistEditorController);
+app.register('flash-message', FlashMessageController);
+app.register('countdown', CountdownController);
+app.register('star-rating', StarRatingController);
+app.register('sport-participants', SportParticipantsController);
+app.register('username-check', UsernameCheckController);
+app.register('event-friends', EventFriendsController);
+app.register('notification-badge', NotificationBadgeController);
+app.register('push-notification', PushNotificationController);

@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Sport — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">Sport</h1>
+        <a href="{{ path('app_event_new', {category: 'sport'}) }}"
+           class="iwt-icon-btn text-lg font-bold leading-none" style="color: var(--positive)">+</a>
+    </div>
+
+    {# Segmented tab #}
+    <div class="iwt-segmented mb-4">
+        <a href="{{ path('app_sport', app.request.query.all|merge({tab: 'past'})) }}"
+           class="{{ tab == 'past' ? 'active' : '' }}">
+            Passés · {{ past_count }}
+        </a>
+        <a href="{{ path('app_sport', app.request.query.all|merge({tab: 'upcoming'})) }}"
+           class="{{ tab == 'upcoming' ? 'active' : '' }}">
+            À venir · {{ upcoming_count }}
+        </a>
+    </div>
+
+    {# Pill filters #}
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-4" style="scrollbar-width: none">
+        <a href="{{ path('app_sport', app.request.query.all|merge({sport: ''})) }}"
+           class="iwt-pill{{ filter_sport == '' ? ' active' : '' }}">Tous</a>
+        <a href="{{ path('app_sport', app.request.query.all|merge({sport: 'football'})) }}"
+           class="iwt-pill{{ filter_sport == 'football' ? ' active' : '' }}">⚽ Football</a>
+        <a href="{{ path('app_sport', app.request.query.all|merge({sport: 'rugby'})) }}"
+           class="iwt-pill{{ filter_sport == 'rugby' ? ' active' : '' }}">🏉 Rugby</a>
+        <a href="{{ path('app_sport', app.request.query.all|merge({sport: 'tennis'})) }}"
+           class="iwt-pill{{ filter_sport == 'tennis' ? ' active' : '' }}">🎾 Tennis</a>
+        {% for year in years %}
+        <a href="{{ path('app_sport', app.request.query.all|merge({year: year})) }}"
+           class="iwt-pill{{ filter_year == year ~ '' ? ' active' : '' }}">{{ year }}</a>
+        {% endfor %}
+    </div>
+
+    {# Events list #}
+    {% if participations|length == 0 %}
+        {{ m.empty_state(
+            '🏟️',
+            'Aucun événement sportif',
+            tab == 'upcoming' ? 'Ajoute un match à venir !' : 'Commence à archiver tes matchs',
+            path('app_event_new', {category: 'sport'}),
+            '+ Ajouter un match'
+        ) }}
+    {% else %}
+        <div class="card" style="padding: 0; overflow: hidden">
+            {% for p in participations %}
+            <a href="{{ path('app_event_show', {id: p.event.id}) }}"
+               class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
+               style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}">
+                <div class="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
+                    <div class="w-full h-full poster-{{ p.event.type ?? 'default' }} flex items-center justify-center">
+                        <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
+                            {{ p.event.date|date('d') }}<br><span style="font-size:9px; opacity:0.6">{{ p.event.date|date('M')|upper }}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    {% if p.event.teams %}
+                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ p.event.teams }}</p>
+                    {% endif %}
+                    {% if p.event.tournamentName %}
+                    <p class="text-xs font-medium truncate" style="color: var(--fg-2)">{{ p.event.tournamentName }}</p>
+                    {% endif %}
+                    <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                        {{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.city }}{% endif %}
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                    {{ m.event_badge(p.event.type) }}
+                    {% if p.finalScore %}
+                    <span class="text-xs font-bold" style="color: var(--fg-2); font-family: var(--font-mono)">{{ p.finalScore }}</span>
+                    {% endif %}
+                    {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

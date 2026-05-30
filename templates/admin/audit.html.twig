@@ -1,0 +1,52 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Journal d'audit{% endblock %}
+
+{% block body %}
+<h1 class="text-2xl font-semibold mb-6" style="color: var(--fg-1); letter-spacing: -0.01em">📋 Journal d'audit</h1>
+
+<div class="rounded-2xl overflow-hidden" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+    <table class="w-full text-sm">
+        <thead style="background: var(--bg-2); color: var(--fg-4)">
+            <tr>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Date</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Action</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Entité</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">ID</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Champ</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Avant</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Après</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr style="border-top: 1px solid var(--border-subtle)">
+                <td class="px-5 py-3 text-xs whitespace-nowrap" style="color: var(--fg-4)">
+                    {{ log.performedAt|date('d/m/Y H:i:s') }}
+                </td>
+                <td class="px-5 py-3">
+                    <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          style="{% if log.action in ['delete', 'ban'] %}background: var(--negative-soft); color: var(--negative)
+                          {% elseif log.action == 'create' %}background: var(--positive-soft); color: var(--positive)
+                          {% elseif log.action == 'suspend' %}background: rgba(251,191,36,0.12); color: #FBBF24
+                          {% else %}background: var(--bg-3); color: var(--fg-3){% endif %}">
+                        {{ log.action }}
+                    </span>
+                </td>
+                <td class="px-5 py-3 font-medium" style="color: var(--fg-2)">{{ log.entityType }}</td>
+                <td class="px-5 py-3 text-xs font-mono" style="color: var(--fg-4)">{{ log.entityId|slice(0, 8) }}…</td>
+                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ log.fieldChanged ?? '—' }}</td>
+                <td class="px-5 py-3 text-xs max-w-xs truncate" style="color: var(--fg-4)">{{ log.oldValue ?? '—' }}</td>
+                <td class="px-5 py-3 text-xs max-w-xs truncate" style="color: var(--fg-2)">{{ log.newValue ?? '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="px-5 py-10 text-center" style="color: var(--fg-4)">
+                    Aucune action enregistrée
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

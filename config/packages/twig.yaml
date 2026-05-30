@@ -1,5 +1,7 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        vapid_public_key: '%env(default::VAPID_PUBLIC_KEY)%'
 
 when@test:
     twig:

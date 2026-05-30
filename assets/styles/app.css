@@ -1,3 +1,605 @@
-body {
-    background-color: skyblue;
+/* IWasThere — Design System */
+
+/* ── Geist Font ── */
+@import "tailwindcss";
+
+/* ── Design tokens ── */
+:root {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ── Semantic tokens — dark (default) ── */
+:root,
+:root[data-theme="dark"] {
+  --bg-0: #0B0D10;
+  --bg-1: #13161B;
+  --bg-2: #1B1F26;
+  --bg-3: #262B33;
+
+  --fg-1: #F3F4F6;
+  --fg-2: rgba(243, 244, 246, 0.72);
+  --fg-3: rgba(243, 244, 246, 0.48);
+  --fg-4: rgba(243, 244, 246, 0.28);
+
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong:  rgba(255, 255, 255, 0.18);
+
+  --positive:      #B060FF;
+  --positive-soft: rgba(176, 96, 255, 0.14);
+  --negative:      #E89B8E;
+  --negative-soft: rgba(232, 155, 142, 0.14);
+}
+
+/* ── Semantic tokens — light ── */
+:root[data-theme="light"] {
+  --bg-0: #FAFAF7;
+  --bg-1: #FFFFFF;
+  --bg-2: #F2F2EE;
+  --bg-3: #E6E6E0;
+
+  --fg-1: #0B0D10;
+  --fg-2: rgba(11, 13, 16, 0.68);
+  --fg-3: rgba(11, 13, 16, 0.44);
+  --fg-4: rgba(11, 13, 16, 0.24);
+
+  --border-subtle:  rgba(11, 13, 16, 0.06);
+  --border-default: rgba(11, 13, 16, 0.10);
+  --border-strong:  rgba(11, 13, 16, 0.18);
+
+  --positive:      #7B2FBE;
+  --positive-soft: rgba(123, 47, 190, 0.10);
+  --negative:      #C8654F;
+  --negative-soft: rgba(200, 101, 79, 0.10);
+}
+
+/* ── Tailwind theme remapping ── */
+@theme {
+  /* Gray scale → dark palette (inverted for dark mode) */
+  --color-gray-50:  #0B0D10;
+  --color-gray-100: #1B1F26;
+  --color-gray-200: #262B33;
+  --color-gray-300: #353B45;
+  --color-gray-400: #8B95A1;
+  --color-gray-500: #9FA5AF;
+  --color-gray-600: #B5BCC6;
+  --color-gray-700: #C8CDD5;
+  --color-gray-800: #D9DEE3;
+  --color-gray-900: #F3F4F6;
+
+  /* Primary → Mint green */
+  --color-primary-50:  rgba(176, 96, 255, 0.07);
+  --color-primary-100: rgba(176, 96, 255, 0.14);
+  --color-primary-200: rgba(176, 96, 255, 0.25);
+  --color-primary-300: #C890FF;
+  --color-primary-400: #B878FF;
+  --color-primary-500: #B060FF;
+  --color-primary-600: #B060FF;
+  --color-primary-700: #7B2FBE;
+  --color-primary-800: #5A1F9C;
+  --color-primary-900: #3D0A6E;
+
+  --color-accent-400: #E89B8E;
+  --color-accent-500: #D87A6A;
+
+  --font-family-sans: var(--font-sans);
+}
+
+/* ── Base reset ── */
+* { box-sizing: border-box; }
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background-color: var(--bg-0);
+    color: var(--fg-1);
+    margin: 0;
+  }
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid rgba(176, 96, 255, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+/* bg-white override — Tailwind hardcodes 'white', not a theme variable */
+.bg-white { background-color: var(--bg-1) !important; }
+
+/* ── App shell chrome ── */
+.app-header {
+  background: color-mix(in srgb, var(--bg-1) 80%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.app-nav {
+  background: color-mix(in srgb, var(--bg-0) 80%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Components ── */
+@layer components {
+
+  /* Buttons */
+  .btn-primary {
+    background-color: var(--positive);
+    color: #0B0D10;
+    padding-inline: 1rem;
+    padding-block: 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 120ms, scale 120ms;
+    line-height: 1.5;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:active { scale: 0.97; opacity: 0.85; }
+
+  .btn-secondary {
+    background-color: var(--bg-2);
+    color: var(--fg-2);
+    border: 1px solid var(--border-default);
+    padding-inline: 1rem;
+    padding-block: 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity 120ms;
+  }
+  .btn-secondary:active { opacity: 0.7; }
+
+  .btn-danger {
+    background-color: var(--negative);
+    color: #0B0D10;
+    padding-inline: 1rem;
+    padding-block: 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    transition: opacity 120ms;
+  }
+  .btn-danger:active { opacity: 0.85; }
+
+  /* Card */
+  .card {
+    background-color: var(--bg-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  /* Input */
+  .input-field {
+    width: 100%;
+    background-color: var(--bg-2);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    padding-inline: 1rem;
+    padding-block: 0.75rem;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    color: var(--fg-1);
+    transition: border-color 120ms, background 120ms;
+  }
+  .input-field::placeholder { color: var(--fg-3); }
+  .input-field:focus {
+    outline: 2px solid var(--positive);
+    outline-offset: -2px;
+    background-color: var(--bg-1);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding-inline: 0.5rem;
+    padding-block: 0.15rem;
+    border-radius: 999px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-concert  { background: rgba(176, 96, 255, 0.15); color: #C890FF; }
+  .badge-festival { background: rgba(232, 155, 142, 0.14); color: #E89B8E; }
+  .badge-football { background: rgba(74, 222, 128, 0.12);  color: #7EE8A2; }
+  .badge-rugby    { background: rgba(163, 177, 138, 0.14); color: #A8B89A; }
+  .badge-tennis   { background: rgba(234, 179, 8, 0.12);   color: #F4D04A; }
+
+  /* Section title */
+  .section-title {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+  }
+
+  /* Page header */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-1);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  /* Nav tab */
+  .nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--fg-4);
+    transition: color 120ms;
+    text-decoration: none;
+  }
+  .nav-tab.active { color: var(--positive); }
+
+  /* Stars */
+  .star-rating { display: inline-flex; gap: 0.2rem; }
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+  /* Icon button (circular) */
+  .iwt-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-2);
+    color: var(--fg-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    text-decoration: none;
+    transition: background 120ms;
+    position: relative;
+  }
+  .iwt-icon-btn:hover { background: var(--bg-3); }
+
+  /* Segmented control */
+  .iwt-segmented {
+    display: flex;
+    background: var(--bg-2);
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    width: 100%;
+  }
+  .iwt-segmented a,
+  .iwt-segmented button {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 999px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg-3);
+    cursor: pointer;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    transition: all 120ms;
+  }
+  .iwt-segmented a.active,
+  .iwt-segmented button.active {
+    background: var(--bg-0);
+    color: var(--fg-1);
+  }
+
+  /* Pill filters */
+  .iwt-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--bg-1);
+    border: 1px solid var(--border-subtle);
+    font-size: 12px;
+    color: var(--fg-2);
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    text-decoration: none;
+    transition: all 120ms;
+    flex-shrink: 0;
+  }
+  .iwt-pill.active {
+    background: var(--positive-soft);
+    color: var(--positive);
+    border-color: transparent;
+  }
+
+  /* Year group header */
+  .iwt-year {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 14px 0 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 4px;
+  }
+  .iwt-year-num {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--fg-1);
+  }
+  .iwt-year-count {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    font-weight: 500;
+  }
+
+  /* Hero card (next event) */
+  .iwt-hero {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-1);
+  }
+  .iwt-hero-poster {
+    position: relative;
+    height: 160px;
+    overflow: hidden;
+  }
+  .iwt-hero-poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, var(--bg-1) 100%);
+  }
+  .iwt-hero-art-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-2);
+    color: var(--fg-3);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  /* Type-specific art tag accent colors */
+  .iwt-hero-art-tag--concert  { color: #C890FF; background: rgba(176, 96, 255, 0.12); }
+  .iwt-hero-art-tag--festival { color: #F0B0A0; background: rgba(232, 155, 142, 0.12); }
+  .iwt-hero-art-tag--football { color: #7EE8A2; background: rgba(74, 222, 128, 0.10); }
+  .iwt-hero-art-tag--rugby    { color: #B0BC9A; background: rgba(163, 177, 138, 0.10); }
+  .iwt-hero-art-tag--tennis   { color: #F4D04A; background: rgba(234, 179, 8, 0.10); }
+  .iwt-hero-body {
+    padding: 14px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .iwt-hero-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--fg-1);
+  }
+  .iwt-hero-sub { font-size: 13px; color: var(--fg-2); }
+
+  .iwt-countdown {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .iwt-countdown-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .iwt-countdown-num {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--fg-1);
+  }
+  .iwt-countdown-lbl {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    font-weight: 500;
+  }
+
+  /* Reminder card (J+1) */
+  .iwt-reminder {
+    background: var(--positive-soft);
+    border: 1px solid rgba(176, 96, 255, 0.18);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .iwt-reminder-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: rgba(176, 96, 255, 0.2);
+    color: var(--positive);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .iwt-reminder-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .iwt-reminder-title { font-size: 13px; font-weight: 500; color: var(--fg-1); }
+  .iwt-reminder-sub { font-size: 12px; color: var(--fg-2); }
+  .iwt-reminder-cta {
+    background: var(--positive);
+    color: #0B0D10;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* Search input */
+  .iwt-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--bg-1);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+  }
+  .iwt-search input {
+    flex: 1; border: none; background: none;
+    color: var(--fg-1); font-family: var(--font-sans); font-size: 15px;
+    outline: none; padding: 0;
+  }
+  .iwt-search input::placeholder { color: var(--fg-3); }
+
+  /* Category grid */
+  .iwt-cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .iwt-cat-tile {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px; background: var(--bg-1);
+    border: 1px solid var(--border-subtle); border-radius: 10px;
+    cursor: pointer; text-decoration: none;
+    color: var(--fg-1); font-family: var(--font-sans); font-size: 13px;
+    transition: border-color 120ms;
+  }
+  .iwt-cat-tile:hover { border-color: var(--border-strong); }
+  .iwt-cat-tile-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--bg-2); display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; font-size: 16px;
+  }
+
+  /* Stats strip */
+  .iwt-stat-strip {
+    display: flex; justify-content: space-between;
+    background: var(--bg-1); border: 1px solid var(--border-subtle);
+    border-radius: 12px; padding: 14px; gap: 8px;
+  }
+  .iwt-stat-item { display: flex; flex-direction: column; gap: 3px; }
+  .iwt-stat-lbl {
+    font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--fg-3); font-weight: 500;
+  }
+  .iwt-stat-val {
+    font-family: var(--font-mono); font-size: 22px; font-weight: 500;
+    letter-spacing: -0.02em; line-height: 1.1; color: var(--fg-1);
+  }
+  .iwt-stat-val.positive { color: var(--positive); }
+
+  /* Notification unread state */
+  .notif-unread {
+    border-color: rgba(176, 96, 255, 0.2);
+    background: rgba(176, 96, 255, 0.04);
+  }
+
+  /* Poster title overlay */
+  .poster-title {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 4px; text-align: center; padding: 0 20px; z-index: 1; color: #fff;
+  }
+  .poster-title .name {
+    font-size: 30px; font-weight: 700;
+    letter-spacing: -0.02em; line-height: 0.95;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  }
+  .poster-title .when {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.7); margin-top: 2px;
+  }
+}
+
+/* ── Poster art backgrounds ── */
+.poster-concert, .poster-music {
+  background:
+    radial-gradient(120% 80% at 50% 0%, #07334A 0%, transparent 65%),
+    linear-gradient(180deg, #061119 0%, #04070A 100%);
+}
+.poster-festival {
+  background:
+    radial-gradient(120% 80% at 10% 10%, #5C0A0A 0%, transparent 55%),
+    radial-gradient(120% 100% at 95% 90%, #2A0F0A 0%, transparent 60%),
+    linear-gradient(135deg, #1A0808 0%, #0B0405 100%);
+}
+.poster-football {
+  background:
+    radial-gradient(140% 80% at 50% 100%, #0E2E1A 0%, transparent 60%),
+    radial-gradient(120% 80% at 10% 10%, #1B2638 0%, transparent 55%),
+    linear-gradient(180deg, #050912 0%, #020407 100%);
+}
+.poster-rugby {
+  background:
+    radial-gradient(120% 80% at 30% 80%, #2A3010 0%, transparent 55%),
+    linear-gradient(180deg, #0A0F03 0%, #030500 100%);
+}
+.poster-tennis {
+  background:
+    radial-gradient(120% 80% at 80% 80%, #321414 0%, transparent 60%),
+    linear-gradient(180deg, #160808 0%, #060304 100%);
+}
+.poster-default {
+  background:
+    radial-gradient(120% 80% at 30% 20%, #1F1F2A 0%, transparent 60%),
+    linear-gradient(180deg, #0A0A12 0%, #050507 100%);
 }
