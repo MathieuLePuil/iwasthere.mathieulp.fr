@@ -1,21 +1,19 @@
 import { Controller } from '@hotwired/stimulus';
 
-/**
- * Profile-page opt-in card.
- * Hides itself when push is already enabled or unsupported/denied.
- */
 export default class extends Controller {
     static values = { publicKey: String };
 
-    async connect() {
+    connect() {
         if (!this.#supported() || Notification.permission === 'denied') {
             this.element.style.display = 'none';
             return;
         }
+        // granted → hide immediately; no need to wait for SW subscription check
         if (Notification.permission === 'granted') {
-            const sub = await this.#getSub();
-            if (sub) this.element.style.display = 'none';
+            this.element.style.display = 'none';
+            return;
         }
+        // default → show opt-in card
     }
 
     async enable() {
@@ -24,25 +22,23 @@ export default class extends Controller {
 
         const perm = await Notification.requestPermission();
 
-        if (perm === 'denied') { this.element.style.display = 'none'; return; }
-        if (perm !== 'granted') {
-            if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
+        if (perm === 'denied' || perm !== 'granted') {
+            this.element.style.display = 'none';
             return;
         }
 
         try {
             await this.#subscribe();
-            this.element.style.display = 'none';
         } catch (e) {
             console.warn('Push subscribe error:', e);
-            if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
         }
+        this.element.style.display = 'none';
     }
 
     // ── Private ─────────────────────────────────────────────────────────────
 
     async #subscribe() {
-        const reg = await this.#swReady();
+        const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: this.#b64(this.publicKeyValue),
@@ -52,20 +48,6 @@ export default class extends Controller {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON()),
         });
-    }
-
-    async #getSub() {
-        try {
-            const reg = await this.#swReady();
-            return await reg.pushManager.getSubscription();
-        } catch { return null; }
-    }
-
-    #swReady() {
-        return Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, r) => setTimeout(() => r(new Error('SW timeout')), 5000)),
-        ]);
     }
 
     #supported() {

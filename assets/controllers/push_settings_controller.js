@@ -1,21 +1,21 @@
 import { Controller } from '@hotwired/stimulus';
 
-/**
- * Manages the push notification toggle in settings.
- * Reflects real browser permission state — never the DB value.
- */
 export default class extends Controller {
-    static targets = ['btn', 'status', 'row'];
+    static targets = ['btn', 'status'];
     static values  = { publicKey: String };
 
-    async connect() {
+    connect() {
         if (!this.#supported()) { this.element.style.display = 'none'; return; }
-        await this.#refresh();
+        this.#refresh();
     }
 
     async toggle() {
         this.#setLoading();
         try {
+            if (Notification.permission === 'denied') {
+                this.#render(false, true);
+                return;
+            }
             const sub = await this.#getSub();
             if (sub) {
                 await this.#unsubscribe(sub);
@@ -24,32 +24,45 @@ export default class extends Controller {
                 await this.#requestAndSubscribe();
             }
         } catch (e) {
-            console.warn('Push settings toggle error:', e);
-            await this.#refresh();
+            console.warn('Push toggle error:', e);
+            this.#refresh();
         }
     }
 
     // ── Private ─────────────────────────────────────────────────────────────
 
-    async #refresh() {
-        if (Notification.permission === 'denied') {
+    #refresh() {
+        const perm = Notification.permission;
+        if (perm === 'denied') {
             this.#render(false, true);
             return;
         }
-        const sub = await this.#getSub();
-        this.#render(!!sub, false);
+        if (perm === 'default') {
+            this.#render(false, false);
+            return;
+        }
+        // granted — show active immediately, then correct if no subscription exists
+        this.#render(true, false);
+        this.#getSub()
+            .then(sub => { if (!sub) this.#render(false, false); })
+            .catch(() => {});
     }
 
     async #requestAndSubscribe() {
         const perm = await Notification.requestPermission();
         if (perm === 'denied') { this.#render(false, true); return; }
         if (perm !== 'granted') { this.#render(false, false); return; }
-        await this.#subscribe();
-        this.#render(true, false);
+        try {
+            await this.#subscribe();
+            this.#render(true, false);
+        } catch (e) {
+            console.warn('Push subscribe error:', e);
+            this.#render(false, false);
+        }
     }
 
     async #subscribe() {
-        const reg = await this.#swReady();
+        const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: this.#b64(this.publicKeyValue),
@@ -71,46 +84,40 @@ export default class extends Controller {
     }
 
     async #getSub() {
-        try {
-            const reg = await this.#swReady();
-            return await reg.pushManager.getSubscription();
-        } catch { return null; }
-    }
-
-    #swReady() {
-        return Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, r) => setTimeout(() => r(new Error('SW timeout')), 5000)),
-        ]);
+        const reg = await navigator.serviceWorker.ready;
+        return reg.pushManager.getSubscription();
     }
 
     #render(active, blocked) {
+        if (this.hasStatusTarget) {
+            const s = this.statusTarget;
+            if (blocked) {
+                s.textContent = 'Bloquées — autorise dans Réglages > Safari > Notifications.';
+                s.style.color = 'var(--negative)';
+            } else if (active) {
+                s.textContent = 'Activées sur cet appareil ✓';
+                s.style.color = 'var(--positive)';
+            } else {
+                s.textContent = 'Désactivées';
+                s.style.color = 'var(--fg-4)';
+            }
+        }
         if (!this.hasBtnTarget) return;
         const btn = this.btnTarget;
-
+        btn.disabled    = blocked;
+        btn.style.opacity = blocked ? '0.5' : '1';
         if (blocked) {
             btn.textContent = 'Bloquées par le navigateur';
-            btn.disabled    = true;
-            btn.style.opacity = '0.5';
-            if (this.hasStatusTarget) {
-                this.statusTarget.textContent = 'Va dans Réglages > Safari > Notifications pour autoriser.';
-            }
             return;
         }
-
-        btn.disabled      = false;
-        btn.style.opacity = '1';
-
         if (active) {
             btn.textContent = 'Désactiver';
             btn.classList.remove('btn-primary');
             btn.classList.add('btn-secondary');
-            if (this.hasStatusTarget) this.statusTarget.textContent = 'Activées sur cet appareil ✓';
         } else {
             btn.textContent = 'Activer';
             btn.classList.remove('btn-secondary');
             btn.classList.add('btn-primary');
-            if (this.hasStatusTarget) this.statusTarget.textContent = 'Désactivées';
         }
     }
 
