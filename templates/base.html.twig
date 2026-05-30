@@ -11,6 +11,7 @@
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
@@ -24,7 +25,7 @@
 
         {% if app.user %}
         {# ── Fixed top header ── #}
-        <header id="app-header" class="fixed top-0 inset-x-0 z-30 h-14 app-header flex items-center px-4 gap-3">
+        <header id="app-header" class="fixed top-0 inset-x-0 z-30 app-header flex items-center px-4 gap-3">
             <a href="{{ path('app_home') }}">
                 <img src="/logo.png" alt="IWasThere" style="height: 28px; width: auto; display: block;">
             </a>
@@ -52,12 +53,12 @@
         {% endif %}
 
         {# ── Main content ── #}
-        <main class="{{ app.user ? 'pt-14 pb-20' : '' }} min-h-screen">
+        <main class="{{ app.user ? 'pt-safe-header pb-safe-nav' : '' }} min-h-screen">
             {# Flash messages #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
                 <div data-controller="flash-message"
-                     class="fixed top-16 inset-x-4 z-40 flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-2xl"
+                     class="fixed top-below-header inset-x-4 z-40 flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-2xl"
                      style="
                         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
                         {% if type == 'success' %}
@@ -175,13 +176,58 @@
     </script>
     {% if vapid_public_key is defined and vapid_public_key %}
     <script>
-        // Auto-resubscribe if permission already granted but no subscription stored
-        if ('serviceWorker' in navigator && 'PushManager' in window && Notification.permission === 'granted') {
-            navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
-                if (!sub) return;
-                // Subscription exists, nothing to do
+        (function() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+            const vapidKey = {{ vapid_public_key|json_encode|raw }};
+
+            function urlBase64ToUint8Array(b64) {
+                const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+                const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+                const raw = atob(base64);
+                return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+            }
+
+            async function subscribePush() {
+                try {
+                    const reg = await Promise.race([
+                        navigator.serviceWorker.ready,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
+                    ]);
+                    const sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                    });
+                    await fetch('/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sub.toJSON()),
+                    });
+                } catch (e) {
+                    console.warn('Push subscription failed:', e);
+                }
+            }
+
+            // Prompt automatique à l'inscription (flash push_prompt)
+            {% if app.flashes('push_prompt')|length > 0 %}
+            window.addEventListener('load', async function() {
+                if (Notification.permission === 'default') {
+                    const perm = await Notification.requestPermission();
+                    if (perm === 'granted') await subscribePush();
+                }
             });
-        }
+            {% endif %}
+
+            // Auto-resouscription si permission déjà accordée
+            if (Notification.permission === 'granted') {
+                navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+                    if (!sub) subscribePush();
+                });
+            }
+
+            // Expose pour le contrôleur Stimulus
+            window._iwtSubscribePush = subscribePush;
+        })();
     </script>
     {% endif %}
     </body>

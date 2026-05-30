@@ -63,6 +63,7 @@ class SecurityController extends AbstractController
             $em->flush();
 
             $this->addFlash('success', 'Compte créé avec succès ! Bienvenue sur IWasThere.');
+            $this->addFlash('push_prompt', '1');
             return $this->redirectToRoute('app_home');
         }
 

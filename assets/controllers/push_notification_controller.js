@@ -10,42 +10,40 @@ export default class extends Controller {
             return;
         }
 
-        navigator.serviceWorker.ready.then(reg => {
-            reg.pushManager.getSubscription().then(sub => {
-                if (sub) {
-                    this.element.style.display = 'none';
-                }
-            });
-        });
+        navigator.serviceWorker.ready.then(reg =>
+            reg.pushManager.getSubscription()
+        ).then(sub => {
+            if (sub || Notification.permission === 'denied') {
+                this.element.style.display = 'none';
+            }
+        }).catch(() => {});
     }
 
     async enable() {
-        const reg = await navigator.serviceWorker.ready;
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
+        const btn = this.element.querySelector('button');
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
         try {
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: this._urlBase64ToUint8Array(this.publicKeyValue),
-            });
+            const permission = await Notification.requestPermission();
 
-            await fetch('/push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sub.toJSON()),
-            });
+            if (permission === 'denied') {
+                this.element.style.display = 'none';
+                return;
+            }
+            if (permission !== 'granted') {
+                if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
+                return;
+            }
+
+            // Déléguer à la fonction globale (définie dans base.html.twig)
+            if (typeof window._iwtSubscribePush === 'function') {
+                await window._iwtSubscribePush();
+            }
 
             this.element.style.display = 'none';
         } catch (e) {
             console.warn('Push subscription failed:', e);
+            if (btn) { btn.disabled = false; btn.textContent = 'Activer'; }
         }
-    }
-
-    _urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     }
 }

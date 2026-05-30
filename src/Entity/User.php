@@ -47,20 +47,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 20, options: ['default' => 'friends'])]
     private string $defaultEventVisibility = 'friends';
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notificationsEnabled = true;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $notificationsEnabled = false;
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notifCompletionEnabled = true;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $notifCompletionEnabled = false;
 
     #[ORM\Column(length: 5, nullable: true, options: ['default' => '08:00'])]
     private ?string $notifCompletionTime = '08:00';
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notifPresenceEnabled = true;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $notifPresenceEnabled = false;
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notifFriendRequestEnabled = true;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $notifFriendRequestEnabled = false;
 
     #[ORM\Column(length: 20, options: ['default' => 'user'])]
     private string $role = 'user';
