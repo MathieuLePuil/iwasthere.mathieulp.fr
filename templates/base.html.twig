@@ -191,10 +191,7 @@
 
             async function subscribePush() {
                 try {
-                    const reg = await Promise.race([
-                        navigator.serviceWorker.ready,
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
-                    ]);
+                    const reg = await navigator.serviceWorker.ready;
                     const sub = await reg.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(vapidKey),
@@ -219,11 +216,21 @@
             });
             {% endif %}
 
-            // Auto-resouscription si permission déjà accordée
+            // Sync push subscription with server on every page load
             if (Notification.permission === 'granted') {
                 navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
-                    if (!sub) subscribePush();
-                });
+                    if (sub) {
+                        // Subscription exists in browser — sync to server (idempotent)
+                        fetch('/push/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(sub.toJSON()),
+                        }).catch(() => {});
+                    } else {
+                        // No browser subscription — create one
+                        subscribePush();
+                    }
+                }).catch(() => {});
             }
 
             // Expose pour le contrôleur Stimulus
