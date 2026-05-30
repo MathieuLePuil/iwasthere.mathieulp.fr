@@ -117,20 +117,6 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
-  /* Safe area : Dynamic Island / status bar */
-  padding-top: env(safe-area-inset-top, 0px);
-  height: calc(3.5rem + env(safe-area-inset-top, 0px));
-}
-
-/* Utilitaires safe-area utilisés dans base.html.twig */
-.pt-safe-header {
-  padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
-}
-.top-below-header {
-  top: calc(4rem + env(safe-area-inset-top, 0px));
-}
-.pb-safe-nav {
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
 .app-nav {

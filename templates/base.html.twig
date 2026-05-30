@@ -25,7 +25,8 @@
 
         {% if app.user %}
         {# ── Fixed top header ── #}
-        <header id="app-header" class="fixed top-0 inset-x-0 z-30 app-header flex items-center px-4 gap-3">
+        <header id="app-header" class="fixed top-0 inset-x-0 z-30 h-14 app-header flex items-center px-4 gap-3"
+                style="padding-top: env(safe-area-inset-top, 0px); height: calc(3.5rem + env(safe-area-inset-top, 0px))">
             <a href="{{ path('app_home') }}">
                 <img src="/logo.png" alt="IWasThere" style="height: 28px; width: auto; display: block;">
             </a>
@@ -53,14 +54,14 @@
         {% endif %}
 
         {# ── Main content ── #}
-        <main class="{{ app.user ? 'pt-safe-header pb-safe-nav' : '' }} min-h-screen">
+        <main class="min-h-screen"
+              {% if app.user %}style="padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));"{% endif %}>
             {# Flash messages #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
                 <div data-controller="flash-message"
-                     class="fixed top-below-header inset-x-4 z-40 flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-2xl"
-                     style="
-                        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+                     class="fixed inset-x-4 z-40 flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-2xl"
+                     style="top: calc(4rem + env(safe-area-inset-top, 0px)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
                         {% if type == 'success' %}
                             background: color-mix(in srgb, #0d1f12 90%, transparent);
                             border: 1px solid rgba(74, 222, 128, 0.35);
