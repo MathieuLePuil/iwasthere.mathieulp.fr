@@ -63,15 +63,20 @@ export default class extends Controller {
 
     async #subscribe() {
         const reg = await navigator.serviceWorker.ready;
+        // Unsubscribe first — required when VAPID key has changed
+        const old = await reg.pushManager.getSubscription();
+        if (old) await old.unsubscribe();
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: this.#b64(this.publicKeyValue),
         });
-        await fetch('/push/subscribe', {
+        const resp = await fetch('/push/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON()),
         });
+        if (!resp.ok) throw new Error(`Subscribe failed: ${resp.status}`);
+        localStorage.setItem('iwtVapidKey', this.publicKeyValue);
     }
 
     async #unsubscribe(sub) {

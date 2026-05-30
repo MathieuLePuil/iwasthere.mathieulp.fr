@@ -189,18 +189,24 @@
                 return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
             }
 
+            const LS_KEY = 'iwtVapidKey';
+
             async function subscribePush() {
                 try {
                     const reg = await navigator.serviceWorker.ready;
+                    // Always unsubscribe first — required when VAPID key changed
+                    const old = await reg.pushManager.getSubscription();
+                    if (old) await old.unsubscribe();
                     const sub = await reg.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(vapidKey),
                     });
-                    await fetch('/push/subscribe', {
+                    const resp = await fetch('/push/subscribe', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(sub.toJSON()),
                     });
+                    if (resp.ok) localStorage.setItem(LS_KEY, vapidKey);
                 } catch (e) {
                     console.warn('Push subscription failed:', e);
                 }
@@ -216,18 +222,19 @@
             });
             {% endif %}
 
-            // Sync push subscription with server on every page load
+            // On every page load: sync subscription, forcing re-subscribe if VAPID key changed
             if (Notification.permission === 'granted') {
                 navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
-                    if (sub) {
-                        // Subscription exists in browser — sync to server (idempotent)
+                    const storedKey = localStorage.getItem(LS_KEY);
+                    if (sub && storedKey === vapidKey) {
+                        // Key matches — just sync to server (idempotent upsert)
                         fetch('/push/subscribe', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(sub.toJSON()),
                         }).catch(() => {});
                     } else {
-                        // No browser subscription — create one
+                        // No subscription, or VAPID key changed — force fresh subscribe
                         subscribePush();
                     }
                 }).catch(() => {});
