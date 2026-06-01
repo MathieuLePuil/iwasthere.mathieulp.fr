@@ -113,6 +113,20 @@
             if (autohide) setTimeout(() => { status.style.opacity = '0'; }, 3000);
         }
 
+        // Timeout helper — empêche toute promesse de hang infiniment.
+        function withTimeout(promise, ms, label) {
+            return new Promise((resolve, reject) => {
+                const t = setTimeout(
+                    () => reject(new Error('Timeout ' + label + ' (' + ms + 'ms)')),
+                    ms
+                );
+                Promise.resolve(promise).then(
+                    v => { clearTimeout(t); resolve(v); },
+                    e => { clearTimeout(t); reject(e); }
+                );
+            });
+        }
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
@@ -123,14 +137,13 @@
             return;
         }
 
-        // État initial selon la permission navigateur
+        // État initial selon la permission navigateur — VISUEL UNIQUEMENT.
+        // Pas d'auto-sync : on attend l'action utilisateur sur le toggle pour éviter tout hang silencieux.
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
                 toggle.checked = true;
                 paint(true);
-                // Auto-sync : si la permission est déjà accordée, on POST silencieusement
-                // pour s'assurer que le serveur a bien notre souscription.
-                subscribeUser(true);
+                setStatus('✓ Activées sur cet appareil', '#3DDC97', true);
             } else if (Notification.permission === 'denied') {
                 toggle.disabled = true;
                 setStatus('Bloquées dans iOS — Réglages → Notifications.', '#E89B8E');
@@ -143,14 +156,13 @@
             paint(this.checked);
 
             if (this.checked) {
-                setStatus('⏳ Activation…');
-                const ok = await subscribeUser(false);
+                const ok = await subscribeUser();
                 if (ok) {
                     setStatus('✓ Activées', '#3DDC97', true);
                 } else {
                     this.checked = false;
                     paint(false);
-                    setStatus('✗ Échec', '#E89B8E', true);
+                    // setStatus déjà appelé par subscribeUser avec l'erreur précise
                 }
             } else {
                 await unsubscribeUser();
@@ -158,38 +170,59 @@
             }
         });
 
-        async function subscribeUser(silent) {
+        async function subscribeUser() {
             try {
-                const permission = await Notification.requestPermission();
+                setStatus('⏳ 1/5 Permission…');
+                const permission = await withTimeout(
+                    Notification.requestPermission(),
+                    30000, 'permission'
+                );
                 if (permission !== 'granted') {
-                    if (!silent) alert('Permission refusée.');
+                    setStatus('✗ Permission ' + permission, '#E89B8E', true);
                     return false;
                 }
 
-                const reg = await navigator.serviceWorker.ready;
-                let sub = await reg.pushManager.getSubscription();
-                if (!sub) {
-                    sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(publicKey)
-                    });
+                setStatus('⏳ 2/5 Service Worker…');
+                const reg = await withTimeout(
+                    navigator.serviceWorker.ready,
+                    10000, 'sw.ready'
+                );
+
+                setStatus('⏳ 3/5 Nettoyage…');
+                const existing = await reg.pushManager.getSubscription();
+                if (existing) {
+                    try { await withTimeout(existing.unsubscribe(), 5000, 'unsub'); } catch (_) {}
                 }
 
-                const response = await fetch(subscribeUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(sub)
-                });
+                setStatus('⏳ 4/5 Souscription push…');
+                const sub = await withTimeout(
+                    reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicKey)
+                    }),
+                    15000, 'pushManager.subscribe'
+                );
+
+                setStatus('⏳ 5/5 Envoi serveur…');
+                const response = await withTimeout(
+                    fetch(subscribeUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sub)
+                    }),
+                    10000, 'fetch'
+                );
 
                 if (!response.ok) {
                     const txt = await response.text();
                     throw new Error('HTTP ' + response.status + ' — ' + txt.slice(0, 200));
                 }
-
                 return true;
+
             } catch (e) {
                 console.error('subscribeUser error:', e);
-                if (!silent) alert('Erreur : ' + (e && e.message ? e.message : e));
+                const msg = (e && e.message) ? e.message : String(e);
+                setStatus('✗ ' + msg, '#E89B8E');
                 return false;
             }
         }
