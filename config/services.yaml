@@ -27,20 +27,9 @@ services:
         arguments:
             $apiKey: '%setlistfm_api_key%'
 
-    App\Service\PushService:
+    App\Service\NotificationService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
-
-    App\Command\SendTestNotificationCommand:
-        arguments:
             $projectDir: '%kernel.project_dir%'
-
-    App\Command\PushDiagnoseCommand:
-        arguments:
-            $projectDir: '%kernel.project_dir%'
-            $vapidPublicKey: '%vapid_public_key%'
-            $vapidPrivateKey: '%vapid_private_key%'
-            $vapidSubject: '%vapid_subject%'

@@ -14,7 +14,7 @@ use App\Repository\FriendRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
-use App\Service\PushService;
+use App\Service\NotificationService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,7 +37,7 @@ class EventController extends AbstractController
         FriendRepository $friendRepo,
         UserRepository $userRepo,
         SetlistFmService $setlistFm,
-        PushService $push,
+        NotificationService $push,
     ): Response {
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
@@ -173,14 +173,10 @@ if (!empty($data['duration'])) {
                             'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
                         ]);
                     $em->persist($notif);
-                    if ($taggedUser->isNotifFriendRequestEnabled()) {
-                        $push->sendToUser(
-                            $taggedUser,
-                            $me->getDisplayName() . ' t\'a ajouté à un événement',
-                            $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                            '/event/' . $event->getId(),
-                        );
-                    }
+                    $push->sendNotification(
+                        $me->getDisplayName() . ' t\'a ajouté à un événement',
+                        $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    );
                 }
                 if (!empty($friendsData)) {
                     $em->flush();
@@ -308,7 +304,7 @@ if (!empty($data['duration'])) {
         EventParticipationRepository $participationRepo,
         FriendRepository $friendRepo,
         UserRepository $userRepo,
-        PushService $push,
+        NotificationService $push,
     ): Response {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
@@ -422,14 +418,10 @@ if (!empty($data['duration'])) {
                         'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
                     ]);
                 $em->persist($notif);
-                if ($taggedUser->isNotifFriendRequestEnabled()) {
-                    $push->sendToUser(
-                        $taggedUser,
-                        $me->getDisplayName() . ' t\'a ajouté à un événement',
-                        $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                        '/event/' . $event->getId(),
-                    );
-                }
+                $push->sendNotification(
+                    $me->getDisplayName() . ' t\'a ajouté à un événement',
+                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                );
             }
             $em->flush();
 

@@ -83,7 +83,7 @@
         const thumb = document.getElementById('notif-thumb');
         const status = document.getElementById('notif-status');
         const publicKey = "{{ vapid_public_key|default('') }}";
-        const subscribeUrl = "{{ path('app_push_subscribe') }}";
+        const subscribeUrl = "{{ path('app_subscribe') }}";
 
         function urlBase64ToUint8Array(b64) {
             const pad = '='.repeat((4 - b64.length % 4) % 4);
