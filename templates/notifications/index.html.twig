@@ -16,34 +16,70 @@
     </div>
 
     {% if vapid_public_key %}
-    <div data-controller="push-prompt"
-         data-push-prompt-public-key-value="{{ vapid_public_key }}"
-         data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}"
-         class="mb-5">
-        <div data-push-prompt-target="wrapper"
-             class="card flex items-start gap-3"
-             style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                 style="background: rgba(61,220,151,0.15)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                     stroke="#3DDC97" stroke-width="1.6"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/>
-                </svg>
-            </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push</p>
-                <p data-push-prompt-target="status"
-                   class="text-xs mt-0.5"
-                   style="color: var(--fg-3)">Vérification…</p>
-            </div>
-            <button data-push-prompt-target="btn"
-                    data-action="click->push-prompt#enable"
-                    class="btn-primary text-xs py-1.5 px-3 shrink-0 self-center">
-                Activer
-            </button>
+    <div id="iwt-push-banner" class="card flex items-center gap-3 mb-5"
+         style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+             style="background: rgba(61,220,151,0.15)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="#3DDC97" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/>
+            </svg>
         </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push</p>
+            <p class="text-xs" style="color: var(--fg-3)">Active-les pour être prévenu en temps réel.</p>
+        </div>
+        <button id="iwt-push-banner-btn"
+                class="btn-primary text-xs py-1.5 px-3 shrink-0">
+            Activer
+        </button>
     </div>
+    <script data-turbo-eval="false">
+    (function() {
+        const banner = document.getElementById('iwt-push-banner');
+        const btn = document.getElementById('iwt-push-banner-btn');
+        const publicKey = "{{ vapid_public_key }}";
+        const subscribeUrl = "{{ path('app_push_subscribe') }}";
+
+        function urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+        }
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+            banner.style.display = 'none';
+        }
+
+        btn.addEventListener('click', async function() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicKey)
+                });
+
+                await fetch(subscribeUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(sub.toJSON())
+                });
+
+                banner.style.display = 'none';
+            } catch (e) {
+                alert('Erreur : ' + (e && e.message ? e.message : e));
+            }
+        });
+    })();
+    </script>
     {% endif %}
 
     {% if notifications|length == 0 %}

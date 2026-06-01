@@ -47,30 +47,67 @@
 
     {# ── Push notifications section ── #}
     {% if vapid_public_key %}
-    <div class="card"
-         data-controller="push-prompt"
-         data-push-prompt-public-key-value="{{ vapid_public_key }}"
-         data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}">
+    <div class="card">
         <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
         <p class="text-xs mb-3" style="color: var(--fg-3)">
             Reçois les alertes même quand l'app est fermée. Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
         </p>
         <label class="flex items-center justify-between mb-3">
             <span class="text-sm" style="color: var(--fg-2)">Notifications activées</span>
-            <input type="checkbox"
-                   data-push-prompt-target="checkbox"
-                   class="w-5 h-5 rounded accent-[#3DDC97]"
-                   disabled>
+            <input type="checkbox" id="iwt-push-checkbox"
+                   class="w-5 h-5 rounded accent-[#3DDC97]" disabled>
         </label>
-        <p data-push-prompt-target="status"
-           class="text-xs mb-3"
-           style="color: var(--fg-3)">Vérification…</p>
-        <button data-push-prompt-target="btn"
-                data-action="click->push-prompt#enable"
-                class="btn-primary w-full py-3">
+        <button id="iwt-push-btn" class="btn-primary w-full py-3">
             Activer les notifications
         </button>
     </div>
+    <script data-turbo-eval="false">
+    (function() {
+        const btn = document.getElementById('iwt-push-btn');
+        const checkbox = document.getElementById('iwt-push-checkbox');
+        const publicKey = "{{ vapid_public_key }}";
+        const subscribeUrl = "{{ path('app_push_subscribe') }}";
+
+        function urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+        }
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+            checkbox.checked = true;
+            btn.style.display = 'none';
+        }
+
+        btn.addEventListener('click', async function() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicKey)
+                });
+
+                await fetch(subscribeUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(sub.toJSON())
+                });
+
+                checkbox.checked = true;
+                btn.style.display = 'none';
+            } catch (e) {
+                alert('Erreur : ' + (e && e.message ? e.message : e));
+            }
+        });
+    })();
+    </script>
     {% endif %}
 
     {# ── In-app notification preferences ── #}

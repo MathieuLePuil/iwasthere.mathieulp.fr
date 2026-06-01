@@ -175,13 +175,5 @@
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     </script>
-
-    {% if app.user and vapid_public_key %}
-    {# Auto-open push permission popup if the browser has never been asked #}
-    <div data-controller="push-prompt"
-         data-push-prompt-public-key-value="{{ vapid_public_key }}"
-         data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}"
-         data-push-prompt-auto-value="true"></div>
-    {% endif %}
     </body>
 </html>
