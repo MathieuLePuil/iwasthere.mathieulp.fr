@@ -45,149 +45,165 @@
         </form>
     </div>
 
-    {# ── Push notifications section (copie myrenault) ── #}
+    {# ── Push notifications section (tout en CSS inline, indépendant de Tailwind) ── #}
     {% if vapid_public_key %}
     <div class="card">
         <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
-        <div class="flex items-center justify-between mt-2">
-            <div>
-                <div class="text-sm font-medium" style="color: var(--fg-1)">Activer les notifications</div>
-                <div id="notif-status" class="text-xs mt-1 opacity-0 transition-opacity" style="color: var(--fg-3)">En attente…</div>
+        <p class="text-xs mb-3" style="color: var(--fg-3)">
+            Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
+        </p>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:.875rem; font-weight:500; color:var(--fg-1)">Activer les notifications</div>
+                <div id="notif-status"
+                     style="font-size:.75rem; margin-top:.25rem; opacity:0; transition:opacity .2s; color:var(--fg-3)">
+                    &nbsp;
+                </div>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="notif-toggle" class="sr-only peer">
-                <div class="w-12 h-6 bg-[#2c2c2e] peer-focus:outline-none rounded-full peer
-                            peer-checked:after:translate-x-full peer-checked:after:border-white
-                            after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-                            after:bg-gray-500 after:border-gray-500 after:border after:rounded-full
-                            after:h-5 after:w-5 after:transition-all
-                            peer-checked:bg-[#3DDC97]/20 peer-checked:after:bg-[#3DDC97]
-                            peer-checked:after:border-[#3DDC97]"></div>
+            <label style="position:relative; display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0;">
+                <input type="checkbox" id="notif-toggle"
+                       style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;">
+                <span id="notif-track"
+                      style="width:48px; height:26px; background:#2c2c2e; border-radius:999px;
+                             position:relative; display:block; transition:background .2s;">
+                    <span id="notif-thumb"
+                          style="position:absolute; top:2px; left:2px; width:22px; height:22px;
+                                 background:#888; border-radius:50%;
+                                 transition:transform .2s, background .2s;"></span>
+                </span>
             </label>
         </div>
     </div>
 
     <script data-turbo-eval="false">
-        (function() {
-            const toggle = document.getElementById('notif-toggle');
-            const status = document.getElementById('notif-status');
-            const publicKey = "{{ vapid_public_key|default('') }}";
+    (function() {
+        const toggle = document.getElementById('notif-toggle');
+        const track = document.getElementById('notif-track');
+        const thumb = document.getElementById('notif-thumb');
+        const status = document.getElementById('notif-status');
+        const publicKey = "{{ vapid_public_key|default('') }}";
+        const subscribeUrl = "{{ path('app_push_subscribe') }}";
 
-            function urlBase64ToUint8Array(base64String) {
-                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                const base64 = (base64String + padding)
-                    .replace(/\-/g, '+')
-                    .replace(/_/g, '/');
-                const rawData = window.atob(base64);
-                const outputArray = new Uint8Array(rawData.length);
-                for (let i = 0; i < rawData.length; ++i) {
-                    outputArray[i] = rawData.charCodeAt(i);
-                }
-                return outputArray;
-            }
+        function urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const base64 = (b64 + pad).replace(/\-/g, '+').replace(/_/g, '/');
+            const raw = window.atob(base64);
+            const out = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+            return out;
+        }
 
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js').catch(() => {});
-            }
-
-            if (!publicKey) {
-                toggle.disabled = true;
-                status.innerText = "Non disponible (Clé VAPID manquante)";
-                status.classList.remove('opacity-0');
+        function paint(on) {
+            if (on) {
+                track.style.background = 'rgba(61,220,151,0.30)';
+                thumb.style.background = '#3DDC97';
+                thumb.style.transform = 'translateX(22px)';
             } else {
-                if (Notification.permission === 'granted') {
-                    toggle.checked = true;
-                    status.innerText = "✓ Activées";
-                    status.classList.remove('opacity-0');
-                } else if (Notification.permission === 'denied') {
-                    toggle.disabled = true;
-                    status.innerText = "✗ Bloquées dans le navigateur";
-                    status.classList.remove('opacity-0');
-                }
-
-                toggle.addEventListener('change', async function() {
-                    status.classList.remove('opacity-0');
-
-                    if (this.checked) {
-                        status.innerText = "⏳ Demande d'autorisation…";
-                        const output = await subscribeUser();
-                        if (output) {
-                            status.innerText = "✓ Notifications activées !";
-                        } else {
-                            status.innerText = "✗ Échec de l'activation";
-                            this.checked = false;
-                        }
-                    } else {
-                        await unsubscribeUser();
-                        status.innerText = "✓ Désactivées";
-                    }
-
-                    setTimeout(() => {
-                        if (Notification.permission === 'granted' && toggle.checked) {
-                            status.innerText = "✓ Activées";
-                        } else if (!toggle.checked) {
-                            status.classList.add('opacity-0');
-                        }
-                    }, 3000);
-                });
+                track.style.background = '#2c2c2e';
+                thumb.style.background = '#888';
+                thumb.style.transform = 'translateX(0)';
             }
+        }
 
-            async function subscribeUser() {
-                if (!('serviceWorker' in navigator)) {
-                    alert('Les notifications push ne sont pas supportées par votre navigateur.');
+        function setStatus(text, color, autohide) {
+            status.textContent = text || ' ';
+            status.style.color = color || 'var(--fg-3)';
+            status.style.opacity = text ? '1' : '0';
+            if (autohide) setTimeout(() => { status.style.opacity = '0'; }, 3000);
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        if (!publicKey) {
+            toggle.disabled = true;
+            setStatus('Configuration manquante (VAPID).', '#E89B8E');
+            return;
+        }
+
+        // État initial selon la permission navigateur
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                toggle.checked = true;
+                paint(true);
+                // Auto-sync : si la permission est déjà accordée, on POST silencieusement
+                // pour s'assurer que le serveur a bien notre souscription.
+                subscribeUser(true);
+            } else if (Notification.permission === 'denied') {
+                toggle.disabled = true;
+                setStatus('Bloquées dans iOS — Réglages → Notifications.', '#E89B8E');
+            } else {
+                paint(false);
+            }
+        }
+
+        toggle.addEventListener('change', async function() {
+            paint(this.checked);
+
+            if (this.checked) {
+                setStatus('⏳ Activation…');
+                const ok = await subscribeUser(false);
+                if (ok) {
+                    setStatus('✓ Activées', '#3DDC97', true);
+                } else {
+                    this.checked = false;
+                    paint(false);
+                    setStatus('✗ Échec', '#E89B8E', true);
+                }
+            } else {
+                await unsubscribeUser();
+                setStatus('Désactivées', null, true);
+            }
+        });
+
+        async function subscribeUser(silent) {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    if (!silent) alert('Permission refusée.');
                     return false;
                 }
 
-                try {
-                    const permission = await Notification.requestPermission();
-                    if (permission !== 'granted') {
-                        alert('Vous devez autoriser les notifications pour recevoir des alertes.');
-                        return false;
-                    }
-
-                    const reg = await navigator.serviceWorker.ready;
-
-                    let sub = await reg.pushManager.getSubscription();
-                    if (!sub) {
-                        sub = await reg.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(publicKey)
-                        });
-                    }
-
-                    const response = await fetch('{{ path("app_push_subscribe") }}', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(sub)
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicKey)
                     });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to save subscription');
-                    }
-
-                    return true;
-                } catch (e) {
-                    console.error('Subscription error:', e);
-                    alert('Erreur lors de l\'activation des notifications: ' + e.message);
-                    return false;
                 }
-            }
 
-            async function unsubscribeUser() {
-                if (!('serviceWorker' in navigator)) return;
+                const response = await fetch(subscribeUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
 
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    const sub = await reg.pushManager.getSubscription();
-
-                    if (sub) {
-                        await sub.unsubscribe();
-                    }
-                } catch (e) {
-                    console.error('Unsubscribe error:', e);
+                if (!response.ok) {
+                    const txt = await response.text();
+                    throw new Error('HTTP ' + response.status + ' — ' + txt.slice(0, 200));
                 }
+
+                return true;
+            } catch (e) {
+                console.error('subscribeUser error:', e);
+                if (!silent) alert('Erreur : ' + (e && e.message ? e.message : e));
+                return false;
             }
-        })();
+        }
+
+        async function unsubscribeUser() {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+            } catch (e) {
+                console.error('unsubscribeUser error:', e);
+            }
+        }
+    })();
     </script>
     {% endif %}
 
