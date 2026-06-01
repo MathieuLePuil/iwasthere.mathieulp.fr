@@ -4,36 +4,36 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\User;
-use App\Repository\PushSubscriptionRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
 
 class PushService
 {
+    private string $subsFile;
+
     public function __construct(
-        private readonly PushSubscriptionRepository $subscriptionRepo,
-        private readonly EntityManagerInterface $em,
+        string $projectDir,
         private readonly string $vapidPublicKey,
         private readonly string $vapidPrivateKey,
         private readonly string $vapidSubject,
-    ) {}
+    ) {
+        $this->subsFile = $projectDir . '/var/subscriptions.json';
+    }
 
     /**
-     * Sends a push notification to every active subscription owned by the user.
-     * Expired subscriptions are removed from the database automatically.
+     * Send a push notification to every stored subscription.
+     * Expired subscriptions are removed from the file.
      *
      * @return array{sent: int, failed: int}
      */
-    public function sendToUser(User $user, string $title, string $body, string $url = '/'): array
+    public function sendToAll(string $title, string $body, string $url = '/'): array
     {
         if (empty($this->vapidPublicKey) || empty($this->vapidPrivateKey)) {
             return ['sent' => 0, 'failed' => 0];
         }
 
-        $subscriptions = $this->subscriptionRepo->findByUser($user);
-        if (empty($subscriptions)) {
+        $subs = $this->getSubscriptions();
+        if (empty($subs)) {
             return ['sent' => 0, 'failed' => 0];
         }
 
@@ -51,23 +51,13 @@ class PushService
             'url' => $url,
         ]);
 
-        $entityByEndpoint = [];
-        foreach ($subscriptions as $sub) {
-            $entityByEndpoint[$sub->getEndpoint()] = $sub;
-            $webPush->queueNotification(
-                Subscription::create([
-                    'endpoint' => $sub->getEndpoint(),
-                    'keys' => [
-                        'p256dh' => $sub->getP256dh(),
-                        'auth' => $sub->getAuth(),
-                    ],
-                ]),
-                $payload,
-            );
+        foreach ($subs as $sub) {
+            $webPush->queueNotification(Subscription::create($sub), $payload);
         }
 
         $sent = 0;
         $failed = 0;
+        $expiredEndpoints = [];
 
         foreach ($webPush->flush() as $report) {
             if ($report->isSuccess()) {
@@ -75,17 +65,38 @@ class PushService
                 continue;
             }
             $failed++;
-
             if ($report->isSubscriptionExpired()) {
-                $endpoint = $report->getEndpoint();
-                if (isset($entityByEndpoint[$endpoint])) {
-                    $this->em->remove($entityByEndpoint[$endpoint]);
-                }
+                $expiredEndpoints[] = $report->getEndpoint();
             }
         }
 
-        $this->em->flush();
+        if ($expiredEndpoints) {
+            $remaining = array_values(array_filter(
+                $subs,
+                static fn (array $s) => !in_array($s['endpoint'] ?? '', $expiredEndpoints, true),
+            ));
+            @file_put_contents($this->subsFile, json_encode($remaining, JSON_PRETTY_PRINT));
+        }
 
         return ['sent' => $sent, 'failed' => $failed];
+    }
+
+    /**
+     * Backwards-compatible alias kept so existing controller calls keep working.
+     * Per the new design, every push goes to everyone.
+     */
+    public function sendToUser(mixed $user, string $title, string $body, string $url = '/'): array
+    {
+        return $this->sendToAll($title, $body, $url);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function getSubscriptions(): array
+    {
+        if (!file_exists($this->subsFile)) {
+            return [];
+        }
+        $data = json_decode((string) @file_get_contents($this->subsFile), true);
+        return is_array($data) ? $data : [];
     }
 }

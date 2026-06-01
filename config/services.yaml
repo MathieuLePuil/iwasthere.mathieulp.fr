@@ -29,12 +29,18 @@ services:
 
     App\Service\PushService:
         arguments:
+            $projectDir: '%kernel.project_dir%'
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
 
+    App\Command\SendTestNotificationCommand:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     App\Command\PushDiagnoseCommand:
         arguments:
+            $projectDir: '%kernel.project_dir%'
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'

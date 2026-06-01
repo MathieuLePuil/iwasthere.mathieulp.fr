@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Repository\PushSubscriptionRepository;
-use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,8 +19,7 @@ class PushDiagnoseCommand extends Command
 {
     public function __construct(
         private readonly RouterInterface $router,
-        private readonly Connection $db,
-        private readonly PushSubscriptionRepository $subRepo,
+        private readonly string $projectDir,
         private readonly string $vapidPublicKey,
         private readonly string $vapidPrivateKey,
         private readonly string $vapidSubject,
@@ -33,67 +30,71 @@ class PushDiagnoseCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-
         $io->title('Push notification diagnosis');
 
         // 1. Routes
         $io->section('Routes');
         $routes = $this->router->getRouteCollection();
-        $found = ['app_push_ping' => null, 'app_push_subscribe' => null];
-        foreach (array_keys($found) as $name) {
+        foreach (['app_push_ping', 'app_push_subscribe'] as $name) {
             $route = $routes->get($name);
-            $found[$name] = $route ? sprintf('%s %s', implode('|', $route->getMethods() ?: ['ANY']), $route->getPath()) : 'MISSING';
-        }
-        foreach ($found as $name => $info) {
-            $ok = $info !== 'MISSING';
-            $io->writeln(sprintf(' %s  %s : %s', $ok ? '<info>OK</info>' : '<error>KO</error>', $name, $info));
-        }
-        if (in_array('MISSING', $found, true)) {
-            $io->warning('Au moins une route manque. Exécute : bin/console cache:clear');
+            $info = $route
+                ? sprintf('%s %s', implode('|', $route->getMethods() ?: ['ANY']), $route->getPath())
+                : '<error>MISSING</error>';
+            $io->writeln(sprintf(' %s : %s', $name, $info));
         }
 
         // 2. VAPID
         $io->section('Clés VAPID');
-        $rows = [
-            ['VAPID_PUBLIC_KEY', $this->mask($this->vapidPublicKey)],
-            ['VAPID_PRIVATE_KEY', $this->mask($this->vapidPrivateKey)],
-            ['VAPID_SUBJECT', $this->vapidSubject ?: '(vide)'],
-        ];
-        $io->table(['Variable', 'Valeur'], $rows);
-        if (!$this->vapidPublicKey || !$this->vapidPrivateKey) {
-            $io->error('Clés VAPID manquantes ! Génère-les avec : bin/console app:generate-vapid-keys');
-        }
-
-        // 3. Table
-        $io->section('Table push_subscription');
-        try {
-            $schema = $this->db->createSchemaManager();
-            if (!$schema->tablesExist(['push_subscription'])) {
-                $io->error('La table push_subscription n\'existe pas. Exécute : bin/console doctrine:migrations:migrate');
-                return Command::FAILURE;
-            }
-            $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM push_subscription');
-            $io->writeln(sprintf(' Total des abonnements : <info>%d</info>', $total));
-        } catch (\Throwable $e) {
-            $io->error('Erreur DB : ' . $e->getMessage());
-            return Command::FAILURE;
-        }
-
-        // 4. Détail par user
-        $io->section('Abonnements par utilisateur');
-        $rows = $this->db->fetchAllAssociative(
-            'SELECT u.username, COUNT(ps.id) AS n
-             FROM `user` u
-             LEFT JOIN push_subscription ps ON ps.user_id = u.id
-             GROUP BY u.id, u.username
-             ORDER BY n DESC, u.username ASC'
+        $io->table(
+            ['Variable', 'Valeur'],
+            [
+                ['VAPID_PUBLIC_KEY', $this->mask($this->vapidPublicKey)],
+                ['VAPID_PRIVATE_KEY', $this->mask($this->vapidPrivateKey)],
+                ['VAPID_SUBJECT', $this->vapidSubject ?: '(vide)'],
+            ],
         );
-        $tbl = [];
-        foreach ($rows as $r) {
-            $tbl[] = ['@' . $r['username'], $r['n']];
+        if (!$this->vapidPublicKey || !$this->vapidPrivateKey) {
+            $io->error('Clés VAPID manquantes. Lance : bin/console app:generate-vapid-keys');
         }
-        if ($tbl) {
-            $io->table(['Username', 'Abonnements'], $tbl);
+
+        // 3. Fichier des souscriptions
+        $io->section('Souscriptions');
+        $file = $this->projectDir . '/var/subscriptions.json';
+        $dir = dirname($file);
+
+        $io->writeln(sprintf(' Fichier      : %s', $file));
+        $io->writeln(sprintf(' Dossier      : %s (existe=%s, writable=%s)',
+            $dir,
+            is_dir($dir) ? 'oui' : '<error>NON</error>',
+            is_writable($dir) ? 'oui' : '<error>NON</error>',
+        ));
+        $io->writeln(sprintf(' Fichier      : existe=%s, writable=%s',
+            file_exists($file) ? 'oui' : 'non',
+            file_exists($file) ? (is_writable($file) ? 'oui' : '<error>NON</error>') : 'n/a',
+        ));
+
+        $subs = [];
+        if (file_exists($file)) {
+            $subs = json_decode((string) @file_get_contents($file), true) ?? [];
+        }
+        $io->writeln(sprintf(' Souscriptions: <info>%d</info>', count($subs)));
+        foreach ($subs as $i => $sub) {
+            $host = parse_url((string)($sub['endpoint'] ?? ''), PHP_URL_HOST) ?: '(invalide)';
+            $io->writeln(sprintf('  #%d %s', $i + 1, $host));
+        }
+
+        // 4. Log
+        $io->section('Log debug push');
+        $log = $this->projectDir . '/var/push.log';
+        if (file_exists($log)) {
+            $io->writeln(' ' . $log);
+            $lines = @file($log) ?: [];
+            $tail = array_slice($lines, -8);
+            foreach ($tail as $line) {
+                $io->writeln('  ' . rtrim($line));
+            }
+        } else {
+            $io->writeln(' Aucun log encore (var/push.log absent).');
         }
 
         $io->success('Diagnostic terminé.');
