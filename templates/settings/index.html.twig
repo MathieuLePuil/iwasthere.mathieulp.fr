@@ -52,26 +52,24 @@
          data-push-prompt-public-key-value="{{ vapid_public_key }}"
          data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}">
         <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
-        <p class="text-xs mb-4" style="color: var(--fg-3)">
+        <p class="text-xs mb-3" style="color: var(--fg-3)">
             Reçois les alertes même quand l'app est fermée. Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
         </p>
-        <label class="flex items-center justify-between mb-4">
+        <label class="flex items-center justify-between mb-3">
             <span class="text-sm" style="color: var(--fg-2)">Notifications activées</span>
             <input type="checkbox"
                    data-push-prompt-target="checkbox"
                    class="w-5 h-5 rounded accent-[#3DDC97]"
                    disabled>
         </label>
+        <p data-push-prompt-target="status"
+           class="text-xs mb-3"
+           style="color: var(--fg-3)">Vérification…</p>
         <button data-push-prompt-target="btn"
                 data-action="click->push-prompt#enable"
                 class="btn-primary w-full py-3">
             Activer les notifications
         </button>
-        <p data-push-prompt-target="blockedMsg"
-           class="text-xs text-center mt-3 hidden"
-           style="color: var(--negative)">
-            Bloquées au niveau du système. Ouvre Réglages iPhone → Notifications → IWasThere et autorise.
-        </p>
     </div>
     {% endif %}
 

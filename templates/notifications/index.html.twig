@@ -21,7 +21,7 @@
          data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}"
          class="mb-5">
         <div data-push-prompt-target="wrapper"
-             class="card flex items-center gap-3"
+             class="card flex items-start gap-3"
              style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                  style="background: rgba(61,220,151,0.15)">
@@ -32,17 +32,14 @@
                 </svg>
             </div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push désactivées</p>
-                <p class="text-xs" style="color: var(--fg-3)">Active-les pour être prévenu en temps réel.</p>
-                <p data-push-prompt-target="blockedMsg"
-                   class="text-xs mt-1 hidden"
-                   style="color: var(--negative)">
-                    Bloquées au niveau du système. Réglages iPhone → Notifications → IWasThere.
-                </p>
+                <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push</p>
+                <p data-push-prompt-target="status"
+                   class="text-xs mt-0.5"
+                   style="color: var(--fg-3)">Vérification…</p>
             </div>
             <button data-push-prompt-target="btn"
                     data-action="click->push-prompt#enable"
-                    class="btn-primary text-xs py-1.5 px-3 shrink-0">
+                    class="btn-primary text-xs py-1.5 px-3 shrink-0 self-center">
                 Activer
             </button>
         </div>

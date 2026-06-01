@@ -3,7 +3,7 @@ import { Controller } from '@hotwired/stimulus';
 const LS_PROMPTED = 'iwt-push-prompted';
 
 export default class extends Controller {
-    static targets = ['checkbox', 'btn', 'blockedMsg', 'wrapper'];
+    static targets = ['checkbox', 'btn', 'status', 'wrapper'];
     static values = {
         publicKey: String,
         subscribeUrl: String,
@@ -11,12 +11,12 @@ export default class extends Controller {
     };
 
     connect() {
-        if (!this.#supported()) {
-            this.element.classList.add('hidden');
+        // Always update what's visible, even when push is not usable yet.
+        this.#refreshUi();
+
+        if (!this.#supported() || !this.#isInPwa()) {
             return;
         }
-
-        this.#refreshUi();
 
         if (this.autoValue
             && Notification.permission === 'default'
@@ -26,29 +26,57 @@ export default class extends Controller {
     }
 
     async enable() {
-        const perm = Notification.permission;
-
-        if (perm === 'denied') {
-            this.#showBlocked();
+        if (!('Notification' in window)) {
+            this.#setStatus('Cet appareil ne supporte pas les notifications push.', 'err');
             return;
         }
 
-        await this.#requestAndSubscribe();
-        this.#refreshUi();
+        if (this.#isIos() && !this.#isInPwa()) {
+            this.#setStatus(
+                'Ajoute d\'abord IWasThere à l\'écran d\'accueil (Partager → Sur l\'écran d\'accueil), puis ouvre l\'app depuis l\'icône.',
+                'warn',
+            );
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            this.#setStatus(
+                'Bloquées au niveau du système. Ouvre Réglages iPhone → Notifications → IWasThere.',
+                'err',
+            );
+            return;
+        }
+
+        try {
+            this.#setStatus('Demande d\'autorisation…');
+            const perm = await Notification.requestPermission();
+            localStorage.setItem(LS_PROMPTED, '1');
+
+            if (perm === 'denied') {
+                this.#setStatus(
+                    'Refusé. Tu peux réautoriser dans Réglages iPhone → Notifications → IWasThere.',
+                    'err',
+                );
+                this.#refreshUi();
+                return;
+            }
+            if (perm !== 'granted') {
+                this.#setStatus('Autorisation annulée.');
+                this.#refreshUi();
+                return;
+            }
+
+            this.#setStatus('Enregistrement de l\'abonnement…');
+            await this.#subscribe();
+            this.#setStatus('Notifications activées ✓', 'ok');
+            this.#refreshUi();
+        } catch (e) {
+            console.warn('Push enable failed:', e);
+            this.#setStatus('Erreur : ' + (e?.message || e), 'err');
+        }
     }
 
     // ── Internal ─────────────────────────────────────────────────────────────
-
-    async #requestAndSubscribe() {
-        try {
-            const perm = await Notification.requestPermission();
-            localStorage.setItem(LS_PROMPTED, '1');
-            if (perm !== 'granted') return;
-            await this.#subscribe();
-        } catch (e) {
-            console.warn('Push enable failed:', e);
-        }
-    }
 
     async #subscribe() {
         const reg = await navigator.serviceWorker.ready;
@@ -70,40 +98,70 @@ export default class extends Controller {
     }
 
     #refreshUi() {
-        const perm = Notification.permission;
+        const perm = ('Notification' in window) ? Notification.permission : null;
+        const supported = this.#supported();
+        const inPwa = this.#isInPwa();
         const granted = perm === 'granted';
-        const denied = perm === 'denied';
 
         if (this.hasCheckboxTarget) this.checkboxTarget.checked = granted;
 
-        if (this.hasBtnTarget) {
-            if (granted) {
-                this.btnTarget.classList.add('hidden');
-            } else {
-                this.btnTarget.classList.remove('hidden');
-                this.btnTarget.textContent = denied
-                    ? 'Bloquées — Réglages iPhone'
-                    : 'Activer les notifications';
-                this.btnTarget.disabled = denied;
-                this.btnTarget.style.opacity = denied ? '0.6' : '';
-            }
-        }
-
-        if (this.hasBlockedMsgTarget) {
-            this.blockedMsgTarget.classList.toggle('hidden', !denied);
-        }
-
+        // Wrapper visible if not granted (notifications-page banner uses it).
         if (this.hasWrapperTarget) {
             this.wrapperTarget.classList.toggle('hidden', granted);
         }
 
-        if (granted) this.#syncSubscription();
-    }
-
-    #showBlocked() {
-        if (this.hasBlockedMsgTarget) {
-            this.blockedMsgTarget.classList.remove('hidden');
+        // The button is always rendered; its label/state mirrors reality.
+        if (this.hasBtnTarget) {
+            const btn = this.btnTarget;
+            btn.disabled = false;
+            btn.style.opacity = '';
+            if (granted) {
+                btn.classList.add('hidden');
+            } else {
+                btn.classList.remove('hidden');
+                if (!supported) {
+                    btn.textContent = 'Non supporté sur cet appareil';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                } else if (this.#isIos() && !inPwa) {
+                    btn.textContent = 'Ajoute à l\'écran d\'accueil';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                } else if (perm === 'denied') {
+                    btn.textContent = 'Bloquées — Réglages iPhone';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                } else {
+                    btn.textContent = 'Activer les notifications';
+                }
+            }
         }
+
+        // Status line (when present) — explain the current situation.
+        if (this.hasStatusTarget) {
+            if (!supported) {
+                this.#setStatus(
+                    'Notifications non supportées sur cet appareil/navigateur.',
+                    'warn',
+                );
+            } else if (this.#isIos() && !inPwa) {
+                this.#setStatus(
+                    'Sur iOS, ouvre l\'app depuis l\'icône installée pour activer le push.',
+                    'warn',
+                );
+            } else if (perm === 'denied') {
+                this.#setStatus(
+                    'Bloquées. Réglages iPhone → Notifications → IWasThere → Autoriser.',
+                    'err',
+                );
+            } else if (perm === 'granted') {
+                this.#setStatus('Notifications activées ✓', 'ok');
+            } else {
+                this.#setStatus('Pas encore activées sur cet appareil.');
+            }
+        }
+
+        if (granted && supported) this.#syncSubscription();
     }
 
     async #syncSubscription() {
@@ -127,6 +185,7 @@ export default class extends Controller {
 
     #openOverlay() {
         if (document.getElementById('iwt-push-overlay')) return;
+        if (!this.#supported() || !this.#isInPwa()) return;
 
         const overlay = document.createElement('div');
         overlay.id = 'iwt-push-overlay';
@@ -179,8 +238,7 @@ export default class extends Controller {
 
         overlay.querySelector('#iwt-push-accept').addEventListener('click', async () => {
             overlay.remove();
-            await this.#requestAndSubscribe();
-            this.#refreshUi();
+            await this.enable();
         });
         overlay.querySelector('#iwt-push-later').addEventListener('click', () => {
             localStorage.setItem(LS_PROMPTED, '1');
@@ -188,10 +246,37 @@ export default class extends Controller {
         });
     }
 
+    #setStatus(text, kind = '') {
+        if (!this.hasStatusTarget) return;
+        const colors = {
+            ok: 'var(--positive, #3DDC97)',
+            err: 'var(--negative, #E89B8E)',
+            warn: '#FBBF24',
+            '': 'var(--fg-3, #9aa0a6)',
+        };
+        this.statusTarget.textContent = text;
+        this.statusTarget.style.color = colors[kind] ?? colors[''];
+    }
+
     #supported() {
         return 'Notification' in window
             && 'serviceWorker' in navigator
             && 'PushManager' in window;
+    }
+
+    #isIos() {
+        const ua = navigator.userAgent || '';
+        return /iP(hone|ad|od)/.test(ua)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    #isInPwa() {
+        if (typeof window.matchMedia === 'function'
+            && window.matchMedia('(display-mode: standalone)').matches) {
+            return true;
+        }
+        // iOS-specific flag
+        return navigator.standalone === true;
     }
 
     #b64(s) {
