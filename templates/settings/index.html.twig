@@ -45,7 +45,7 @@
         </form>
     </div>
 
-    {# ── Push notifications section (tout en CSS inline, indépendant de Tailwind) ── #}
+    {# ── Push notifications section ── #}
     {% if vapid_public_key %}
     <div class="card">
         <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
@@ -56,10 +56,6 @@
         <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
             <div style="flex:1; min-width:0;">
                 <div style="font-size:.875rem; font-weight:500; color:var(--fg-1)">Activer les notifications</div>
-                <div id="notif-status"
-                     style="font-size:.75rem; margin-top:.25rem; opacity:0; transition:opacity .2s; color:var(--fg-3)">
-                    &nbsp;
-                </div>
             </div>
             <label style="position:relative; display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0;">
                 <input type="checkbox" id="notif-toggle"
@@ -81,7 +77,6 @@
         const toggle = document.getElementById('notif-toggle');
         const track = document.getElementById('notif-track');
         const thumb = document.getElementById('notif-thumb');
-        const status = document.getElementById('notif-status');
         const publicKey = "{{ vapid_public_key|default('') }}";
         const subscribeUrl = "{{ path('app_subscribe') }}";
 
@@ -106,123 +101,57 @@
             }
         }
 
-        function setStatus(text, color, autohide) {
-            status.textContent = text || ' ';
-            status.style.color = color || 'var(--fg-3)';
-            status.style.opacity = text ? '1' : '0';
-            if (autohide) setTimeout(() => { status.style.opacity = '0'; }, 3000);
-        }
-
-        // Timeout helper — empêche toute promesse de hang infiniment.
-        function withTimeout(promise, ms, label) {
-            return new Promise((resolve, reject) => {
-                const t = setTimeout(
-                    () => reject(new Error('Timeout ' + label + ' (' + ms + 'ms)')),
-                    ms
-                );
-                Promise.resolve(promise).then(
-                    v => { clearTimeout(t); resolve(v); },
-                    e => { clearTimeout(t); reject(e); }
-                );
-            });
-        }
-
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
 
         if (!publicKey) {
             toggle.disabled = true;
-            setStatus('Configuration manquante (VAPID).', '#E89B8E');
-            return;
-        }
-
-        // État initial selon la permission navigateur — VISUEL UNIQUEMENT.
-        // Pas d'auto-sync : on attend l'action utilisateur sur le toggle pour éviter tout hang silencieux.
-        if ('Notification' in window) {
+        } else {
             if (Notification.permission === 'granted') {
                 toggle.checked = true;
                 paint(true);
-                setStatus('✓ Activées sur cet appareil', '#3DDC97', true);
             } else if (Notification.permission === 'denied') {
                 toggle.disabled = true;
-                setStatus('Bloquées dans iOS — Réglages → Notifications.', '#E89B8E');
-            } else {
-                paint(false);
             }
+
+            toggle.addEventListener('change', async function() {
+                paint(this.checked);
+                if (this.checked) {
+                    const ok = await subscribeUser();
+                    if (!ok) {
+                        this.checked = false;
+                        paint(false);
+                    }
+                } else {
+                    await unsubscribeUser();
+                }
+            });
         }
 
-        toggle.addEventListener('change', async function() {
-            paint(this.checked);
-
-            if (this.checked) {
-                const ok = await subscribeUser();
-                if (ok) {
-                    setStatus('✓ Activées', '#3DDC97', true);
-                } else {
-                    this.checked = false;
-                    paint(false);
-                    // setStatus déjà appelé par subscribeUser avec l'erreur précise
-                }
-            } else {
-                await unsubscribeUser();
-                setStatus('Désactivées', null, true);
-            }
-        });
-
         async function subscribeUser() {
+            if (!('serviceWorker' in navigator)) return false;
             try {
-                setStatus('⏳ 1/5 Permission…');
-                const permission = await withTimeout(
-                    Notification.requestPermission(),
-                    30000, 'permission'
-                );
-                if (permission !== 'granted') {
-                    setStatus('✗ Permission ' + permission, '#E89B8E', true);
-                    return false;
-                }
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return false;
 
-                setStatus('⏳ 2/5 Service Worker…');
-                const reg = await withTimeout(
-                    navigator.serviceWorker.ready,
-                    10000, 'sw.ready'
-                );
-
-                setStatus('⏳ 3/5 Nettoyage…');
-                const existing = await reg.pushManager.getSubscription();
-                if (existing) {
-                    try { await withTimeout(existing.unsubscribe(), 5000, 'unsub'); } catch (_) {}
-                }
-
-                setStatus('⏳ 4/5 Souscription push…');
-                const sub = await withTimeout(
-                    reg.pushManager.subscribe({
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(publicKey)
-                    }),
-                    15000, 'pushManager.subscribe'
-                );
-
-                setStatus('⏳ 5/5 Envoi serveur…');
-                const response = await withTimeout(
-                    fetch(subscribeUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sub)
-                    }),
-                    10000, 'fetch'
-                );
-
-                if (!response.ok) {
-                    const txt = await response.text();
-                    throw new Error('HTTP ' + response.status + ' — ' + txt.slice(0, 200));
+                    });
                 }
-                return true;
 
+                const response = await fetch(subscribeUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+                return response.ok;
             } catch (e) {
                 console.error('subscribeUser error:', e);
-                const msg = (e && e.message) ? e.message : String(e);
-                setStatus('✗ ' + msg, '#E89B8E');
                 return false;
             }
         }
