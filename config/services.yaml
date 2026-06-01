@@ -27,12 +27,8 @@ services:
         arguments:
             $apiKey: '%setlistfm_api_key%'
 
-    App\Service\WebPushService:
+    App\Service\PushService:
         arguments:
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
-
-    App\Controller\PushController:
-        arguments:
-            $vapidPublicKey: '%vapid_public_key%'

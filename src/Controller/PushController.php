@@ -14,52 +14,33 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
-#[Route('/push')]
 class PushController extends AbstractController
 {
-    public function __construct(private readonly string $vapidPublicKey) {}
-
-    #[Route('/subscribe', name: 'app_push_subscribe', methods: ['POST'])]
-    public function subscribe(Request $request, EntityManagerInterface $em, PushSubscriptionRepository $repo): JsonResponse
-    {
+    #[Route('/push/subscribe', name: 'app_push_subscribe', methods: ['POST'])]
+    public function subscribe(
+        Request $request,
+        EntityManagerInterface $em,
+        PushSubscriptionRepository $repo,
+    ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        $endpoint = $data['endpoint'] ?? '';
-        $p256dh = $data['keys']['p256dh'] ?? '';
-        $auth = $data['keys']['auth'] ?? '';
+        $endpoint = $data['endpoint'] ?? null;
+        $p256dh = $data['keys']['p256dh'] ?? null;
+        $auth = $data['keys']['auth'] ?? null;
 
         if (!$endpoint || !$p256dh || !$auth) {
-            return $this->json(['error' => 'Invalid subscription data'], 400);
+            return $this->json(['status' => 'error', 'message' => 'Invalid subscription'], 400);
         }
 
-        $existing = $repo->findByEndpoint($endpoint);
-        if (!$existing) {
-            $sub = new PushSubscription();
-            $sub->setUser($this->getUser())
-                ->setEndpoint($endpoint)
-                ->setP256dh($p256dh)
-                ->setAuth($auth);
-            $em->persist($sub);
-            $em->flush();
-        }
+        $sub = $repo->findByEndpoint($endpoint) ?? new PushSubscription();
+        $sub->setUser($this->getUser())
+            ->setEndpoint($endpoint)
+            ->setP256dh($p256dh)
+            ->setAuth($auth);
 
-        return $this->json(['success' => true]);
-    }
+        $em->persist($sub);
+        $em->flush();
 
-    #[Route('/unsubscribe', name: 'app_push_unsubscribe', methods: ['POST'])]
-    public function unsubscribe(Request $request, EntityManagerInterface $em, PushSubscriptionRepository $repo): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $endpoint = $data['endpoint'] ?? '';
-
-        if ($endpoint) {
-            $sub = $repo->findByEndpoint($endpoint);
-            if ($sub && $sub->getUser() === $this->getUser()) {
-                $em->remove($sub);
-                $em->flush();
-            }
-        }
-
-        return $this->json(['success' => true]);
+        return $this->json(['status' => 'success']);
     }
 }

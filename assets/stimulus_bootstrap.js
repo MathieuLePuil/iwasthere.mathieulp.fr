@@ -10,8 +10,7 @@ import SportParticipantsController from './controllers/sport_participants_contro
 import UsernameCheckController from './controllers/username_check_controller.js';
 import EventFriendsController from './controllers/event_friends_controller.js';
 import NotificationBadgeController from './controllers/notification_badge_controller.js';
-import PushNotificationController from './controllers/push_notification_controller.js';
-import PushSettingsController from './controllers/push_settings_controller.js';
+import PushPromptController from './controllers/push_prompt_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -25,5 +24,4 @@ app.register('sport-participants', SportParticipantsController);
 app.register('username-check', UsernameCheckController);
 app.register('event-friends', EventFriendsController);
 app.register('notification-badge', NotificationBadgeController);
-app.register('push-notification', PushNotificationController);
-app.register('push-settings', PushSettingsController);
+app.register('push-prompt', PushPromptController);

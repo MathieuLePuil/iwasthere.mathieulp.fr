@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: PushSubscriptionRepository::class)]
+#[ORM\Table(name: 'push_subscription')]
+#[ORM\UniqueConstraint(name: 'uq_push_subscription_endpoint', columns: ['endpoint'])]
 class PushSubscription
 {
     #[ORM\Id]
@@ -21,10 +23,10 @@ class PushSubscription
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    #[ORM\Column(type: 'text')]
+    #[ORM\Column(length: 500)]
     private string $endpoint;
 
-    #[ORM\Column(length: 512)]
+    #[ORM\Column(length: 255)]
     private string $p256dh;
 
     #[ORM\Column(length: 255)]

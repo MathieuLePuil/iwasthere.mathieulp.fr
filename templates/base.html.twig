@@ -175,75 +175,13 @@
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     </script>
-    {% if vapid_public_key is defined and vapid_public_key %}
-    <script>
-        (function() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
-            const vapidKey = {{ vapid_public_key|json_encode|raw }};
-
-            function urlBase64ToUint8Array(b64) {
-                const pad = '='.repeat((4 - (b64.length % 4)) % 4);
-                const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-                const raw = atob(base64);
-                return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-            }
-
-            const LS_KEY = 'iwtVapidKey';
-
-            async function subscribePush() {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    // Always unsubscribe first — required when VAPID key changed
-                    const old = await reg.pushManager.getSubscription();
-                    if (old) await old.unsubscribe();
-                    const sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-                    });
-                    const resp = await fetch('/push/subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sub.toJSON()),
-                    });
-                    if (resp.ok) localStorage.setItem(LS_KEY, vapidKey);
-                } catch (e) {
-                    console.warn('Push subscription failed:', e);
-                }
-            }
-
-            // Prompt automatique à l'inscription (flash push_prompt)
-            {% if app.flashes('push_prompt')|length > 0 %}
-            window.addEventListener('load', async function() {
-                if (Notification.permission === 'default') {
-                    const perm = await Notification.requestPermission();
-                    if (perm === 'granted') await subscribePush();
-                }
-            });
-            {% endif %}
-
-            // On every page load: sync subscription, forcing re-subscribe if VAPID key changed
-            if (Notification.permission === 'granted') {
-                navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
-                    const storedKey = localStorage.getItem(LS_KEY);
-                    if (sub && storedKey === vapidKey) {
-                        // Key matches — just sync to server (idempotent upsert)
-                        fetch('/push/subscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(sub.toJSON()),
-                        }).catch(() => {});
-                    } else {
-                        // No subscription, or VAPID key changed — force fresh subscribe
-                        subscribePush();
-                    }
-                }).catch(() => {});
-            }
-
-            // Expose pour le contrôleur Stimulus
-            window._iwtSubscribePush = subscribePush;
-        })();
-    </script>
+    {% if app.user and vapid_public_key %}
+    {# Auto-open push permission popup if the browser has never been asked #}
+    <div data-controller="push-prompt"
+         data-push-prompt-public-key-value="{{ vapid_public_key }}"
+         data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}"
+         data-push-prompt-auto-value="true"></div>
     {% endif %}
     </body>
 </html>

@@ -7,7 +7,7 @@ namespace App\Controller;
 use App\Entity\Friend;
 use App\Entity\Notification;
 use App\Repository\NotificationRepository;
-use App\Service\WebPushService;
+use App\Service\PushService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -74,7 +74,7 @@ class NotificationsController extends AbstractController
         Friend $friend,
         EntityManagerInterface $em,
         NotificationRepository $notifRepo,
-        WebPushService $push,
+        PushService $push,
         Request $request,
     ): Response {
         $user = $this->getUser();
@@ -99,12 +99,11 @@ class NotificationsController extends AbstractController
 
         $em->flush();
 
-        // Push notification to the requester
         $push->sendToUser(
             $friend->getOwner(),
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            '/profile/' . $user->getUsername()
+            '/profile/' . $user->getUsername(),
         );
 
         $this->addFlash('success', 'Demande d\'ami acceptée !');

@@ -11,7 +11,7 @@ use App\Repository\EventParticipationRepository;
 use App\Repository\FriendRepository;
 use App\Repository\UserRepository;
 use App\Service\AvatarService;
-use App\Service\WebPushService;
+use App\Service\PushService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -96,7 +96,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/add/{id}', name: 'app_friend_add', methods: ['POST'])]
-    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, WebPushService $push): Response
+    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, PushService $push): Response
     {
         $user = $this->getUser();
 
@@ -133,13 +133,12 @@ class ProfileController extends AbstractController
         $em->persist($notif);
         $em->flush();
 
-        // Push notification
         if ($targetUser->isNotifFriendRequestEnabled()) {
             $push->sendToUser(
                 $targetUser,
                 'Nouvelle demande d\'ami',
                 '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
-                '/notifications'
+                '/notifications',
             );
         }
 
@@ -175,7 +174,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/accept/{id}', name: 'app_friend_accept', methods: ['POST'])]
-    public function acceptFriend(Friend $friend, EntityManagerInterface $em, WebPushService $push): Response
+    public function acceptFriend(Friend $friend, EntityManagerInterface $em, PushService $push): Response
     {
         $user = $this->getUser();
         if ($friend->getFriendUser() !== $user) {
@@ -191,12 +190,11 @@ class ProfileController extends AbstractController
         $em->persist($notif);
         $em->flush();
 
-        // Push notification to the requester
         $push->sendToUser(
             $friend->getOwner(),
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            '/profile/' . $user->getUsername()
+            '/profile/' . $user->getUsername(),
         );
 
         $this->addFlash('success', 'Ami ajouté !');
