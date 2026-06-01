@@ -15,6 +15,40 @@
         {% endif %}
     </div>
 
+    {% if vapid_public_key %}
+    <div data-controller="push-prompt"
+         data-push-prompt-public-key-value="{{ vapid_public_key }}"
+         data-push-prompt-subscribe-url-value="{{ path('app_push_subscribe') }}"
+         class="mb-5">
+        <div data-push-prompt-target="wrapper"
+             class="card flex items-center gap-3"
+             style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                 style="background: rgba(61,220,151,0.15)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="#3DDC97" stroke-width="1.6"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push désactivées</p>
+                <p class="text-xs" style="color: var(--fg-3)">Active-les pour être prévenu en temps réel.</p>
+                <p data-push-prompt-target="blockedMsg"
+                   class="text-xs mt-1 hidden"
+                   style="color: var(--negative)">
+                    Bloquées au niveau du système. Réglages iPhone → Notifications → IWasThere.
+                </p>
+            </div>
+            <button data-push-prompt-target="btn"
+                    data-action="click->push-prompt#enable"
+                    class="btn-primary text-xs py-1.5 px-3 shrink-0">
+                Activer
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     {% if notifications|length == 0 %}
         <div class="flex flex-col items-center justify-center py-16 text-center">
             <div class="text-6xl mb-4">🔔</div>

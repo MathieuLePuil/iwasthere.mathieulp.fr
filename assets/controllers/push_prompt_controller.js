@@ -3,7 +3,7 @@ import { Controller } from '@hotwired/stimulus';
 const LS_PROMPTED = 'iwt-push-prompted';
 
 export default class extends Controller {
-    static targets = ['checkbox', 'btn', 'blockedMsg'];
+    static targets = ['checkbox', 'btn', 'blockedMsg', 'wrapper'];
     static values = {
         publicKey: String,
         subscribeUrl: String,
@@ -18,13 +18,21 @@ export default class extends Controller {
 
         this.#refreshUi();
 
-        // Auto-prompt only once per device, only if permission is still "default"
-        if (this.autoValue && Notification.permission === 'default' && !localStorage.getItem(LS_PROMPTED)) {
-            this.#openOverlay();
+        if (this.autoValue
+            && Notification.permission === 'default'
+            && !localStorage.getItem(LS_PROMPTED)) {
+            setTimeout(() => this.#openOverlay(), 250);
         }
     }
 
     async enable() {
+        const perm = Notification.permission;
+
+        if (perm === 'denied') {
+            this.#showBlocked();
+            return;
+        }
+
         await this.#requestAndSubscribe();
         this.#refreshUi();
     }
@@ -64,19 +72,37 @@ export default class extends Controller {
     #refreshUi() {
         const perm = Notification.permission;
         const granted = perm === 'granted';
+        const denied = perm === 'denied';
 
         if (this.hasCheckboxTarget) this.checkboxTarget.checked = granted;
 
         if (this.hasBtnTarget) {
-            this.btnTarget.classList.toggle('hidden', granted || perm === 'denied');
-        }
-        if (this.hasBlockedMsgTarget) {
-            this.hasBlockedMsgTarget && this.blockedMsgTarget.classList.toggle('hidden', perm !== 'denied');
+            if (granted) {
+                this.btnTarget.classList.add('hidden');
+            } else {
+                this.btnTarget.classList.remove('hidden');
+                this.btnTarget.textContent = denied
+                    ? 'Bloquées — Réglages iPhone'
+                    : 'Activer les notifications';
+                this.btnTarget.disabled = denied;
+                this.btnTarget.style.opacity = denied ? '0.6' : '';
+            }
         }
 
-        // If granted, make sure the server has our subscription (idempotent re-sync).
-        if (granted) {
-            this.#syncSubscription();
+        if (this.hasBlockedMsgTarget) {
+            this.blockedMsgTarget.classList.toggle('hidden', !denied);
+        }
+
+        if (this.hasWrapperTarget) {
+            this.wrapperTarget.classList.toggle('hidden', granted);
+        }
+
+        if (granted) this.#syncSubscription();
+    }
+
+    #showBlocked() {
+        if (this.hasBlockedMsgTarget) {
+            this.blockedMsgTarget.classList.remove('hidden');
         }
     }
 
