@@ -45,72 +45,149 @@
         </form>
     </div>
 
-    {# ── Push notifications section ── #}
+    {# ── Push notifications section (copie myrenault) ── #}
     {% if vapid_public_key %}
     <div class="card">
         <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
-        <p class="text-xs mb-3" style="color: var(--fg-3)">
-            Reçois les alertes même quand l'app est fermée. Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
-        </p>
-        <label class="flex items-center justify-between mb-3">
-            <span class="text-sm" style="color: var(--fg-2)">Notifications activées</span>
-            <input type="checkbox" id="iwt-push-checkbox"
-                   class="w-5 h-5 rounded accent-[#3DDC97]" disabled>
-        </label>
-        <button id="iwt-push-btn" class="btn-primary w-full py-3">
-            Activer les notifications
-        </button>
+        <div class="flex items-center justify-between mt-2">
+            <div>
+                <div class="text-sm font-medium" style="color: var(--fg-1)">Activer les notifications</div>
+                <div id="notif-status" class="text-xs mt-1 opacity-0 transition-opacity" style="color: var(--fg-3)">En attente…</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="notif-toggle" class="sr-only peer">
+                <div class="w-12 h-6 bg-[#2c2c2e] peer-focus:outline-none rounded-full peer
+                            peer-checked:after:translate-x-full peer-checked:after:border-white
+                            after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                            after:bg-gray-500 after:border-gray-500 after:border after:rounded-full
+                            after:h-5 after:w-5 after:transition-all
+                            peer-checked:bg-[#3DDC97]/20 peer-checked:after:bg-[#3DDC97]
+                            peer-checked:after:border-[#3DDC97]"></div>
+            </label>
+        </div>
     </div>
+
     <script data-turbo-eval="false">
-    (function() {
-        const btn = document.getElementById('iwt-push-btn');
-        const checkbox = document.getElementById('iwt-push-checkbox');
-        const publicKey = "{{ vapid_public_key }}";
-        const subscribeUrl = "{{ path('app_push_subscribe') }}";
+        (function() {
+            const toggle = document.getElementById('notif-toggle');
+            const status = document.getElementById('notif-status');
+            const publicKey = "{{ vapid_public_key|default('') }}";
 
-        function urlBase64ToUint8Array(b64) {
-            const pad = '='.repeat((4 - b64.length % 4) % 4);
-            const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-            const raw = atob(base64);
-            return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-        }
+            function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding)
+                    .replace(/\-/g, '+')
+                    .replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
 
-        if ('Notification' in window && Notification.permission === 'granted') {
-            checkbox.checked = true;
-            btn.style.display = 'none';
-        }
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
 
-        btn.addEventListener('click', async function() {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') return;
-
-                const reg = await navigator.serviceWorker.ready;
-                let sub = await reg.pushManager.getSubscription();
-                if (sub) await sub.unsubscribe();
-                sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(publicKey)
-                });
-
-                const resp = await fetch(subscribeUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(sub.toJSON())
-                });
-                if (!resp.ok) {
-                    const text = await resp.text();
-                    throw new Error('Serveur ' + resp.status + ' — ' + text.slice(0, 200));
+            if (!publicKey) {
+                toggle.disabled = true;
+                status.innerText = "Non disponible (Clé VAPID manquante)";
+                status.classList.remove('opacity-0');
+            } else {
+                if (Notification.permission === 'granted') {
+                    toggle.checked = true;
+                    status.innerText = "✓ Activées";
+                    status.classList.remove('opacity-0');
+                } else if (Notification.permission === 'denied') {
+                    toggle.disabled = true;
+                    status.innerText = "✗ Bloquées dans le navigateur";
+                    status.classList.remove('opacity-0');
                 }
 
-                checkbox.checked = true;
-                btn.style.display = 'none';
-            } catch (e) {
-                alert('Erreur : ' + (e && e.message ? e.message : e));
+                toggle.addEventListener('change', async function() {
+                    status.classList.remove('opacity-0');
+
+                    if (this.checked) {
+                        status.innerText = "⏳ Demande d'autorisation…";
+                        const output = await subscribeUser();
+                        if (output) {
+                            status.innerText = "✓ Notifications activées !";
+                        } else {
+                            status.innerText = "✗ Échec de l'activation";
+                            this.checked = false;
+                        }
+                    } else {
+                        await unsubscribeUser();
+                        status.innerText = "✓ Désactivées";
+                    }
+
+                    setTimeout(() => {
+                        if (Notification.permission === 'granted' && toggle.checked) {
+                            status.innerText = "✓ Activées";
+                        } else if (!toggle.checked) {
+                            status.classList.add('opacity-0');
+                        }
+                    }, 3000);
+                });
             }
-        });
-    })();
+
+            async function subscribeUser() {
+                if (!('serviceWorker' in navigator)) {
+                    alert('Les notifications push ne sont pas supportées par votre navigateur.');
+                    return false;
+                }
+
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        alert('Vous devez autoriser les notifications pour recevoir des alertes.');
+                        return false;
+                    }
+
+                    const reg = await navigator.serviceWorker.ready;
+
+                    let sub = await reg.pushManager.getSubscription();
+                    if (!sub) {
+                        sub = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(publicKey)
+                        });
+                    }
+
+                    const response = await fetch('{{ path("app_push_subscribe") }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(sub)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save subscription');
+                    }
+
+                    return true;
+                } catch (e) {
+                    console.error('Subscription error:', e);
+                    alert('Erreur lors de l\'activation des notifications: ' + e.message);
+                    return false;
+                }
+            }
+
+            async function unsubscribeUser() {
+                if (!('serviceWorker' in navigator)) return;
+
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const sub = await reg.pushManager.getSubscription();
+
+                    if (sub) {
+                        await sub.unsubscribe();
+                    }
+                } catch (e) {
+                    console.error('Unsubscribe error:', e);
+                }
+            }
+        })();
     </script>
     {% endif %}
 
