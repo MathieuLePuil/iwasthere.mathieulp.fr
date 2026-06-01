@@ -32,3 +32,9 @@ services:
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
+
+    App\Command\PushDiagnoseCommand:
+        arguments:
+            $vapidPublicKey: '%vapid_public_key%'
+            $vapidPrivateKey: '%vapid_private_key%'
+            $vapidSubject: '%vapid_subject%'

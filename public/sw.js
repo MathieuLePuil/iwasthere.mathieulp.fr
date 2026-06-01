@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iwt-v2';
+const CACHE_NAME = 'iwt-v3';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
