@@ -93,12 +93,16 @@
                     applicationServerKey: urlBase64ToUint8Array(publicKey)
                 });
 
-                await fetch(subscribeUrl, {
+                const resp = await fetch(subscribeUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
                     body: JSON.stringify(sub.toJSON())
                 });
+                if (!resp.ok) {
+                    const text = await resp.text();
+                    throw new Error('Serveur ' + resp.status + ' — ' + text.slice(0, 200));
+                }
 
                 checkbox.checked = true;
                 btn.style.display = 'none';
