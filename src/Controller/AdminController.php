@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\AuditLog;
 use App\Entity\Event;
+use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Entity\Venue;
 use App\Repository\AuditLogRepository;
@@ -86,6 +87,36 @@ class AdminController extends AbstractController
         ]);
     }
 
+    #[Route('/users/{id}/edit', name: 'app_admin_user_edit', methods: ['GET', 'POST'])]
+    public function editUser(User $user, Request $request): Response
+    {
+        if ($request->isMethod('POST')) {
+            $old = ['email' => $user->getEmail(), 'role' => $user->getRole(), 'displayName' => $user->getDisplayName()];
+
+            $user->setDisplayName((string) $request->request->get('display_name', $user->getDisplayName()));
+            $user->setEmail((string) $request->request->get('email', $user->getEmail()));
+            $user->setBio($request->request->get('bio') ?: null);
+            $user->setRole((string) $request->request->get('role', $user->getRole()));
+
+            if ($old['email'] !== $user->getEmail()) {
+                $this->logAction('update', 'User', (string) $user->getId(), 'email', $old['email'], $user->getEmail());
+            }
+            if ($old['role'] !== $user->getRole()) {
+                $this->logAction('update', 'User', (string) $user->getId(), 'role', $old['role'], $user->getRole());
+            }
+            if ($old['displayName'] !== $user->getDisplayName()) {
+                $this->logAction('update', 'User', (string) $user->getId(), 'displayName', $old['displayName'], $user->getDisplayName());
+            }
+
+            $this->em->flush();
+            $this->addFlash('success', 'Utilisateur mis à jour.');
+
+            return $this->redirectToRoute('app_admin_user_show', ['id' => $user->getId()]);
+        }
+
+        return $this->render('admin/user_edit.html.twig', ['profile_user' => $user]);
+    }
+
     #[Route('/users/{id}/delete', name: 'app_admin_user_delete', methods: ['POST'])]
     public function deleteUser(User $user): Response
     {
@@ -113,6 +144,66 @@ class AdminController extends AbstractController
             : $eventRepo->findBy([], ['createdAt' => 'DESC'], 50);
 
         return $this->render('admin/events.html.twig', ['events' => $events, 'q' => $q]);
+    }
+
+    #[Route('/events/{id}', name: 'app_admin_event_show')]
+    public function eventShow(Event $event, EventParticipationRepository $partRepo): Response
+    {
+        return $this->render('admin/event_show.html.twig', [
+            'event' => $event,
+            'participations' => $partRepo->findByEvent($event),
+        ]);
+    }
+
+    #[Route('/events/{id}/edit', name: 'app_admin_event_edit', methods: ['GET', 'POST'])]
+    public function editEvent(Event $event, Request $request, VenueRepository $venueRepo): Response
+    {
+        if ($request->isMethod('POST')) {
+            $old = $event->getArtistName() ?? $event->getTournamentName();
+
+            $dateStr = $request->request->get('date');
+            if ($dateStr) {
+                $event->setDate(new \DateTimeImmutable($dateStr));
+            }
+            $event->setArtistName($request->request->get('artist_name') ?: null);
+            $event->setTournamentName($request->request->get('tournament_name') ?: null);
+            $event->setTeams($request->request->get('teams') ?: null);
+            $event->setType((string) $request->request->get('type', $event->getType()));
+
+            $venueId = $request->request->get('venue_id');
+            if ($venueId) {
+                $venue = $venueRepo->find($venueId);
+                $event->setVenue($venue);
+            } else {
+                $event->setVenue(null);
+            }
+
+            $event->setUpdatedAt(new \DateTime());
+            $this->logAction('update', 'Event', (string) $event->getId(), null, $old, $event->getArtistName() ?? $event->getTournamentName());
+            $this->em->flush();
+            $this->addFlash('success', 'Événement mis à jour.');
+
+            return $this->redirectToRoute('app_admin_event_show', ['id' => $event->getId()]);
+        }
+
+        return $this->render('admin/event_edit.html.twig', [
+            'event' => $event,
+            'venues' => $venueRepo->findBy([], ['name' => 'ASC']),
+        ]);
+    }
+
+    #[Route('/events/{id}/participations/{pid}/delete', name: 'app_admin_participation_delete', methods: ['POST'])]
+    public function deleteParticipation(Event $event, string $pid, EventParticipationRepository $partRepo): Response
+    {
+        $participation = $partRepo->find($pid);
+        if ($participation && $participation->getEvent()->getId()->equals($event->getId())) {
+            $this->logAction('delete', 'EventParticipation', $pid);
+            $this->em->remove($participation);
+            $this->em->flush();
+            $this->addFlash('success', 'Participation supprimée.');
+        }
+
+        return $this->redirectToRoute('app_admin_event_show', ['id' => $event->getId()]);
     }
 
     #[Route('/events/{id}/setlist/force-import', name: 'app_admin_event_setlist_import', methods: ['POST'])]
@@ -155,6 +246,32 @@ class AdminController extends AbstractController
             : $venueRepo->findBy([], ['name' => 'ASC'], 50);
 
         return $this->render('admin/venues.html.twig', ['venues' => $venues, 'q' => $q]);
+    }
+
+    #[Route('/venues/{id}/edit', name: 'app_admin_venue_edit', methods: ['GET', 'POST'])]
+    public function editVenue(Venue $venue, Request $request): Response
+    {
+        if ($request->isMethod('POST')) {
+            $old = $venue->getName();
+
+            $venue->setName((string) $request->request->get('name', $venue->getName()));
+            $venue->setAddress((string) $request->request->get('address', $venue->getAddress()));
+            $venue->setCity((string) $request->request->get('city', $venue->getCity()));
+            $venue->setCountry((string) $request->request->get('country', $venue->getCountry()));
+            $venue->setLatitude((float) $request->request->get('latitude', $venue->getLatitude()));
+            $venue->setLongitude((float) $request->request->get('longitude', $venue->getLongitude()));
+            $venue->setCapacity($request->request->get('capacity') !== '' ? (int) $request->request->get('capacity') : null);
+            $venue->setVenueType($request->request->get('venue_type') ?: null);
+            $venue->setUpdatedAt(new \DateTime());
+
+            $this->logAction('update', 'Venue', (string) $venue->getId(), 'name', $old, $venue->getName());
+            $this->em->flush();
+            $this->addFlash('success', 'Lieu mis à jour.');
+
+            return $this->redirectToRoute('app_admin_venues');
+        }
+
+        return $this->render('admin/venue_edit.html.twig', ['venue' => $venue]);
     }
 
     #[Route('/venues/{id}/delete', name: 'app_admin_venue_delete', methods: ['POST'])]

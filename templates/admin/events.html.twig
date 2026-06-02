@@ -62,10 +62,16 @@
                     {% endif %}
                 </td>
                 <td class="px-5 py-3 text-right">
-                    <form method="post" action="{{ path('app_admin_event_delete', {id: event.id}) }}"
-                          onsubmit="return confirm('Supprimer cet événement et toutes les participations ?')">
-                        <button class="text-xs" style="color: var(--negative)">Supprimer</button>
-                    </form>
+                    <div class="flex items-center justify-end gap-3">
+                        <a href="{{ path('app_admin_event_show', {id: event.id}) }}"
+                           class="text-xs font-medium" style="color: var(--positive)">Voir</a>
+                        <a href="{{ path('app_admin_event_edit', {id: event.id}) }}"
+                           class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
+                        <form method="post" action="{{ path('app_admin_event_delete', {id: event.id}) }}"
+                              onsubmit="return confirm('Supprimer cet événement et toutes les participations ?')">
+                            <button class="text-xs" style="color: var(--negative)">Supprimer</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% else %}

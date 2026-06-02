@@ -38,10 +38,14 @@
                     {{ venue.capacity ? venue.capacity|number_format(0, ',', ' ') : '—' }}
                 </td>
                 <td class="px-5 py-3 text-right">
-                    <form method="post" action="{{ path('app_admin_venue_delete', {id: venue.id}) }}"
-                          onsubmit="return confirm('Supprimer le lieu {{ venue.name|escape('js') }} ?')">
-                        <button class="text-xs" style="color: var(--negative)">Supprimer</button>
-                    </form>
+                    <div class="flex items-center justify-end gap-3">
+                        <a href="{{ path('app_admin_venue_edit', {id: venue.id}) }}"
+                           class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
+                        <form method="post" action="{{ path('app_admin_venue_delete', {id: venue.id}) }}"
+                              onsubmit="return confirm('Supprimer le lieu {{ venue.name|escape('js') }} ?')">
+                            <button class="text-xs" style="color: var(--negative)">Supprimer</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% else %}

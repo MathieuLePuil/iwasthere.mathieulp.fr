@@ -47,6 +47,8 @@
                     <div class="flex items-center justify-end gap-3">
                         <a href="{{ path('app_admin_user_show', {id: user.id}) }}"
                            class="text-xs font-medium" style="color: var(--positive)">Voir</a>
+                        <a href="{{ path('app_admin_user_edit', {id: user.id}) }}"
+                           class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
                         {% if user != app.user %}
                         <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}"
                               onsubmit="return confirm('Supprimer définitivement @{{ user.username }} ?')">

@@ -68,9 +68,6 @@ class EventController extends AbstractController
                     ->setDate(new \DateTimeImmutable($data['date']))
                     ->setCreatedByUserId($this->getUser()->getId());
 
-                if (!empty($data['start_time'])) {
-                    $event->setStartTime($data['start_time']);
-                }
                 if ($venue) {
                     $event->setVenue($venue);
                 }
@@ -325,9 +322,6 @@ if (!empty($data['duration'])) {
             // Update event factual data (any participant can edit)
             if (!empty($data['artist_name'])) {
                 $event->setArtistName($data['artist_name']);
-            }
-            if (!empty($data['start_time'])) {
-                $event->setStartTime($data['start_time']);
             }
             if (!empty($data['teams'])) {
                 $event->setTeams($data['teams']);

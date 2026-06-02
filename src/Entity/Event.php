@@ -29,9 +29,6 @@ class Event
     #[ORM\Column]
     private \DateTimeImmutable $date;
 
-    #[ORM\Column(length: 5, nullable: true)]
-    private ?string $startTime = null;
-
     #[ORM\Column(type: 'uuid', nullable: true)]
     private ?Uuid $venueId = null;
 
@@ -137,18 +134,6 @@ class Event
     public function setDate(\DateTimeImmutable $date): static
     {
         $this->date = $date;
-
-        return $this;
-    }
-
-    public function getStartTime(): ?string
-    {
-        return $this->startTime;
-    }
-
-    public function setStartTime(?string $startTime): static
-    {
-        $this->startTime = $startTime;
 
         return $this;
     }
