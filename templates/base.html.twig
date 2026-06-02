@@ -28,7 +28,7 @@
         <header id="app-header" class="fixed top-0 inset-x-0 z-30 h-14 app-header flex items-center px-4 gap-3"
                 style="padding-top: env(safe-area-inset-top, 0px); height: calc(3.5rem + env(safe-area-inset-top, 0px))">
             <a href="{{ path('app_home') }}">
-                <img src="/logo.png" alt="IWasThere" style="height: 48px; width: auto; display: block;">
+                <img src="{{ asset('images/logo.png') }}" alt="IWasThere" style="height: 48px; width: auto; display: block;">
             </a>
             <div class="flex-1"></div>
             {%- set _unread = unread_notifications_count() -%}
