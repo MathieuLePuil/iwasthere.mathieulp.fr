@@ -1,0 +1,37 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<h1 class="text-2xl font-semibold mb-6" style="color: var(--fg-1); letter-spacing: -0.01em">Dashboard</h1>
+
+<div class="grid grid-cols-3 gap-6 mb-8">
+    <a href="{{ path('app_admin_users') }}" class="card hover:border-[var(--border-default)] transition-colors" style="text-decoration: none">
+        <p class="text-4xl font-black" style="color: var(--positive)">{{ total_users }}</p>
+        <p class="mt-1 font-medium" style="color: var(--fg-3)">Utilisateurs</p>
+        <p class="text-sm mt-2" style="color: var(--positive)">Gérer →</p>
+    </a>
+    <a href="{{ path('app_admin_events') }}" class="card hover:border-[var(--border-default)] transition-colors" style="text-decoration: none">
+        <p class="text-4xl font-black" style="color: var(--positive)">{{ total_events }}</p>
+        <p class="mt-1 font-medium" style="color: var(--fg-3)">Événements</p>
+        <p class="text-sm mt-2" style="color: var(--positive)">Gérer →</p>
+    </a>
+    <a href="{{ path('app_admin_venues') }}" class="card hover:border-[var(--border-default)] transition-colors" style="text-decoration: none">
+        <p class="text-4xl font-black" style="color: var(--positive)">{{ total_venues }}</p>
+        <p class="mt-1 font-medium" style="color: var(--fg-3)">Lieux</p>
+        <p class="text-sm mt-2" style="color: var(--positive)">Gérer →</p>
+    </a>
+</div>
+
+<div class="card">
+    <h2 class="font-medium mb-4" style="color: var(--fg-1)">Accès rapides</h2>
+    <div class="flex flex-wrap gap-3">
+        <a href="{{ path('app_admin_audit') }}" class="px-4 py-2 rounded-xl text-sm font-medium transition-colors" style="background: var(--bg-2); color: var(--fg-2)">
+            📋 Journal d'audit
+        </a>
+        <a href="{{ path('app_home') }}" target="_blank" class="px-4 py-2 rounded-xl text-sm font-medium transition-colors" style="background: var(--bg-2); color: var(--fg-2)">
+            🔗 Voir l'application
+        </a>
+    </div>
+</div>
+{% endblock %}

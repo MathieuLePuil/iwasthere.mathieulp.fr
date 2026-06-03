@@ -1,0 +1,117 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Notifications — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+    <div class="flex items-center justify-between mb-5">
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Notifications</h1>
+        {% if notifications|length > 0 %}
+        <form method="post" action="{{ path('app_notification_delete_all') }}">
+            <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg" style="color: var(--fg-3); background: var(--bg-3)">
+                Tout supprimer
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if vapid_public_key %}
+    <a href="{{ path('app_settings') }}"
+       class="card flex items-center gap-3 mb-5 no-underline"
+       style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+             style="background: rgba(61,220,151,0.15)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="#3DDC97" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/>
+            </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push</p>
+            <p class="text-xs" style="color: var(--fg-3)">Active-les depuis les Paramètres.</p>
+        </div>
+        <span class="text-xs font-medium" style="color: var(--positive)">Paramètres →</span>
+    </a>
+    {% endif %}
+
+    {% if notifications|length == 0 %}
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="text-6xl mb-4">🔔</div>
+            <h3 class="text-base font-semibold mb-2" style="color: var(--fg-1)">Tout est à jour</h3>
+            <p class="text-sm" style="color: var(--fg-3)">Tu n'as aucune notification pour l'instant</p>
+        </div>
+    {% else %}
+        <div class="space-y-2">
+            {% for notif in notifications %}
+            <div class="card {% if not notif.isRead %}notif-unread{% endif %}" style="position: relative; {% if notif.isRead %}opacity: 0.7{% endif %}">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
+                         style="background: {% if notif.type == 'friend_request' %}rgba(96,165,250,0.15){% elseif notif.type == 'friend_accepted' %}rgba(61,220,151,0.15){% elseif notif.type == 'friend_tagged_in_event' %}rgba(176,96,255,0.15){% elseif notif.type == 'completion_reminder' %}rgba(251,191,36,0.15){% elseif notif.type == 'presence_confirmation' %}rgba(61,220,151,0.15){% else %}var(--bg-3){% endif %}">
+                        {% if notif.type == 'friend_request' %}👥
+                        {% elseif notif.type == 'friend_accepted' %}✅
+                        {% elseif notif.type == 'friend_tagged_in_event' %}🎟️
+                        {% elseif notif.type == 'completion_reminder' %}⏰
+                        {% elseif notif.type == 'presence_confirmation' %}✅
+                        {% elseif notif.type == 'setlist_updated' %}🎵
+                        {% else %}🔔{% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="font-semibold text-sm" style="color: var(--fg-1)">{{ notif.title }}</p>
+                            {% if not notif.isRead %}
+                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: var(--positive)"></span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs mt-0.5" style="color: var(--fg-3)">{{ notif.body }}</p>
+                        <p class="text-xs mt-1" style="color: var(--fg-4)">{{ notif.createdAt|date('d/m/Y à H:i') }}</p>
+
+                        {% if notif.type == 'friend_request' and notif.data and notif.data.friendId is defined %}
+                        <div class="flex gap-2 mt-2">
+                            <form method="post" action="{{ path('app_friend_request_accept', {id: notif.data.friendId}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('friend_request') }}">
+                                <button class="btn-primary text-xs py-1.5 px-3">Accepter</button>
+                            </form>
+                            <form method="post" action="{{ path('app_friend_request_refuse', {id: notif.data.friendId}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('friend_request') }}">
+                                <button class="btn-secondary text-xs py-1.5 px-3">Refuser</button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        {% if notif.type == 'friend_tagged_in_event' and notif.data %}
+                        <div class="flex gap-2 mt-2">
+                            <form method="post" action="{{ path('app_event_tag_accept', {id: notif.id}) }}">
+                                <button class="btn-primary text-xs py-1.5 px-3">Ajouter à mon compte</button>
+                            </form>
+                            <form method="post" action="{{ path('app_event_tag_decline', {id: notif.id}) }}">
+                                <button class="btn-secondary text-xs py-1.5 px-3">Ignorer</button>
+                            </form>
+                        </div>
+                        {% if notif.data.eventId is defined %}
+                        <a href="{{ path('app_event_show', {id: notif.data.eventId}) }}"
+                           class="inline-block mt-1.5 text-xs font-medium" style="color: var(--positive)">
+                            Voir l'événement →
+                        </a>
+                        {% endif %}
+                        {% elseif notif.data and notif.data.eventId is defined %}
+                        <a href="{{ path('app_event_show', {id: notif.data.eventId}) }}"
+                           class="inline-block mt-2 text-xs font-medium" style="color: var(--positive)">
+                            Voir l'événement →
+                        </a>
+                        {% endif %}
+                    </div>
+                    <form method="post" action="{{ path('app_notification_delete', {id: notif.id}) }}">
+                        <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="color: var(--fg-4); background: var(--bg-3)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

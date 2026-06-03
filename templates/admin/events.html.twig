@@ -1,0 +1,87 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Événements{% endblock %}
+
+{% block body %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Événements</h1>
+    <form method="get" class="flex gap-2">
+        <input type="search" name="q" value="{{ q }}"
+               class="input-field w-64"
+               placeholder="Artiste, tournoi, lieu...">
+        <button class="btn-primary px-4 py-2">Chercher</button>
+    </form>
+</div>
+
+<div class="rounded-2xl overflow-hidden" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+    <table class="w-full text-sm">
+        <thead style="background: var(--bg-2); color: var(--fg-4)">
+            <tr>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Événement</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Type</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Date</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Lieu</th>
+                <th class="px-5 py-3 text-center text-xs uppercase tracking-wide">Participants</th>
+                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Setlist</th>
+                <th class="px-5 py-3"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr style="border-top: 1px solid var(--border-subtle)">
+                <td class="px-5 py-3">
+                    <div class="font-medium" style="color: var(--fg-1)">{{ event.artistName ?? event.tournamentName ?? '—' }}</div>
+                    {% if event.teams %}<div class="text-xs" style="color: var(--fg-4)">{{ event.teams }}</div>{% endif %}
+                </td>
+                <td class="px-5 py-3">
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                          style="{% if event.type == 'concert' %}background: var(--positive-soft); color: var(--positive)
+                          {% elseif event.type == 'festival' %}background: var(--negative-soft); color: var(--negative)
+                          {% elseif event.type == 'football' %}background: rgba(96,165,250,0.12); color: #60A5FA
+                          {% elseif event.type == 'rugby' %}background: rgba(251,191,36,0.12); color: #FBBF24
+                          {% else %}background: var(--bg-3); color: var(--fg-3){% endif %}">
+                        {{ event.type }}
+                    </span>
+                </td>
+                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ event.date|date('d/m/Y') }}</td>
+                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">
+                    {{ event.venue ? event.venue.name ~ ', ' ~ event.venue.city : '—' }}
+                </td>
+                <td class="px-5 py-3 text-center font-medium" style="color: var(--fg-2)">{{ event.participantCount }}</td>
+                <td class="px-5 py-3">
+                    {% if event.setlist and event.setlist|length > 0 %}
+                        <span class="text-xs font-medium" style="color: var(--positive)">✓ {{ event.setlist|length }} titres
+                            {% if event.setlistSource == 'setlist_fm' %}<span style="color: #60A5FA">(SF)</span>{% endif %}
+                        </span>
+                    {% elseif event.category == 'music' %}
+                        <form method="post" action="{{ path('app_admin_event_setlist_import', {id: event.id}) }}" class="inline">
+                            <button class="text-xs font-medium" style="color: #60A5FA">Import SF</button>
+                        </form>
+                    {% else %}
+                        <span class="text-xs" style="color: var(--fg-4)">N/A</span>
+                    {% endif %}
+                </td>
+                <td class="px-5 py-3 text-right">
+                    <div class="flex items-center justify-end gap-3">
+                        <a href="{{ path('app_admin_event_show', {id: event.id}) }}"
+                           class="text-xs font-medium" style="color: var(--positive)">Voir</a>
+                        <a href="{{ path('app_admin_event_edit', {id: event.id}) }}"
+                           class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
+                        <form method="post" action="{{ path('app_admin_event_delete', {id: event.id}) }}"
+                              onsubmit="return confirm('Supprimer cet événement et toutes les participations ?')">
+                            <button class="text-xs" style="color: var(--negative)">Supprimer</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="px-5 py-10 text-center" style="color: var(--fg-4)">
+                    {% if q %}Aucun événement trouvé pour "{{ q }}"{% else %}Aucun événement{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

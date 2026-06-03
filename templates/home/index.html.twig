@@ -1,0 +1,141 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Accueil — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {# Greeting #}
+    <div class="flex items-center justify-between">
+        <div>
+            <p class="section-title">Bonsoir</p>
+            <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">{{ app.user.displayName }}</h1>
+        </div>
+        {% if app.user.avatarUrl %}
+            <img src="{{ app.user.avatarUrl }}" class="w-11 h-11 rounded-2xl object-cover" alt=""
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="w-11 h-11 rounded-2xl items-center justify-center font-bold text-lg" style="display:none;background: var(--positive-soft); color: var(--positive)">
+                {{ app.user.displayName|first|upper }}
+            </div>
+        {% else %}
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg"
+                 style="background: var(--positive-soft); color: var(--positive)">
+                {{ app.user.displayName|first|upper }}
+            </div>
+        {% endif %}
+    </div>
+
+    {# Pending reminders #}
+    {% if pending_reminders|length > 0 %}
+    <div>
+        <p class="section-title mb-2">À compléter</p>
+        <div class="iwt-reminder">
+            <div class="iwt-reminder-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l1.7 4.6 4.6 1.7-4.6 1.7L12 15.6 10.3 11l-4.6-1.7L10.3 7.6z"/>
+                </svg>
+            </div>
+            <div class="iwt-reminder-body">
+                <span class="iwt-reminder-title">{{ pending_reminders|length }} fiche{{ pending_reminders|length > 1 ? 's' : '' }} à compléter</span>
+                <span class="iwt-reminder-sub">
+                    {% for p in pending_reminders|slice(0, 1) %}{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}{% endfor %}{% if pending_reminders|length > 1 %} +{{ pending_reminders|length - 1 }} autre{{ pending_reminders|length > 2 ? 's' : '' }}{% endif %}
+                </span>
+            </div>
+            <a href="{{ path('app_event_show', {id: pending_reminders[0].event.id}) }}" class="iwt-reminder-cta">
+                Compléter
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Next event countdown #}
+    <div>
+        <div class="flex items-center justify-between mb-2">
+            <p class="section-title">Prochain événement</p>
+        </div>
+        {% if next_event %}
+        {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
+        <div class="iwt-hero">
+            <div class="iwt-hero-poster poster-{{ next_event.event.type ?? 'default' }}">
+                <span class="iwt-hero-art-tag iwt-hero-art-tag--{{ next_event.event.type ?? 'default' }}">{{ type_emoji[next_event.event.type] ?? '🎫' }} {{ next_event.event.type ? next_event.event.type|capitalize : 'Événement' }}</span>
+                <div class="poster-title">
+                    <span class="name">{{ next_event.event.artistName ?? next_event.event.tournamentName ?? 'Événement' }}</span>
+                    {% if next_event.event.venue %}
+                    <span class="when">{{ next_event.event.date|date('d/m/Y') }} · {{ next_event.event.venue.city }}</span>
+                    {% else %}
+                    <span class="when">{{ next_event.event.date|date('d/m/Y') }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="iwt-hero-body">
+                <div class="iwt-countdown" data-controller="countdown" data-countdown-date-value="{{ next_event.event.date|date('c') }}">
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="days">--</span><span class="iwt-countdown-lbl">jours</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="hours">--</span><span class="iwt-countdown-lbl">h</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="minutes">--</span><span class="iwt-countdown-lbl">min</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="seconds">--</span><span class="iwt-countdown-lbl">sec</span></div>
+                </div>
+                <a href="{{ path('app_event_show', {id: next_event.event.id}) }}"
+                   class="text-sm font-medium text-right block" style="color: var(--positive)">
+                    Voir la fiche →
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="iwt-hero">
+            <div class="iwt-hero-body" style="align-items: center; text-align: center; padding: 2rem 1rem">
+                <p class="section-title">Aucun événement à venir</p>
+                <a href="{{ path('app_event_new') }}" class="btn-primary mt-2">+ Ajouter un événement</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Recent events #}
+    {% if recent_past|length > 0 %}
+    <div>
+        <div class="flex items-center justify-between mb-2">
+            <p class="section-title">Derniers souvenirs</p>
+            <a href="{{ path('app_music') }}" class="text-xs font-medium" style="color: var(--fg-2)">Tout voir →</a>
+        </div>
+        <div class="card" style="padding: 0; overflow: hidden">
+            {% for p in recent_past %}
+            <a href="{{ path('app_event_show', {id: p.event.id}) }}"
+               class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
+               style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}"
+>
+                <div class="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
+                    <div class="w-full h-full poster-{{ p.event.type ?? 'default' }} flex items-center justify-center">
+                        <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
+                            {{ p.event.date|date('d') }}<br><span style="font-size:9px; opacity:0.6">{{ p.event.date|date('M')|upper }}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}</p>
+                    <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                        {% if p.event.venue %}{{ p.event.venue.name }}{% endif %}
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    {% if p.rating %}
+                        {{ m.star_rating(p.rating) }}
+                    {% else %}
+                        {{ m.event_badge(p.event.type) }}
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card text-center py-10">
+        <p class="text-4xl mb-3">🎤</p>
+        <p class="font-semibold text-sm" style="color: var(--fg-1)">Ton journal est vide</p>
+        <p class="text-xs mt-1 mb-4" style="color: var(--fg-3)">Commence par ajouter ton premier événement</p>
+        <a href="{{ path('app_event_new') }}" class="btn-primary">+ Ajouter un événement</a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% macro event_badge(type) %}
+    {% set configs = {
+        'concert':  {bg: 'rgba(176,96,255,0.15)',  color: '#C890FF'},
+        'festival': {bg: 'rgba(232,155,142,0.14)', color: '#E89B8E'},
+        'football': {bg: 'rgba(74,222,128,0.12)',  color: '#7EE8A2'},
+        'rugby':    {bg: 'rgba(163,177,138,0.14)', color: '#A8B89A'},
+        'tennis':   {bg: 'rgba(234,179,8,0.12)',   color: '#F4D04A'},
+    } %}
+    {% set labels = {
+        'concert':  '🎤 Concert',
+        'festival': '🎪 Festival',
+        'football': '⚽ Football',
+        'rugby':    '🏉 Rugby',
+        'tennis':   '🎾 Tennis',
+    } %}
+    {% set cfg = configs[type] ?? {bg: 'rgba(139,149,161,0.18)', color: '#8B95A1'} %}
+    <span class="badge" style="background: {{ cfg.bg }}; color: {{ cfg.color }}">
+        {{ labels[type] ?? type }}
+    </span>
+{% endmacro %}
+
+{% macro star_rating(rating) %}
+    <div class="flex gap-0.5">
+        {% for i in 1..5 %}
+            <svg class="w-3.5 h-3.5" fill="{{ i <= rating ? 'var(--positive)' : 'none' }}" stroke="{{ i <= rating ? 'var(--positive)' : 'var(--fg-4)' }}" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2l3 7 7.5.7-5.7 5 1.7 7.3L12 18l-6.5 4 1.7-7.3L1.5 9.7 9 9z"/>
+            </svg>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{% macro avatar(user, size) %}
+    {% set size = size ?? 'md' %}
+    {% set sizes = {'sm': 'w-8 h-8 text-xs', 'md': 'w-10 h-10 text-sm', 'lg': 'w-16 h-16 text-xl'} %}
+    {% set sz = sizes[size] ?? sizes.md %}
+    {% if user.avatarUrl is defined and user.avatarUrl %}
+        <img src="{{ user.avatarUrl }}" class="{{ sz }} rounded-full object-cover" alt="{{ user.displayName }}">
+    {% else %}
+        <div class="{{ sz }} rounded-full flex items-center justify-center flex-shrink-0 font-bold"
+             style="background: var(--positive-soft); color: var(--positive)">
+            {{ user.displayName|first|upper }}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro empty_state(icon, title, description, action_url, action_label) %}
+    <div class="flex flex-col items-center justify-center py-16 px-8 text-center">
+        <div class="text-5xl mb-4">{{ icon }}</div>
+        <h3 class="text-base font-semibold mb-2" style="color: var(--fg-1)">{{ title }}</h3>
+        <p class="text-sm mb-6" style="color: var(--fg-3)">{{ description }}</p>
+        {% if action_url and action_label %}
+            <a href="{{ action_url }}" class="btn-primary">{{ action_label }}</a>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro back_button(url, label) %}
+    <a href="{{ url }}" class="flex items-center gap-1.5 text-sm font-medium" style="color: var(--positive)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 6-6 6 6 6"/>
+        </svg>
+        {{ label ?? 'Retour' }}
+    </a>
+{% endmacro %}

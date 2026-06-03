@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}@{{ profile_user.username }} — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    {# Back button #}
+    {{ m.back_button(path('app_profile')) }}
+
+    {# Profile header #}
+    <div class="flex items-center gap-4 mt-4 mb-5">
+        {{ m.avatar(profile_user, 'lg') }}
+        <div class="flex-1">
+            <h1 class="text-xl font-semibold" style="color: var(--fg-1)">{{ profile_user.displayName }}</h1>
+            <p class="text-sm" style="color: var(--fg-3)">@{{ profile_user.username }}</p>
+            {% if profile_user.bio %}
+                <p class="text-sm mt-1" style="color: var(--fg-2)">{{ profile_user.bio }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Action buttons #}
+    {% if not is_self %}
+    <div class="mb-5">
+        {% set relStatus = relationship ? relationship.status : null %}
+        {% set isSentByMe = relationship and relationship.owner == app.user %}
+        {% if relStatus == 'confirmed' %}
+            <span class="flex w-full items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-medium" style="background: var(--positive-soft); color: var(--positive)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                Amis
+            </span>
+        {% elseif relStatus == 'pending' and isSentByMe %}
+            <form method="post" action="{{ path('app_friend_cancel', {id: relationship.id}) }}">
+                <button type="submit" class="w-full py-2.5 rounded-2xl text-sm font-medium" style="background: rgba(251,191,36,0.12); color: #FBBF24">
+                    Demande envoyée · Annuler
+                </button>
+            </form>
+        {% elseif relStatus == 'pending' and not isSentByMe %}
+            <div class="flex gap-2">
+                <form method="post" action="{{ path('app_friend_accept', {id: relationship.id}) }}" class="flex-1">
+                    <button type="submit" class="btn-primary w-full py-2.5 text-sm">Accepter</button>
+                </form>
+                <form method="post" action="{{ path('app_friend_refuse', {id: relationship.id}) }}" class="flex-1">
+                    <button type="submit" class="btn-secondary w-full py-2.5 text-sm">Refuser</button>
+                </form>
+            </div>
+        {% else %}
+            <form method="post" action="{{ path('app_friend_add', {id: profile_user.id}) }}">
+                <button type="submit" class="btn-primary w-full py-3">
+                    + Ajouter en ami
+                </button>
+            </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# Stats #}
+    {% if can_view_history and total_events is not null %}
+    <div class="card mb-5 text-center py-4">
+        <p class="text-3xl font-black" style="color: var(--positive)">{{ total_events }}</p>
+        <p class="text-sm mt-0.5" style="color: var(--fg-4)">événement{{ total_events > 1 ? 's' : '' }} vécu{{ total_events > 1 ? 's' : '' }}</p>
+    </div>
+    {% endif %}
+
+    {# Events history #}
+    {% if can_view_history %}
+        {% if events|length == 0 %}
+            <div class="text-center py-12">
+                <p class="text-4xl mb-2">🎵</p>
+                <p class="font-medium" style="color: var(--fg-2)">Aucun événement pour l'instant</p>
+            </div>
+        {% else %}
+            <h2 class="font-medium mb-3" style="color: var(--fg-1)">Derniers événements</h2>
+            <div class="space-y-3">
+                {% for p in events %}
+                <div class="card flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--positive-soft)">
+                        {% if p.event.category == 'music' %}
+                            <span class="text-xl">{{ p.event.type == 'festival' ? '🎪' : '🎤' }}</span>
+                        {% else %}
+                            <span class="text-xl">⚽</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                            {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
+                        </p>
+                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.city }}{% endif %}</p>
+                    </div>
+                    {% if p.rating %}{{ m.star_rating(p.rating) }}{% else %}{{ m.event_badge(p.event.type) }}{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="card text-center py-10">
+            <p class="text-4xl mb-3">🔒</p>
+            <p class="font-medium" style="color: var(--fg-1)">Profil privé</p>
+            <p class="text-sm mt-1" style="color: var(--fg-3)">
+                {% if profile_user.profileVisibility == 'friends' %}
+                    Ajoute {{ profile_user.displayName }} en ami pour voir son historique
+                {% else %}
+                    Cet historique est privé
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

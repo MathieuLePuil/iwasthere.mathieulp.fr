@@ -1,0 +1,79 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ profile_user.displayName }}{% endblock %}
+
+{% block body %}
+<div class="flex items-center gap-3 mb-6">
+    <a href="{{ path('app_admin_users') }}" class="text-sm font-medium" style="color: var(--positive)">← Utilisateurs</a>
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1)">{{ profile_user.displayName }}</h1>
+    <span style="color: var(--fg-4)">@{{ profile_user.username }}</span>
+    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium"
+          style="{% if profile_user.role == 'superAdmin' %}background: var(--negative-soft); color: var(--negative){% else %}background: var(--bg-3); color: var(--fg-3){% endif %}">
+        {{ profile_user.role }}
+    </span>
+    <a href="{{ path('app_admin_user_edit', {id: profile_user.id}) }}"
+       class="ml-auto px-4 py-2 rounded-xl text-sm font-medium"
+       style="background: var(--bg-2); color: var(--fg-2)">Éditer</a>
+</div>
+
+<div class="grid grid-cols-2 gap-6 mb-6">
+    <div class="card">
+        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Informations du compte</h2>
+        <dl class="space-y-3 text-sm">
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Email</dt>
+                <dd class="font-medium" style="color: var(--fg-1)">{{ profile_user.email }}</dd>
+            </div>
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Identifiant</dt>
+                <dd style="color: var(--fg-2)">@{{ profile_user.username }}</dd>
+            </div>
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Bio</dt>
+                <dd style="color: var(--fg-2)">{{ profile_user.bio ?? '—' }}</dd>
+            </div>
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Visibilité profil</dt>
+                <dd style="color: var(--fg-2)">{{ profile_user.profileVisibility }}</dd>
+            </div>
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Google SSO</dt>
+                <dd style="color: var(--fg-2)">{{ profile_user.googleId ? '✓ Lié' : '—' }}</dd>
+            </div>
+            <div class="flex gap-3">
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Inscrit le</dt>
+                <dd style="color: var(--fg-2)">{{ profile_user.createdAt|date('d/m/Y à H:i') }}</dd>
+            </div>
+        </dl>
+    </div>
+
+    <div class="card">
+        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Derniers événements ({{ participations|length }})</h2>
+        {% if participations|length == 0 %}
+            <p class="text-sm" style="color: var(--fg-4)">Aucun événement</p>
+        {% else %}
+            <div class="space-y-2">
+                {% for p in participations %}
+                <div class="flex items-center justify-between text-sm py-1.5" style="border-bottom: 1px solid var(--border-subtle)">
+                    <span style="color: var(--fg-1)">{{ p.event.artistName ?? p.event.tournamentName ?? '—' }}</span>
+                    <div class="flex items-center gap-2 text-xs" style="color: var(--fg-4)">
+                        <span>{{ p.event.date|date('d/m/Y') }}</span>
+                        {% if p.rating %}<span style="color: var(--positive)">★{{ p.rating }}</span>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if profile_user != app.user %}
+<div class="card" style="border: 1px solid rgba(232,155,142,0.3); background: rgba(232,155,142,0.04)">
+    <h3 class="font-medium mb-3" style="color: var(--negative)">⚠️ Actions irréversibles</h3>
+    <form method="post" action="{{ path('app_admin_user_delete', {id: profile_user.id}) }}"
+          onsubmit="return confirm('Supprimer définitivement le compte de {{ profile_user.displayName }} ?')">
+        <button class="btn-danger px-4 py-2">Supprimer ce compte</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

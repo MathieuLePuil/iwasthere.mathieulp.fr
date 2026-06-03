@@ -1,0 +1,72 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Éditer {{ venue.name }}{% endblock %}
+
+{% block body %}
+<div class="max-w-xl">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{{ path('app_admin_venues') }}" class="text-sm" style="color: var(--fg-4)">← Retour</a>
+        <h1 class="text-2xl font-semibold" style="color: var(--fg-1)">Éditer {{ venue.name }}</h1>
+    </div>
+
+    <div class="rounded-2xl p-6 space-y-5" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+        <form method="post" action="{{ path('app_admin_venue_edit', {id: venue.id}) }}" class="space-y-5">
+
+            <div>
+                <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Nom</label>
+                <input type="text" name="name" class="input-field" value="{{ venue.name }}" required>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Adresse</label>
+                <input type="text" name="address" class="input-field" value="{{ venue.address }}" required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Ville</label>
+                    <input type="text" name="city" class="input-field" value="{{ venue.city }}" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Pays</label>
+                    <input type="text" name="country" class="input-field" value="{{ venue.country }}" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Latitude</label>
+                    <input type="number" step="any" name="latitude" class="input-field" value="{{ venue.latitude }}" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Longitude</label>
+                    <input type="number" step="any" name="longitude" class="input-field" value="{{ venue.longitude }}" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Capacité</label>
+                    <input type="number" name="capacity" class="input-field" value="{{ venue.capacity ?? '' }}" placeholder="—">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium mb-1.5 uppercase tracking-wide" style="color: var(--fg-4)">Type</label>
+                    <select name="venue_type" class="input-field">
+                        <option value="">—</option>
+                        {% for t in ['arena', 'stadium', 'festival', 'club', 'theater', 'outdoor', 'other'] %}
+                        <option value="{{ t }}" {{ venue.venueType == t ? 'selected' : '' }}>{{ t|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <a href="{{ path('app_admin_venues') }}"
+                   class="flex-1 py-2.5 text-sm text-center rounded-xl font-medium"
+                   style="background: var(--bg-2); color: var(--fg-3)">Annuler</a>
+                <button type="submit" class="flex-1 btn-primary py-2.5">Sauvegarder</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

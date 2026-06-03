@@ -7,6 +7,10 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    setlistfm_api_key: '%env(default::SETLISTFM_API_KEY)%'
+    vapid_public_key: '%env(default::VAPID_PUBLIC_KEY)%'
+    vapid_private_key: '%env(default::VAPID_PRIVATE_KEY)%'
+    vapid_subject: '%env(default::VAPID_SUBJECT)%'
 
 services:
     # default configuration for services in *this* file
@@ -19,5 +23,13 @@ services:
     App\:
         resource: '../src/'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\Service\SetlistFmService:
+        arguments:
+            $apiKey: '%setlistfm_api_key%'
+
+    App\Service\NotificationService:
+        arguments:
+            $vapidPublicKey: '%vapid_public_key%'
+            $vapidPrivateKey: '%vapid_private_key%'
+            $vapidSubject: '%vapid_subject%'
+            $projectDir: '%kernel.project_dir%'
