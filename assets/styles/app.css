@@ -104,7 +104,6 @@
     /* Prevent body from ever scrolling — only <main> scrolls */
     height: 100%;
     overflow: hidden;
-    position: relative; /* containing block for absolute <main> */
     background-color: var(--bg-0);
     color: var(--fg-1);
     margin: 0;
