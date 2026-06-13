@@ -21,7 +21,7 @@ class PushController extends AbstractController
             return new JsonResponse(['status' => 'error'], 400);
         }
 
-        $subscription['userId'] = $this->getUser()->getId();
+        $subscription['userId'] = (string) $this->getUser()->getId();
 
         $file = $this->getParameter('kernel.project_dir') . '/var/subscriptions.json';
         $subscriptions = [];

@@ -136,7 +136,7 @@ class ProfileController extends AbstractController
         $push->sendNotification(
             'Nouvelle demande d\'ami',
             '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
-            $targetUser->getId(),
+            (string) $targetUser->getId(),
         );
 
         $this->addFlash('success', 'Demande d\'ami envoyée à @' . $targetUser->getUsername() . ' !');
@@ -190,7 +190,7 @@ class ProfileController extends AbstractController
         $push->sendNotification(
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            $friend->getOwner()->getId(),
+            (string) $friend->getOwner()->getId(),
         );
 
         $this->addFlash('success', 'Ami ajouté !');
