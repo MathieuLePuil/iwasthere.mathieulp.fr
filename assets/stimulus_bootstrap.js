@@ -6,7 +6,7 @@ import SetlistEditorController from './controllers/setlist_editor_controller.js'
 import FlashMessageController from './controllers/flash_message_controller.js';
 import CountdownController from './controllers/countdown_controller.js';
 import StarRatingController from './controllers/star_rating_controller.js';
-import SportParticipantsController from './controllers/sport_participants_controller.js';
+import AutocompleteController from './controllers/autocomplete_controller.js';
 import UsernameCheckController from './controllers/username_check_controller.js';
 import EventFriendsController from './controllers/event_friends_controller.js';
 import NotificationBadgeController from './controllers/notification_badge_controller.js';
@@ -19,7 +19,7 @@ app.register('setlist-editor', SetlistEditorController);
 app.register('flash-message', FlashMessageController);
 app.register('countdown', CountdownController);
 app.register('star-rating', StarRatingController);
-app.register('sport-participants', SportParticipantsController);
+app.register('autocomplete', AutocompleteController);
 app.register('username-check', UsernameCheckController);
 app.register('event-friends', EventFriendsController);
 app.register('notification-badge', NotificationBadgeController);

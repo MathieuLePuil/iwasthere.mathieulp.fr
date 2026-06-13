@@ -89,10 +89,46 @@ class EventRepository extends ServiceEntityRepository
     {
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
-            'SELECT DISTINCT teams FROM event WHERE teams LIKE :q AND teams IS NOT NULL AND teams != "" ORDER BY teams LIMIT 10',
+            'SELECT DISTINCT teams FROM event WHERE teams LIKE :q AND teams IS NOT NULL AND teams != "" LIMIT 30',
             ['q' => '%' . $query . '%']
         );
-        return array_column($results, 'teams');
+
+        $names = [];
+        foreach ($results as $row) {
+            foreach (explode(' vs ', $row['teams']) as $name) {
+                $name = trim($name);
+                if ($name !== '' && mb_stripos($name, $query) !== false) {
+                    $names[$name] = true;
+                }
+            }
+        }
+        ksort($names);
+
+        return array_keys(array_slice($names, 0, 10, true));
+    }
+
+    /** @return string[] */
+    public function searchArtists(string $query): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $results = $conn->fetchAllAssociative(
+            'SELECT DISTINCT artist_name FROM event WHERE artist_name LIKE :q AND artist_name IS NOT NULL AND artist_name != "" ORDER BY artist_name LIMIT 10',
+            ['q' => '%' . $query . '%']
+        );
+
+        return array_column($results, 'artist_name');
+    }
+
+    /** @return string[] */
+    public function searchTournaments(string $query): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+        $results = $conn->fetchAllAssociative(
+            'SELECT DISTINCT tournament_name FROM event WHERE tournament_name LIKE :q AND tournament_name IS NOT NULL AND tournament_name != "" ORDER BY tournament_name LIMIT 10',
+            ['q' => '%' . $query . '%']
+        );
+
+        return array_column($results, 'tournament_name');
     }
 
     /**

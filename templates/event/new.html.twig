@@ -134,36 +134,50 @@
 
         {# Music fields #}
         <div id="music-fields" class="{% if category != 'music' %}hidden{% endif %} space-y-4">
-            <div>
+            <div data-controller="autocomplete"
+                 data-autocomplete-url-value="{{ path('app_artists_search') }}">
                 <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Artiste *</label>
-                <input type="text" name="artist_name" class="input-field" placeholder="Nom de l'artiste ou du groupe">
+                <input type="text" name="artist_name" class="input-field"
+                       placeholder="Nom de l'artiste ou du groupe"
+                       data-autocomplete-target="input"
+                       data-action="input->autocomplete#search focus->autocomplete#search"
+                       autocomplete="off">
+                <div data-autocomplete-target="results" class="mt-1 hidden"></div>
             </div>
         </div>
 
         {# Sport fields #}
         <div id="sport-fields" class="{% if category != 'sport' %}hidden{% endif %} space-y-4">
-            <div>
+            <div data-controller="autocomplete"
+                 data-autocomplete-url-value="{{ path('app_tournaments_search') }}">
                 <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Tournoi / Compétition</label>
-                <input type="text" name="tournament_name" class="input-field" placeholder="ex : Ligue 1, Roland Garros...">
+                <input type="text" name="tournament_name" class="input-field"
+                       placeholder="ex : Ligue 1, Roland Garros..."
+                       data-autocomplete-target="input"
+                       data-action="input->autocomplete#search focus->autocomplete#search"
+                       autocomplete="off">
+                <div data-autocomplete-target="results" class="mt-1 hidden"></div>
             </div>
             <div class="grid grid-cols-2 gap-3">
-                <div data-controller="sport-participants">
+                <div data-controller="autocomplete"
+                     data-autocomplete-url-value="{{ path('app_teams_search') }}">
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 1 / Joueur 1</label>
                     <input type="text" name="team1" class="input-field"
                            placeholder="ex : PSG"
-                           data-sport-participants-target="input"
-                           data-action="input->sport-participants#search focus->sport-participants#search"
+                           data-autocomplete-target="input"
+                           data-action="input->autocomplete#search focus->autocomplete#search"
                            autocomplete="off">
-                    <div data-sport-participants-target="results" class="mt-1 hidden"></div>
+                    <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
-                <div data-controller="sport-participants">
+                <div data-controller="autocomplete"
+                     data-autocomplete-url-value="{{ path('app_teams_search') }}">
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 2 / Joueur 2</label>
                     <input type="text" name="team2" class="input-field"
                            placeholder="ex : OM"
-                           data-sport-participants-target="input"
-                           data-action="input->sport-participants#search focus->sport-participants#search"
+                           data-autocomplete-target="input"
+                           data-action="input->autocomplete#search focus->autocomplete#search"
                            autocomplete="off">
-                    <div data-sport-participants-target="results" class="mt-1 hidden"></div>
+                    <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
             </div>
         </div>

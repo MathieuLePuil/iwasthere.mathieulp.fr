@@ -8,9 +8,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class PushController extends AbstractController
 {
+    #[IsGranted('ROLE_USER')]
     #[Route('/subscribe', name: 'app_subscribe', methods: ['POST'])]
     public function subscribe(Request $request): JsonResponse
     {
@@ -19,6 +21,8 @@ class PushController extends AbstractController
             return new JsonResponse(['status' => 'error'], 400);
         }
 
+        $subscription['userId'] = $this->getUser()->getId();
+
         $file = $this->getParameter('kernel.project_dir') . '/var/subscriptions.json';
         $subscriptions = [];
         if (file_exists($file)) {
@@ -26,17 +30,20 @@ class PushController extends AbstractController
         }
 
         $exists = false;
-        foreach ($subscriptions as $sub) {
+        foreach ($subscriptions as &$sub) {
             if (($sub['endpoint'] ?? '') === ($subscription['endpoint'] ?? '')) {
+                $sub['userId'] = $subscription['userId'];
                 $exists = true;
                 break;
             }
         }
+        unset($sub);
 
         if (!$exists) {
             $subscriptions[] = $subscription;
-            file_put_contents($file, json_encode($subscriptions));
         }
+
+        file_put_contents($file, json_encode($subscriptions));
 
         return new JsonResponse(['status' => 'success']);
     }
