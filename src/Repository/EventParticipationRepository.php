@@ -152,7 +152,7 @@ class EventParticipationRepository extends ServiceEntityRepository
              WHERE p.user = :user
                AND p.status = :upcoming
                AND p.event IN (
-                   SELECT e.id FROM App\Entity\Event e WHERE e.date <= :today
+                   SELECT e.id FROM App\Entity\Event e WHERE e.date < :today
                )'
         )
         ->setParameter('past', 'past')
@@ -332,6 +332,7 @@ class EventParticipationRepository extends ServiceEntityRepository
         $friends = [];
         $byYear = []; $heatmap = [];
         $firstDate = null; $lastDate = null;
+        $festivalGroups = [];
 
         foreach ($pastParts as $p) {
             $e = $p->getEvent();
@@ -356,6 +357,22 @@ class EventParticipationRepository extends ServiceEntityRepository
             if ($e->getCategory() === 'music') {
                 if ($e->getType() === 'festival') {
                     $festivals++;
+                    $festivalVenue = $e->getVenue()?->getName() ?? 'Inconnu';
+                    $festKey = $festivalVenue . '|' . $year;
+                    if (!isset($festivalGroups[$festKey])) {
+                        $festivalGroups[$festKey] = [
+                            'name'         => $festivalVenue,
+                            'year'         => (int) $year,
+                            'count'        => 0,
+                            'total_rating' => 0,
+                            'rating_count' => 0,
+                        ];
+                    }
+                    $festivalGroups[$festKey]['count']++;
+                    if ($p->getRating()) {
+                        $festivalGroups[$festKey]['total_rating'] += $p->getRating();
+                        $festivalGroups[$festKey]['rating_count']++;
+                    }
                 } else {
                     $concerts++;
                 }
@@ -373,7 +390,7 @@ class EventParticipationRepository extends ServiceEntityRepository
             if ($p->getDuration()) {
                 $totalDuration += $p->getDuration();
             }
-if ($p->getRating()) {
+            if ($p->getRating()) {
                 $totalRating += $p->getRating();
                 $ratingCount++;
             }
@@ -385,11 +402,20 @@ if ($p->getRating()) {
                 $cities[$city] = ($cities[$city] ?? 0) + 1;
             }
 
-foreach ($p->getFriends() ?? [] as $f) {
+            foreach ($p->getFriends() ?? [] as $f) {
                 $name = $f['displayName'] ?? ($f['friendUserId'] ?? 'Inconnu');
                 $friends[$name] = ($friends[$name] ?? 0) + 1;
             }
         }
+
+        foreach ($festivalGroups as &$fg) {
+            $fg['avg_rating'] = $fg['rating_count'] > 0
+                ? round($fg['total_rating'] / $fg['rating_count'], 1)
+                : null;
+            unset($fg['total_rating'], $fg['rating_count']);
+        }
+        unset($fg);
+        usort($festivalGroups, fn($a, $b) => $b['count'] <=> $a['count']);
 
         arsort($artists); arsort($venues); arsort($cities); arsort($friends);
         arsort($byYear);
@@ -463,11 +489,14 @@ foreach ($p->getFriends() ?? [] as $f) {
             'cities' => array_slice($cities, 0, 5, true),
             'cities_count' => count($cities),
             'top_city' => $topCity,
-'friends_stats' => array_slice($friends, 0, 5, true),
+            'friends_stats' => array_slice($friends, 0, 5, true),
             'top_friend' => $topFriend,
             'streak' => $streak,
             'max_streak' => $maxStreak,
             'heatmap' => $heatmapFormatted,
+            'festival_count' => count($festivalGroups),
+            'festival_groups' => array_slice($festivalGroups, 0, 5),
+            'top_festival' => $festivalGroups[0] ?? null,
         ];
     }
 }

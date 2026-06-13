@@ -110,9 +110,9 @@
             <p class="text-xs mb-3" style="color: var(--fg-4)">Importée automatiquement. Tu peux la modifier.</p>
             {% endif %}
             <div data-setlist-editor-target="list" class="space-y-2 mb-3">
-                {% for song in event.setlist ?? [] %}
+                {% for song in event.setlistNormalized %}
                 <div class="flex items-center gap-2">
-                    <input type="text" name="setlist[]" value="{{ song }}" class="input-field text-sm" placeholder="Titre">
+                    <input type="text" name="setlist[]" value="{{ song.name }}" class="input-field text-sm" placeholder="Titre">
                     <button type="button" data-action="setlist-editor#remove" class="p-1" style="color: var(--fg-4)">×</button>
                 </div>
                 {% endfor %}
@@ -146,9 +146,9 @@
                    placeholder="120" min="0" value="{{ participation.duration }}">
         </div>
 
-        {# Factual event data — sport & tournament only, no artist #}
-        {% if event.category == 'sport' or event.tournamentName %}
-        <details class="card cursor-pointer">
+        {# Factual event data #}
+        {% if event.category == 'music' or event.category == 'sport' or event.tournamentName %}
+        <details class="card cursor-pointer" {% if event.category == 'music' and not event.artistName %}open{% endif %}>
             <summary class="font-medium text-sm list-none flex items-center justify-between" style="color: var(--fg-2)">
                 Données factuelles de l'événement
                 <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,6 +157,19 @@
             </summary>
             <div class="mt-4 space-y-3">
                 <p class="text-xs" style="color: var(--fg-4)">Ces modifications s'appliquent à tous les participants.</p>
+                {% if event.category == 'music' %}
+                <div data-controller="autocomplete"
+                     data-autocomplete-url-value="{{ path('app_artists_search') }}">
+                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Artiste *</label>
+                    <input type="text" name="artist_name" class="input-field text-sm"
+                           value="{{ event.artistName }}"
+                           placeholder="Nom de l'artiste ou du groupe"
+                           data-autocomplete-target="input"
+                           data-action="input->autocomplete#search focus->autocomplete#search"
+                           autocomplete="off">
+                    <div data-autocomplete-target="results" class="mt-1 hidden"></div>
+                </div>
+                {% endif %}
                 {% if event.category == 'sport' %}
                 <div data-controller="autocomplete"
                      data-autocomplete-url-value="{{ path('app_tournaments_search') }}">

@@ -91,12 +91,15 @@
 
 @layer base {
   html {
+    height: 100%;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   body {
+    height: 100%;
+    overflow: hidden;
     background-color: var(--bg-0);
     color: var(--fg-1);
     margin: 0;

@@ -97,7 +97,7 @@ class EventController extends AbstractController
                 $participation = new EventParticipation();
                 $participation->setEvent($event)
                     ->setUser($this->getUser())
-                    ->setStatus($event->getDate() > new \DateTimeImmutable('today') ? 'upcoming' : 'past')
+                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past')
                     ->setVisibility($this->getUser()->getDefaultEventVisibility());
 
 if (!empty($data['duration'])) {
@@ -484,7 +484,7 @@ if (!empty($data['duration'])) {
                 $newParticipation = new EventParticipation();
                 $newParticipation->setEvent($event)
                     ->setUser($user)
-                    ->setStatus($event->getDate() > new \DateTimeImmutable('today') ? 'upcoming' : 'past')
+                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past')
                     ->setVisibility($user->getDefaultEventVisibility());
                 $em->persist($newParticipation);
                 $event->setParticipantCount($event->getParticipantCount() + 1);

@@ -54,8 +54,8 @@
         {% endif %}
 
         {# ── Main content ── #}
-        <main class="min-h-screen"
-              {% if app.user %}style="padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));"{% endif %}>
+        <main class="overflow-y-auto overscroll-none"
+              style="height: 100%; {% if app.user %}padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));{% endif %}">
             {# Flash messages #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
