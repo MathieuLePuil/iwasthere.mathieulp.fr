@@ -141,7 +141,7 @@ class AdminController extends AbstractController
         $q = $request->query->get('q', '');
         $events = $q
             ? $eventRepo->search($q)
-            : $eventRepo->findBy([], ['createdAt' => 'DESC'], 50);
+            : $eventRepo->findBy([], ['createdAt' => 'DESC']);
 
         return $this->render('admin/events.html.twig', ['events' => $events, 'q' => $q]);
     }
@@ -243,7 +243,7 @@ class AdminController extends AbstractController
         $q = $request->query->get('q', '');
         $venues = $q
             ? $venueRepo->search($q)
-            : $venueRepo->findBy([], ['name' => 'ASC'], 50);
+            : $venueRepo->findBy([], ['name' => 'ASC']);
 
         return $this->render('admin/venues.html.twig', ['venues' => $venues, 'q' => $q]);
     }

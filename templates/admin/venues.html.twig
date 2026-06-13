@@ -18,11 +18,6 @@
         <thead style="background: var(--bg-2); color: var(--fg-4)">
             <tr>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Salle / Stade</th>
-                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Adresse</th>
-                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Ville</th>
-                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Pays</th>
-                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Type</th>
-                <th class="px-5 py-3 text-right text-xs uppercase tracking-wide">Capacité</th>
                 <th class="px-5 py-3"></th>
             </tr>
         </thead>
@@ -30,13 +25,6 @@
             {% for venue in venues %}
             <tr style="border-top: 1px solid var(--border-subtle)">
                 <td class="px-5 py-3 font-medium" style="color: var(--fg-1)">{{ venue.name }}</td>
-                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ venue.address }}</td>
-                <td class="px-5 py-3" style="color: var(--fg-2)">{{ venue.city }}</td>
-                <td class="px-5 py-3" style="color: var(--fg-3)">{{ venue.country }}</td>
-                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ venue.venueType ?? '—' }}</td>
-                <td class="px-5 py-3 text-xs text-right" style="color: var(--fg-4)">
-                    {{ venue.capacity ? venue.capacity|number_format(0, ',', ' ') : '—' }}
-                </td>
                 <td class="px-5 py-3 text-right">
                     <div class="flex items-center justify-end gap-3">
                         <a href="{{ path('app_admin_venue_edit', {id: venue.id}) }}"
@@ -50,7 +38,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="px-5 py-10 text-center" style="color: var(--fg-4)">
+                <td colspan="2" class="px-5 py-10 text-center" style="color: var(--fg-4)">
                     {% if q %}Aucun lieu trouvé pour "{{ q }}"{% else %}Aucun lieu enregistré{% endif %}
                 </td>
             </tr>

@@ -13,6 +13,70 @@
 
     <form method="post" class="space-y-5">
 
+        {# Event info — date + type #}
+        <div class="card space-y-4">
+            <p class="section-title">Événement</p>
+            <div>
+                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date</label>
+                <input type="date" name="date" class="input-field"
+                       value="{{ event.date|date('Y-m-d') }}" required>
+            </div>
+            {% if event.category == 'music' %}
+            <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--fg-3)">Type</p>
+                <div class="flex gap-2">
+                    <label class="flex-1">
+                        <input type="radio" name="type" value="concert" class="sr-only"
+                               {% if event.type == 'concert' %}checked{% endif %}
+                               onchange="updateEditTypeBtns()">
+                        <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
+                             style="border-color: {{ event.type == 'concert' ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == 'concert' ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                            <span class="text-xl">🎤</span>
+                            <p class="text-xs font-medium mt-1">Concert</p>
+                        </div>
+                    </label>
+                    <label class="flex-1">
+                        <input type="radio" name="type" value="festival" class="sr-only"
+                               {% if event.type == 'festival' %}checked{% endif %}
+                               onchange="updateEditTypeBtns()">
+                        <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
+                             style="border-color: {{ event.type == 'festival' ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == 'festival' ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                            <span class="text-xl">🎪</span>
+                            <p class="text-xs font-medium mt-1">Festival</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            {% elseif event.category == 'sport' %}
+            <div>
+                <p class="text-sm font-medium mb-2" style="color: var(--fg-3)">Sport</p>
+                <div class="grid grid-cols-2 gap-2">
+                    {% for sport in [['football','Football','⚽'],['rugby','Rugby','🏉'],['tennis','Tennis','🎾'],['basket','Basket','🏀']] %}
+                    <label>
+                        <input type="radio" name="type" value="{{ sport[0] }}" class="sr-only"
+                               {% if event.type == sport[0] %}checked{% endif %}
+                               onchange="updateEditTypeBtns()">
+                        <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
+                             style="border-color: {{ event.type == sport[0] ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == sport[0] ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                            <span class="text-lg">{{ sport[2] }}</span>
+                            <p class="text-sm font-medium">{{ sport[1] }}</p>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <script>
+        function updateEditTypeBtns() {
+            document.querySelectorAll('[data-type-btn]').forEach(function(div) {
+                var radio = div.closest('label').querySelector('input[type="radio"]');
+                div.style.borderColor = radio.checked ? 'var(--positive)' : 'var(--border-default)';
+                div.style.background  = radio.checked ? 'var(--positive-soft)' : 'var(--bg-2)';
+            });
+        }
+        </script>
+
         {# Rating — toujours affiché (statut déduit de la date) #}
         <div class="card">
             <p class="section-title mb-3">Mon ressenti</p>
