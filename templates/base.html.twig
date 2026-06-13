@@ -54,17 +54,7 @@
         {% endif %}
 
         {# ── Main content ── #}
-        {# position:absolute fills exactly the space between header and nav, no flex tricks needed #}
-        <main style="
-            position: absolute;
-            top: {% if app.user %}calc(3.5rem + env(safe-area-inset-top, 0px)){% else %}0{% endif %};
-            bottom: {% if app.user %}calc(3.25rem + env(safe-area-inset-bottom, 0px)){% else %}0{% endif %};
-            left: 0;
-            right: 0;
-            overflow-y: scroll;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: none;
-        ">
+        <main style="height: 100%; overflow-y: scroll; -webkit-overflow-scrolling: touch; overscroll-behavior: none; {% if app.user %}padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));{% endif %}">
             {# Flash messages #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
@@ -110,15 +100,8 @@
         {% if app.user %}
         {# ── Fixed bottom nav ── #}
         {% set current_route = app.request.attributes.get('_route') %}
-        <nav id="app-nav" class="app-nav" style="
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 30;
-        ">
-            {# Icon row: compact 52px #}
-            <div class="flex items-center max-w-lg mx-auto px-2" style="height: 3.25rem">
+        <nav id="app-nav" class="fixed bottom-0 inset-x-0 z-30 app-nav" style="padding-bottom: env(safe-area-inset-bottom)">
+            <div class="flex items-center h-16 max-w-lg mx-auto px-2">
 
                 {# Accueil #}
                 <a href="{{ path('app_home') }}" data-nav-path="/"
@@ -183,8 +166,6 @@
                 </a>
 
             </div>
-            {# Safe area spacer: fills the home-indicator zone on iPhone X+ #}
-            <div style="height: env(safe-area-inset-bottom, 0px)"></div>
         </nav>
         {% endif %}
 
