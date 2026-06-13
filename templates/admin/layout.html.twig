@@ -7,7 +7,7 @@
     {% block stylesheets %}{% endblock %}
     {% block javascripts %}{{ importmap('app') }}{% endblock %}
 </head>
-<body class="min-h-screen" style="background: var(--bg-0)">
+<body class="min-h-screen" style="background: var(--bg-0); height: auto; overflow: auto">
 
     <nav style="background: var(--bg-1); border-bottom: 1px solid var(--border-subtle)" class="px-6 py-3 flex items-center gap-1 sticky top-0 z-50">
         <a href="{{ path('app_admin_dashboard') }}" class="font-black mr-4" style="color: var(--fg-1)">IW <span style="color: var(--positive)">Admin</span></a>
