@@ -175,5 +175,22 @@
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     </script>
+    {% if app.user and vapid_public_key is defined and vapid_public_key %}
+    <script data-turbo-eval="false">
+    (function() {
+        if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+        navigator.serviceWorker.ready.then(function(reg) {
+            return reg.pushManager.getSubscription();
+        }).then(function(sub) {
+            if (!sub) return;
+            fetch('{{ path('app_subscribe') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sub),
+            }).catch(() => {});
+        }).catch(() => {});
+    })();
+    </script>
+    {% endif %}
     </body>
 </html>

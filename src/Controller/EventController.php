@@ -173,6 +173,7 @@ if (!empty($data['duration'])) {
                     $push->sendNotification(
                         $me->getDisplayName() . ' t\'a ajouté à un événement',
                         $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                        $taggedUser->getId(),
                     );
                 }
                 if (!empty($friendsData)) {
@@ -415,6 +416,7 @@ if (!empty($data['duration'])) {
                 $push->sendNotification(
                     $me->getDisplayName() . ' t\'a ajouté à un événement',
                     $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    $taggedUser->getId(),
                 );
             }
             $em->flush();

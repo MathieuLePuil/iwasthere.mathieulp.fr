@@ -30,9 +30,16 @@ class NotificationService
         $this->subscriptionsFile = $projectDir . '/var/subscriptions.json';
     }
 
-    public function sendNotification(string $title, string $body): array
+    public function sendNotification(string $title, string $body, ?int $userId = null): array
     {
         $subscriptions = $this->getSubscriptions();
+
+        if ($userId !== null) {
+            $subscriptions = array_values(array_filter(
+                $subscriptions,
+                fn ($sub) => ($sub['userId'] ?? null) === $userId,
+            ));
+        }
 
         if (empty($subscriptions)) {
             return ['sent' => 0, 'failed' => 0, 'message' => 'No subscriptions found'];

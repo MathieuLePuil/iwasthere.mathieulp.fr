@@ -102,6 +102,7 @@ class NotificationsController extends AbstractController
         $push->sendNotification(
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
+            $friend->getOwner()->getId(),
         );
 
         $this->addFlash('success', 'Demande d\'ami acceptée !');
