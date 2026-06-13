@@ -133,6 +133,14 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* En mode PWA standalone, ajouter l'espace home-indicator. En mode navigateur Safari,
+   on ne touche pas au safe-area car la toolbar Safari crée déjà son propre espace. */
+@media (display-mode: standalone) {
+  .app-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 /* ── Components ── */
 @layer components {
 
