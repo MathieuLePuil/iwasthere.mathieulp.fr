@@ -343,6 +343,12 @@ if (!empty($data['duration'])) {
             $data = $request->request->all();
 
             // Update event factual data (any participant can edit)
+            if (!empty($data['date'])) {
+                $event->setDate(new \DateTimeImmutable($data['date']));
+            }
+            if (!empty($data['type'])) {
+                $event->setType($data['type']);
+            }
             if (!empty($data['artist_name'])) {
                 $event->setArtistName($data['artist_name']);
             }
