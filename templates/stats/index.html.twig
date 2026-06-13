@@ -23,8 +23,9 @@
             <p class="text-xs mt-1" style="color: var(--fg-4)">Événements</p>
         </div>
         <div class="card text-center py-5">
-            <p class="text-2xl font-black leading-tight" style="color: var(--positive)">{{ stats.top_venue ?? '—' }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Salle préférée</p>
+            <p class="text-2xl mb-1">🏟️</p>
+            <p class="text-xs" style="color: var(--fg-4)">Salle préférée</p>
+            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_venue ?? '—' }}</p>
         </div>
         <div class="card text-center py-5">
             <p class="text-4xl font-black" style="color: #FBBF24">{{ stats.avg_rating ? stats.avg_rating ~ '/5' : '—' }}</p>
@@ -232,23 +233,12 @@
     </div>
     {% endif %}
 
-    {# Top venue & city #}
-    {% if stats.top_venue or stats.top_city %}
-    <div class="grid grid-cols-2 gap-3 mb-4">
-        {% if stats.top_venue %}
-        <div class="card text-center py-4">
-            <p class="text-2xl mb-1">🏟️</p>
-            <p class="text-xs" style="color: var(--fg-4)">Salle préférée</p>
-            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_venue }}</p>
-        </div>
-        {% endif %}
-        {% if stats.top_city %}
-        <div class="card text-center py-4">
-            <p class="text-2xl mb-1">📍</p>
-            <p class="text-xs" style="color: var(--fg-4)">Ville préférée</p>
-            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_city }}</p>
-        </div>
-        {% endif %}
+    {# Top city #}
+    {% if stats.top_city %}
+    <div class="card text-center py-4 mb-4">
+        <p class="text-2xl mb-1">📍</p>
+        <p class="text-xs" style="color: var(--fg-4)">Ville préférée</p>
+        <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_city }}</p>
     </div>
     {% endif %}
 
