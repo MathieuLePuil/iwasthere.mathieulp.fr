@@ -21,6 +21,12 @@ class SetlistFmService
         private readonly string $apiKey,
     ) {}
 
+    public function forceReimportSetlist(Event $event): bool
+    {
+        $event->setSetlistRetryCount(0)->setSetlistLastAttemptAt(null);
+        return $this->tryImportSetlist($event);
+    }
+
     public function tryImportSetlist(Event $event): bool
     {
         if ($event->getCategory() !== 'music') {

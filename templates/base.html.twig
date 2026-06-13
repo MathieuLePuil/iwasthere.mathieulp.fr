@@ -25,7 +25,7 @@
 
         {% if app.user %}
         {# ── Fixed top header ── #}
-        <header id="app-header" class="fixed top-0 inset-x-0 z-30 h-14 app-header flex items-center px-4 gap-3"
+        <header id="app-header" class="fixed top-0 inset-x-0 z-30 h-14 app-header flex items-center px-4 gap-3" data-turbo-permanent
                 style="padding-top: env(safe-area-inset-top, 0px); height: calc(3.5rem + env(safe-area-inset-top, 0px))">
             <a href="{{ path('app_home') }}">
                 <img src="{{ asset('images/logo.png') }}" alt="IWasThere" style="height: 48px; width: auto; display: block;">
@@ -55,7 +55,7 @@
 
         {# ── Main content ── #}
         <main class="overscroll-none"
-              style="height: 100%; overflow-y: scroll; -webkit-overflow-scrolling: touch; {% if app.user %}padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));{% endif %}">
+              style="flex: 1 1 0; min-height: 0; overflow-y: scroll; -webkit-overflow-scrolling: touch; {% if app.user %}padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));{% endif %}">
             {# Flash messages #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
@@ -99,10 +99,10 @@
         </main>
 
         {% if app.user %}
-        {# ── Fixed bottom nav ── #}
+        {# ── Bottom nav (flex child, always at bottom) ── #}
         {% set current_route = app.request.attributes.get('_route') %}
-        <nav id="app-nav" class="fixed bottom-0 inset-x-0 z-30 app-nav" style="padding-bottom: env(safe-area-inset-bottom)">
-            <div class="flex items-center h-16 max-w-lg mx-auto px-2">
+        <nav id="app-nav" class="app-nav" data-turbo-permanent style="padding-bottom: env(safe-area-inset-bottom, 0px); flex-shrink: 0">
+            <div class="flex items-center h-14 max-w-lg mx-auto px-2">
 
                 {# Accueil #}
                 <a href="{{ path('app_home') }}" data-nav-path="/"

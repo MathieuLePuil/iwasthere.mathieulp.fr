@@ -84,6 +84,21 @@ class EventRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** @return Event[] Already imported setlists that need re-syncing */
+    public function findImportedSetlists(): array
+    {
+        return $this->createQueryBuilder('e')
+            ->where('e.category = :cat')
+            ->andWhere('e.date < :today')
+            ->andWhere('e.setlistSource = :source')
+            ->setParameter('cat', 'music')
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->setParameter('source', 'setlist_fm')
+            ->orderBy('e.date', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     /** @return string[] */
     public function searchTeams(string $query): array
     {
