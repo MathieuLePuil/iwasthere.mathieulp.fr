@@ -94,9 +94,15 @@
             <div class="mt-4 space-y-3">
                 <p class="text-xs" style="color: var(--fg-4)">Ces modifications s'appliquent à tous les participants.</p>
                 {% if event.category == 'sport' %}
-                <div>
+                <div data-controller="autocomplete"
+                     data-autocomplete-url-value="{{ path('app_tournaments_search') }}">
                     <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Tournoi</label>
-                    <input type="text" name="tournament_name" class="input-field text-sm" value="{{ event.tournamentName }}">
+                    <input type="text" name="tournament_name" class="input-field text-sm"
+                           value="{{ event.tournamentName }}"
+                           data-autocomplete-target="input"
+                           data-action="input->autocomplete#search focus->autocomplete#search"
+                           autocomplete="off">
+                    <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
                 <div>
                     <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Équipes</label>

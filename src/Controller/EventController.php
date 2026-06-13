@@ -242,6 +242,28 @@ if (!empty($data['duration'])) {
         return $this->json($eventRepo->searchTeams($q));
     }
 
+    #[Route('/artists/search', name: 'app_artists_search')]
+    public function artistsSearch(Request $request, EventRepository $eventRepo): JsonResponse
+    {
+        $q = $request->query->get('q', '');
+        if (strlen($q) < 2) {
+            return $this->json([]);
+        }
+
+        return $this->json($eventRepo->searchArtists($q));
+    }
+
+    #[Route('/tournaments/search', name: 'app_tournaments_search')]
+    public function tournamentsSearch(Request $request, EventRepository $eventRepo): JsonResponse
+    {
+        $q = $request->query->get('q', '');
+        if (strlen($q) < 2) {
+            return $this->json([]);
+        }
+
+        return $this->json($eventRepo->searchTournaments($q));
+    }
+
     #[Route('/venues/search', name: 'app_venue_search')]
     public function venueSearch(Request $request, VenueRepository $venueRepo): JsonResponse
     {
