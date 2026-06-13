@@ -108,18 +108,30 @@ class SetlistFmService
                 if (empty($name)) {
                     continue;
                 }
+                $entry = [
+                    'name' => $name,
+                    'tape' => !empty($song['tape']),
+                    'info' => $song['info'] ?? null ?: null,
+                    'with' => isset($song['with']['name']) ? $song['with']['name'] : null,
+                ];
                 if ($isEncore) {
-                    $encores[] = $name;
+                    $encores[] = $entry;
                 } else {
-                    $songs[] = $name;
+                    $songs[] = $entry;
                 }
             }
         }
+
+        $tourName = $setlist['tour']['name'] ?? null;
 
         $event->setSetlist($songs)
             ->setSetlistEncores($encores)
             ->setSetlistSource('setlist_fm')
             ->setSetlistUrl($setlist['url'] ?? null)
             ->setSetlistImportedAt(new \DateTimeImmutable());
+
+        if ($tourName && !$event->getTourName()) {
+            $event->setTourName($tourName);
+        }
     }
 }

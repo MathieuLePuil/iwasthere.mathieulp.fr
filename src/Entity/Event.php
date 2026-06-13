@@ -45,6 +45,9 @@ class Event
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $teams = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $tourName = null;
+
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $setlist = null;
 
@@ -199,6 +202,18 @@ class Event
         return $this;
     }
 
+    public function getTourName(): ?string
+    {
+        return $this->tourName;
+    }
+
+    public function setTourName(?string $tourName): static
+    {
+        $this->tourName = $tourName;
+
+        return $this;
+    }
+
     public function getSetlist(): ?array
     {
         return $this->setlist;
@@ -221,6 +236,23 @@ class Event
         $this->setlistEncores = $setlistEncores;
 
         return $this;
+    }
+
+    /** Normalize legacy string[] to object[] for display */
+    public function getSetlistNormalized(): array
+    {
+        return array_map(
+            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            $this->setlist ?? []
+        );
+    }
+
+    public function getSetlistEncoresNormalized(): array
+    {
+        return array_map(
+            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            $this->setlistEncores ?? []
+        );
     }
 
     public function getSetlistSource(): ?string
