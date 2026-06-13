@@ -359,12 +359,16 @@ if (!empty($data['duration'])) {
                 $event->setTournamentName($data['tournament_name']);
             }
 
-            // Update setlist if manually entered
+            // Update setlist if manually entered (allow editing even setlist_fm sources)
             if (isset($data['setlist']) && is_array($data['setlist'])) {
                 $setlistLines = array_values(array_filter(array_map('trim', $data['setlist'])));
-                if (!empty($setlistLines) && $event->getSetlistSource() !== 'setlist_fm') {
+                if (!empty($setlistLines)) {
                     $event->setSetlist($setlistLines)->setSetlistSource('manual');
                 }
+            }
+            if (isset($data['setlist_encores']) && is_array($data['setlist_encores'])) {
+                $encoreLines = array_values(array_filter(array_map('trim', $data['setlist_encores'])));
+                $event->setSetlistEncores($encoreLines ?: null);
             }
 
             // Update personal data
@@ -379,7 +383,7 @@ if (!empty($data['duration'])) {
             }
             // Status derived from event date; visibility from user default
             $participation->setStatus(
-                $event->getDate() > new \DateTimeImmutable('today') ? 'upcoming' : 'past'
+                $event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past'
             );
 
             // Sport specific

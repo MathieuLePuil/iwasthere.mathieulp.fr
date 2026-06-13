@@ -119,6 +119,21 @@
             </div>
             <button type="button" data-action="setlist-editor#add"
                     class="text-sm font-medium" style="color: var(--positive)">+ Ajouter un titre</button>
+            {% if event.setlistEncoresNormalized|length > 0 %}
+            <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle)">
+                <p class="section-title mb-2">Rappels</p>
+                <div class="space-y-2" data-setlist-editor-target="encoreList">
+                    {% for song in event.setlistEncoresNormalized %}
+                    <div class="flex items-center gap-2">
+                        <input type="text" name="setlist_encores[]" value="{{ song.name }}" class="input-field text-sm" placeholder="Titre">
+                        <button type="button" data-action="setlist-editor#removeEncore" class="p-1" style="color: var(--fg-4)">×</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" data-action="setlist-editor#addEncore"
+                        class="text-sm font-medium mt-2 block" style="color: var(--positive)">+ Ajouter un rappel</button>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 

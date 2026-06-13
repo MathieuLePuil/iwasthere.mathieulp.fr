@@ -23,8 +23,8 @@
             <p class="text-xs mt-1" style="color: var(--fg-4)">Événements</p>
         </div>
         <div class="card text-center py-5">
-            <p class="text-4xl font-black" style="color: var(--positive)">{{ stats.total_duration_h }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Heures de live</p>
+            <p class="text-2xl font-black leading-tight" style="color: var(--positive)">{{ stats.top_venue ?? '—' }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Salle préférée</p>
         </div>
         <div class="card text-center py-5">
             <p class="text-4xl font-black" style="color: #FBBF24">{{ stats.avg_rating ? stats.avg_rating ~ '/5' : '—' }}</p>
