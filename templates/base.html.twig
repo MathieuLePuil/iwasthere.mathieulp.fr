@@ -100,7 +100,7 @@
         {% if app.user %}
         {# ── Fixed bottom nav ── #}
         {% set current_route = app.request.attributes.get('_route') %}
-        <nav id="app-nav" class="fixed bottom-0 inset-x-0 z-30 app-nav" style="padding-bottom: env(safe-area-inset-bottom)">
+        <nav id="app-nav" class="fixed bottom-0 inset-x-0 z-30 app-nav">
             <div class="flex items-center h-16 max-w-lg mx-auto px-2">
 
                 {# Accueil #}
