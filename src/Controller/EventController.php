@@ -14,6 +14,7 @@ use App\Repository\FriendRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Service\EventImageService;
 use App\Service\NotificationService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -471,6 +472,60 @@ if (!empty($data['duration'])) {
             'participation'     => $participation,
             'confirmed_friends' => $confirmedFriends,
         ]);
+    }
+
+    #[Route('/{id}/image', name: 'app_event_image', methods: ['POST'])]
+    public function uploadImage(
+        Event $event,
+        Request $request,
+        EventImageService $images,
+        EventParticipationRepository $participationRepo,
+        EntityManagerInterface $em,
+    ): Response {
+        $user = $this->getUser();
+        if (!$participationRepo->findByUserAndEvent($user, $event)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $file = $request->files->get('image');
+        if (!$file) {
+            $this->addFlash('error', 'Aucun fichier reçu.');
+            return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
+        }
+
+        $path = $images->saveUploadedFile($file, (string) $event->getId());
+        if ($path === null) {
+            $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
+            return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
+        }
+
+        $event->setImageUrl($path);
+        $em->flush();
+
+        $this->addFlash('success', 'Photo de l\'événement ajoutée !');
+
+        return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
+    }
+
+    #[Route('/{id}/image/delete', name: 'app_event_image_delete', methods: ['POST'])]
+    public function deleteImage(
+        Event $event,
+        EventImageService $images,
+        EventParticipationRepository $participationRepo,
+        EntityManagerInterface $em,
+    ): Response {
+        $user = $this->getUser();
+        if (!$participationRepo->findByUserAndEvent($user, $event)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $images->delete((string) $event->getId());
+        $event->setImageUrl(null);
+        $em->flush();
+
+        $this->addFlash('info', 'Photo de l\'événement supprimée.');
+
+        return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
     }
 
     #[Route('/tag/{id}/accept', name: 'app_event_tag_accept', methods: ['POST'])]

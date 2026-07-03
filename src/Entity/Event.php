@@ -69,6 +69,9 @@ class Event
     #[ORM\Column(options: ['default' => 0])]
     private int $setlistRetryCount = 0;
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $imageUrl = null;
+
     #[ORM\Column(options: ['default' => 0])]
     private int $participantCount = 0;
 
@@ -311,6 +314,18 @@ class Event
     public function setSetlistRetryCount(int $setlistRetryCount): static
     {
         $this->setlistRetryCount = $setlistRetryCount;
+
+        return $this;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): static
+    {
+        $this->imageUrl = $imageUrl;
 
         return $this;
     }
