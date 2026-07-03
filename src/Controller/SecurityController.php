@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -115,7 +116,7 @@ class SecurityController extends AbstractController
                 ]);
 
                 $email = (new Email())
-                    ->from('noreply@iwasthere.app')
+                    ->from(new Address('noreply@mathieulp.fr', 'IWasThere'))
                     ->to($emailAddress)
                     ->subject('Réinitialisation de ton mot de passe — IWasThere')
                     ->html($html);

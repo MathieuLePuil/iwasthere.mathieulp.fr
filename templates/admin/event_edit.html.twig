@@ -48,7 +48,7 @@
                     <option value="">— Aucun lieu —</option>
                     {% for venue in venues %}
                     <option value="{{ venue.id }}" {{ event.venue and event.venue.id == venue.id ? 'selected' : '' }}>
-                        {{ venue.name }} — {{ venue.city }}
+                        {{ venue.name }}{{ venue.city ? ' — ' ~ venue.city }}
                     </option>
                     {% endfor %}
                 </select>

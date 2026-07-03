@@ -45,7 +45,7 @@
                 </td>
                 <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ event.date|date('d/m/Y') }}</td>
                 <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">
-                    {{ event.venue ? event.venue.name ~ ', ' ~ event.venue.city : '—' }}
+                    {{ event.venue ? event.venue.name ~ (event.venue.city ? ', ' ~ event.venue.city) : '—' }}
                 </td>
                 <td class="px-5 py-3 text-center font-medium" style="color: var(--fg-2)">{{ event.participantCount }}</td>
                 <td class="px-5 py-3">

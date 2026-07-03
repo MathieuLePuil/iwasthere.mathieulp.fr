@@ -46,16 +46,22 @@ class EventController extends AbstractController
             $venue = null;
             if (!empty($data['venue_id'])) {
                 $venue = $venueRepo->find($data['venue_id']);
-            } elseif (!empty($data['venue_name'])) {
-                $venue = new Venue();
-                $venue->setName($data['venue_name'])
-                    ->setAddress('')
-                    ->setCity('')
-                    ->setCountry('France')
-                    ->setLatitude(0.0)
-                    ->setLongitude(0.0)
-                    ->setCreatedByUserId($this->getUser()->getId());
-                $em->persist($venue);
+            } elseif (!empty(trim($data['venue_name'] ?? ''))) {
+                $venueName = trim($data['venue_name']);
+                // Reuse an existing venue with the same name (case/whitespace-insensitive)
+                // instead of creating an identical duplicate.
+                $venue = $venueRepo->findOneByName($venueName);
+                if (!$venue) {
+                    $venue = new Venue();
+                    $venue->setName($venueName)
+                        ->setAddress('')
+                        ->setCity('')
+                        ->setCountry('France')
+                        ->setLatitude(0.0)
+                        ->setLongitude(0.0)
+                        ->setCreatedByUserId($this->getUser()->getId());
+                    $em->persist($venue);
+                }
             }
 
             // Check if joining existing event

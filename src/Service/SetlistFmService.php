@@ -13,6 +13,10 @@ class SetlistFmService
 {
     private const API_BASE = 'https://api.setlist.fm/rest/1.0';
     private const MAX_RETRIES = 24;
+    /** Number of in-request retries when setlist.fm rate-limits us (HTTP 429). */
+    private const RATE_LIMIT_RETRIES = 4;
+    /** Base back-off between rate-limited retries (microseconds), multiplied by the attempt number. */
+    private const RATE_LIMIT_BACKOFF_US = 1_200_000;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -42,20 +46,7 @@ class SetlistFmService
         try {
             $date = $event->getDate()->format('d-m-Y');
 
-            $response = $this->httpClient->request('GET', self::API_BASE . '/search/setlists', [
-                'headers' => [
-                    'x-api-key' => $this->apiKey,
-                    'Accept' => 'application/json',
-                ],
-                'query' => [
-                    'artistName' => $event->getArtistName(),
-                    'date' => $date,
-                    'p' => 1,
-                ],
-            ]);
-
-            $data = $response->toArray();
-            $setlists = $data['setlist'] ?? [];
+            $setlists = $this->searchSetlists($event->getArtistName(), $date);
 
             $event->setSetlistLastAttemptAt(new \DateTimeImmutable())
                 ->setSetlistRetryCount($event->getSetlistRetryCount() + 1);
@@ -76,6 +67,15 @@ class SetlistFmService
             $this->em->flush();
             return false;
 
+        } catch (SetlistFmRateLimitException $e) {
+            // Transient: setlist.fm throttled us. Record the attempt time so we back off,
+            // but do NOT burn the retry budget — the setlist may well exist.
+            $this->logger->warning('Setlist.fm rate-limited, will retry later', [
+                'event_id' => (string) $event->getId(),
+            ]);
+            $event->setSetlistLastAttemptAt(new \DateTimeImmutable());
+            $this->em->flush();
+            return false;
         } catch (\Throwable $e) {
             $this->logger->warning('Setlist.fm import failed', [
                 'event_id' => (string) $event->getId(),
@@ -85,6 +85,50 @@ class SetlistFmService
                 ->setSetlistLastAttemptAt(new \DateTimeImmutable());
             $this->em->flush();
             return false;
+        }
+    }
+
+    /**
+     * Search setlist.fm, retrying with back-off on HTTP 429 (free plan: 2 req/s).
+     *
+     * @return array<int, array<string, mixed>> the raw `setlist` array (empty when none)
+     *
+     * @throws SetlistFmRateLimitException when still throttled after RATE_LIMIT_RETRIES
+     */
+    private function searchSetlists(string $artistName, string $date): array
+    {
+        for ($attempt = 1; ; $attempt++) {
+            $response = $this->httpClient->request('GET', self::API_BASE . '/search/setlists', [
+                'headers' => [
+                    'x-api-key' => $this->apiKey,
+                    'Accept' => 'application/json',
+                ],
+                'query' => [
+                    'artistName' => $artistName,
+                    'date' => $date,
+                    'p' => 1,
+                ],
+            ]);
+
+            // getStatusCode() does not throw on 4xx/5xx, so we can inspect it safely.
+            $status = $response->getStatusCode();
+
+            if ($status === 429) {
+                $response->cancel();
+                if ($attempt <= self::RATE_LIMIT_RETRIES) {
+                    usleep(self::RATE_LIMIT_BACKOFF_US * $attempt);
+                    continue;
+                }
+                throw new SetlistFmRateLimitException('setlist.fm rate limit exceeded after retries');
+            }
+
+            // setlist.fm answers 404 when no setlist matches the artist/date.
+            if ($status === 404) {
+                return [];
+            }
+
+            $data = $response->toArray();
+            return $data['setlist'] ?? [];
         }
     }
 

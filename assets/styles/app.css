@@ -7,6 +7,7 @@
 :root {
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
 }
 
 /* ── Semantic tokens — dark (default) ── */
@@ -91,19 +92,17 @@
 
 @layer base {
   html {
-    /* svh = "small viewport height" = correct value in iOS PWA standalone */
-    height: 100vh;
-    height: 100svh;
-    background-color: var(--bg-0); /* fills any gap that appears on iOS */
+    /* Même architecture que myrenault (la PWA de référence qui fonctionne) :
+       AUCUNE contrainte de hauteur, AUCUN app-shell. Le document scrolle
+       nativement et le canvas remplit tout l'écran jusqu'au bord physique.
+       C'était aussi l'architecture d'origine du projet, avant la régression. */
+    background-color: var(--bg-0);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   body {
-    /* Prevent body from ever scrolling — only <main> scrolls */
-    height: 100%;
-    overflow: hidden;
     background-color: var(--bg-0);
     color: var(--fg-1);
     margin: 0;
@@ -126,19 +125,51 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* ── Bottom navigation — original style: full-width bar, translucent + blur,
+   fixed over the natively-scrolling document (exact myrenault architecture:
+   normal-flow body + fixed overlay nav). ── */
 .app-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   background: color-mix(in srgb, var(--bg-0) 80%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-subtle);
+  /* Compact home-indicator clearance: the full inset is 34px on iPhone (native
+     tab-bar standard) but reads as a dead band; 12px keeps the labels just
+     above the indicator line. 0 in Safari/desktop where the inset is 0. */
+  padding-bottom: min(env(safe-area-inset-bottom, 0px), 12px);
 }
 
-/* En mode PWA standalone, ajouter l'espace home-indicator. En mode navigateur Safari,
-   on ne touche pas au safe-area car la toolbar Safari crée déjà son propre espace. */
-@media (display-mode: standalone) {
-  .app-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+.app-nav-inner {
+  display: flex;
+  align-items: stretch;
+  height: 4rem;
+  max-width: 32rem;
+  margin-inline: auto;
+  padding-inline: 0.5rem;
+}
+
+.app-nav-link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-4);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease;
+}
+
+.app-nav-link.is-active {
+  color: var(--positive);
 }
 
 /* ── Components ── */

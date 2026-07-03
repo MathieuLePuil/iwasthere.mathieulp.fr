@@ -45,6 +45,20 @@ class VenueRepository extends ServiceEntityRepository
     }
 
     /**
+     * Find a venue by name, ignoring case and surrounding whitespace,
+     * so we don't create identical duplicates ("Graspop", "graspop", "Graspop ").
+     */
+    public function findOneByName(string $name): ?Venue
+    {
+        return $this->createQueryBuilder('v')
+            ->where('LOWER(TRIM(v.name)) = LOWER(TRIM(:name))')
+            ->setParameter('name', $name)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * @return Venue[]
      */
     public function search(string $query): array
