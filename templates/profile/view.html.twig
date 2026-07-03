@@ -31,6 +31,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 Amis
             </span>
+            <a href="{{ path('app_profile_invite_events', {username: profile_user.username}) }}"
+               class="btn-secondary flex w-full items-center justify-center gap-2 py-2.5 mt-2 text-sm">
+                🎟️ Inviter à mes événements
+            </a>
         {% elseif relStatus == 'pending' and isSentByMe %}
             <form method="post" action="{{ path('app_friend_cancel', {id: relationship.id}) }}">
                 <button type="submit" class="w-full py-2.5 rounded-2xl text-sm font-medium" style="background: rgba(251,191,36,0.12); color: #FBBF24">

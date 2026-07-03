@@ -54,6 +54,20 @@ class EventParticipationRepository extends ServiceEntityRepository
     /**
      * @return EventParticipation[]
      */
+    public function findAllByUser(User $user): array
+    {
+        return $this->createQueryBuilder('p')
+            ->join('p.event', 'e')
+            ->where('p.user = :user')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->orderBy('e.date', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return EventParticipation[]
+     */
     public function findByEvent(Event $event): array
     {
         return $this->createQueryBuilder('ep')

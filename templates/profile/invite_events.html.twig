@@ -1,0 +1,97 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Inviter {{ friend_user.displayName }} — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    {# Back button #}
+    {{ m.back_button(path('app_profile_view', {username: friend_user.username})) }}
+
+    {# Header #}
+    <div class="flex items-center gap-4 mt-4 mb-5">
+        {{ m.avatar(friend_user, 'lg') }}
+        <div class="flex-1">
+            <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Inviter {{ friend_user.displayName }}</h1>
+            <p class="text-sm" style="color: var(--fg-3)">Coche les événements que vous avez vécus ensemble</p>
+        </div>
+    </div>
+
+    {% if participations|length == 0 %}
+        <div class="card text-center py-12">
+            <p class="text-4xl mb-2">🎉</p>
+            <p class="font-medium" style="color: var(--fg-1)">Rien à inviter</p>
+            <p class="text-sm mt-1" style="color: var(--fg-3)">
+                {{ friend_user.displayName }} est déjà associé à tous tes événements.
+            </p>
+        </div>
+    {% else %}
+        <form method="post" id="invite-events-form">
+
+            {# Select all #}
+            <label class="card flex items-center gap-3 mb-3 cursor-pointer select-none">
+                <input type="checkbox" id="invite-select-all" class="w-5 h-5 rounded accent-[var(--positive)]">
+                <span class="font-medium text-sm" style="color: var(--fg-1)">Tout sélectionner</span>
+                <span class="ml-auto text-xs" style="color: var(--fg-4)" id="invite-count">0 / {{ participations|length }}</span>
+            </label>
+
+            <div class="space-y-3 mb-24">
+                {% for p in participations %}
+                <label class="card flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" name="participations[]" value="{{ p.id }}"
+                           class="invite-event-checkbox w-5 h-5 rounded flex-shrink-0 accent-[var(--positive)]">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--positive-soft)">
+                        {% if p.event.category == 'music' %}
+                            <span class="text-xl">{{ p.event.type == 'festival' ? '🎪' : '🎤' }}</span>
+                        {% else %}
+                            <span class="text-xl">⚽</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                            {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
+                        </p>
+                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.city ?: p.event.venue.name }}{% endif %}</p>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3" style="background: var(--bg-1); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
+                <button type="submit" id="invite-submit" class="btn-primary w-full py-3" disabled style="opacity: 0.5">
+                    Inviter aux événements sélectionnés
+                </button>
+            </div>
+
+        </form>
+
+        <script>
+        (function () {
+            const form = document.getElementById('invite-events-form');
+            if (!form) return;
+            const selectAll = document.getElementById('invite-select-all');
+            const boxes = form.querySelectorAll('.invite-event-checkbox');
+            const counter = document.getElementById('invite-count');
+            const submit = document.getElementById('invite-submit');
+
+            function refresh() {
+                const checked = form.querySelectorAll('.invite-event-checkbox:checked').length;
+                counter.textContent = checked + ' / ' + boxes.length;
+                selectAll.checked = checked === boxes.length;
+                submit.disabled = checked === 0;
+                submit.style.opacity = checked === 0 ? '0.5' : '1';
+            }
+
+            selectAll.addEventListener('change', function () {
+                boxes.forEach(function (b) { b.checked = selectAll.checked; });
+                refresh();
+            });
+            boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+            refresh();
+        })();
+        </script>
+    {% endif %}
+
+</div>
+{% endblock %}

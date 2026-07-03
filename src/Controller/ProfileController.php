@@ -245,6 +245,111 @@ class ProfileController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
+    #[Route('/{username}/invite-events', name: 'app_profile_invite_events', methods: ['GET', 'POST'])]
+    public function inviteToEvents(
+        string $username,
+        Request $request,
+        UserRepository $userRepo,
+        FriendRepository $friendRepo,
+        EventParticipationRepository $partRepo,
+        EntityManagerInterface $em,
+        NotificationService $push,
+    ): Response {
+        $friendUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$friendUser) {
+            throw $this->createNotFoundException();
+        }
+
+        $user = $this->getUser();
+        if ($friendUser === $user || !$friendRepo->areFriends($user, $friendUser)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $friendId = (string) $friendUser->getId();
+
+        // Events where the friend already has their own participation
+        $friendEventIds = [];
+        foreach ($partRepo->findAllByUser($friendUser) as $p) {
+            $friendEventIds[(string) $p->getEvent()->getId()] = true;
+        }
+
+        // My participations where the friend isn't already tagged or participating
+        $eligible = [];
+        foreach ($partRepo->findAllByUser($user) as $p) {
+            if (isset($friendEventIds[(string) $p->getEvent()->getId()])) {
+                continue;
+            }
+            $alreadyTagged = false;
+            foreach ($p->getFriends() as $f) {
+                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $friendId) {
+                    $alreadyTagged = true;
+                    break;
+                }
+            }
+            if (!$alreadyTagged) {
+                $eligible[(string) $p->getId()] = $p;
+            }
+        }
+
+        if ($request->isMethod('POST')) {
+            $selectedIds = $request->request->all('participations');
+            $count = 0;
+
+            foreach ($selectedIds as $id) {
+                $participation = $eligible[$id] ?? null;
+                if (!$participation) {
+                    continue;
+                }
+
+                $friends = $participation->getFriends();
+                $friends[] = [
+                    'type'        => 'app',
+                    'userId'      => $friendId,
+                    'username'    => $friendUser->getUsername(),
+                    'displayName' => $friendUser->getDisplayName(),
+                ];
+                $participation->setFriends($friends);
+
+                $event = $participation->getEvent();
+                $notif = new Notification();
+                $notif->setRecipient($friendUser)
+                    ->setType('friend_tagged_in_event')
+                    ->setTitle($user->getDisplayName() . ' t\'a ajouté à un événement')
+                    ->setBody($event->getArtistName() ?? $event->getTournamentName() ?? 'Événement')
+                    ->setData([
+                        'eventId'         => (string) $event->getId(),
+                        'participationId' => (string) $participation->getId(),
+                        'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    ]);
+                $em->persist($notif);
+                $count++;
+            }
+
+            if ($count > 0) {
+                $em->flush();
+
+                // A single push covering all invitations; per-event notifications
+                // remain available in the app for individual accept/decline.
+                $push->sendNotification(
+                    $user->getDisplayName() . ' t\'a ajouté à ' . ($count > 1 ? $count . ' événements' : 'un événement'),
+                    'Consulte tes notifications pour confirmer ta présence.',
+                    $friendId,
+                );
+
+                $this->addFlash('success', $friendUser->getDisplayName() . ' a été invité' . ($count > 1 ? ' à ' . $count . ' événements' : ' à 1 événement') . ' !');
+            } else {
+                $this->addFlash('info', 'Aucun événement sélectionné.');
+            }
+
+            return $this->redirectToRoute('app_profile_view', ['username' => $friendUser->getUsername()]);
+        }
+
+        return $this->render('profile/invite_events.html.twig', [
+            'friend_user'    => $friendUser,
+            'participations' => array_values($eligible),
+        ]);
+    }
+
     #[Route('/{username}', name: 'app_profile_view')]
     public function view(string $username, UserRepository $userRepo, EventParticipationRepository $partRepo, FriendRepository $friendRepo): Response
     {
