@@ -63,13 +63,12 @@
             {% endif %}
         </div>
 
-        {# Event photo #}
-        {% if event.imageUrl %}
+        {# My photo of the event #}
+        {% if participation and participation.imageUrl %}
         <div class="relative mt-3 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle)">
-            <img src="{{ event.imageUrl }}"
-                 alt="Photo de {{ event.artistName ?? event.tournamentName ?? 'l\'événement' }}"
+            <img src="{{ participation.imageUrl }}"
+                 alt="Ma photo de {{ event.artistName ?? event.tournamentName ?? 'l\'événement' }}"
                  class="w-full object-cover block" style="max-height: 280px">
-            {% if participation %}
             <div class="absolute top-2.5 right-2.5 flex gap-2">
                 <form method="post" action="{{ path('app_event_image', {id: event.id}) }}" enctype="multipart/form-data">
                     <label class="iwt-icon-btn cursor-pointer" title="Changer la photo">
@@ -82,7 +81,7 @@
                     </label>
                 </form>
                 <form method="post" action="{{ path('app_event_image_delete', {id: event.id}) }}"
-                      onsubmit="return confirm('Supprimer la photo de cet événement ?')">
+                      onsubmit="return confirm('Supprimer ta photo de cet événement ?')">
                     <button type="submit" class="iwt-icon-btn" title="Supprimer la photo">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
@@ -90,7 +89,6 @@
                     </button>
                 </form>
             </div>
-            {% endif %}
         </div>
         {% elseif participation %}
         <form method="post" action="{{ path('app_event_image', {id: event.id}) }}" enctype="multipart/form-data" class="mt-3">
@@ -177,7 +175,7 @@
              data-ticket-city-value="{{ event.venue ? event.venue.city : '' }}"
              data-ticket-date-value="{{ event.date|date('Y-m-d') }}"
              data-ticket-type-value="{{ event.type }}"
-             data-ticket-image-value="{{ event.imageUrl ?? '' }}">
+             data-ticket-image-value="{{ participation.imageUrl ?? '' }}">
 
             <button type="button" data-action="ticket#open" class="card w-full flex items-center gap-3 text-left cursor-pointer">
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--positive-soft)">

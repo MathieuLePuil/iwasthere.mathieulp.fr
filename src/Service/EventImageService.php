@@ -17,10 +17,12 @@ class EventImageService
     }
 
     /**
-     * Saves an uploaded file as the event's image, returns the public path or null on failure.
+     * Saves an uploaded file as a participant's photo for an event,
+     * returns the public path or null on failure.
      */
-    public function saveUploadedFile(UploadedFile $file, string $eventId): ?string
+    public function saveUploadedFile(UploadedFile $file, string $eventId, string $userId): ?string
     {
+        $key = $eventId . '-' . $userId;
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         if (!in_array($file->getMimeType(), $allowedMimes, true)) {
             return null;
@@ -42,11 +44,11 @@ class EventImageService
             mkdir($this->uploadDir, 0755, true);
         }
 
-        $filename = $eventId . '.' . $ext;
+        $filename = $key . '.' . $ext;
 
         // Remove old image files with different extension
         foreach (['jpg', 'png', 'webp', 'gif'] as $oldExt) {
-            $oldFile = $this->uploadDir . '/' . $eventId . '.' . $oldExt;
+            $oldFile = $this->uploadDir . '/' . $key . '.' . $oldExt;
             if ($oldExt !== $ext && file_exists($oldFile)) {
                 @unlink($oldFile);
             }
@@ -62,12 +64,12 @@ class EventImageService
     }
 
     /**
-     * Deletes the stored image files for an event.
+     * Deletes the stored photo files of a participant for an event.
      */
-    public function delete(string $eventId): void
+    public function delete(string $eventId, string $userId): void
     {
         foreach (['jpg', 'png', 'webp', 'gif'] as $ext) {
-            $file = $this->uploadDir . '/' . $eventId . '.' . $ext;
+            $file = $this->uploadDir . '/' . $eventId . '-' . $userId . '.' . $ext;
             if (file_exists($file)) {
                 @unlink($file);
             }

@@ -44,6 +44,9 @@ class EventParticipation
     #[ORM\Column(type: 'json')]
     private array $photos = [];
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $imageUrl = null;
+
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $finalScore = null;
 
@@ -167,6 +170,18 @@ public function getFriends(): array
     public function setPhotos(array $photos): static
     {
         $this->photos = $photos;
+
+        return $this;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): static
+    {
+        $this->imageUrl = $imageUrl;
 
         return $this;
     }

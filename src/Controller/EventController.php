@@ -483,7 +483,8 @@ if (!empty($data['duration'])) {
         EntityManagerInterface $em,
     ): Response {
         $user = $this->getUser();
-        if (!$participationRepo->findByUserAndEvent($user, $event)) {
+        $participation = $participationRepo->findByUserAndEvent($user, $event);
+        if (!$participation) {
             throw $this->createAccessDeniedException();
         }
 
@@ -493,16 +494,16 @@ if (!empty($data['duration'])) {
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
-        $path = $images->saveUploadedFile($file, (string) $event->getId());
+        $path = $images->saveUploadedFile($file, (string) $event->getId(), (string) $user->getId());
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
-        $event->setImageUrl($path);
+        $participation->setImageUrl($path);
         $em->flush();
 
-        $this->addFlash('success', 'Photo de l\'événement ajoutée !');
+        $this->addFlash('success', 'Ta photo de l\'événement a été ajoutée !');
 
         return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
     }
@@ -515,15 +516,16 @@ if (!empty($data['duration'])) {
         EntityManagerInterface $em,
     ): Response {
         $user = $this->getUser();
-        if (!$participationRepo->findByUserAndEvent($user, $event)) {
+        $participation = $participationRepo->findByUserAndEvent($user, $event);
+        if (!$participation) {
             throw $this->createAccessDeniedException();
         }
 
-        $images->delete((string) $event->getId());
-        $event->setImageUrl(null);
+        $images->delete((string) $event->getId(), (string) $user->getId());
+        $participation->setImageUrl(null);
         $em->flush();
 
-        $this->addFlash('info', 'Photo de l\'événement supprimée.');
+        $this->addFlash('info', 'Ta photo de l\'événement a été supprimée.');
 
         return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
     }
