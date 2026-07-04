@@ -9,6 +9,7 @@ use App\Entity\EventParticipation;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -199,6 +200,67 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->setParameter('status', 'past')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    private function buildHistoryQb(User $user, string $tab, string $type, string $year): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->join('p.event', 'e')
+            ->where('p.user = :user')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('today', new \DateTimeImmutable('today'));
+
+        if ($tab === 'upcoming') {
+            $qb->andWhere('e.date >= :today');
+        } else {
+            $qb->andWhere('e.date < :today');
+            if ($year) {
+                $qb->andWhere('YEAR(e.date) = :year')->setParameter('year', (int) $year);
+            }
+        }
+
+        if ($type === 'sport') {
+            $qb->andWhere('e.category = :cat')->setParameter('cat', 'sport');
+        } elseif ($type) {
+            $qb->andWhere('e.type = :type')->setParameter('type', $type);
+        }
+
+        return $qb;
+    }
+
+    public function countHistory(User $user, string $tab, string $type = '', string $year = ''): int
+    {
+        return (int) $this->buildHistoryQb($user, $tab, $type, $year)
+            ->select('COUNT(p.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** @return EventParticipation[] */
+    public function findHistoryPage(User $user, string $tab, string $type = '', string $year = '', int $page = 1, int $perPage = 20): array
+    {
+        return $this->buildHistoryQb($user, $tab, $type, $year)
+            ->orderBy('e.date', $tab === 'upcoming' ? 'ASC' : 'DESC')
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return int[] */
+    public function findHistoryYears(User $user): array
+    {
+        $result = $this->createQueryBuilder('p')
+            ->select('DISTINCT YEAR(e.date) as year')
+            ->join('p.event', 'e')
+            ->where('p.user = :user')
+            ->andWhere('e.date < :today')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->orderBy('year', 'DESC')
+            ->getQuery()
+            ->getResult();
+        return array_column($result, 'year');
     }
 
     /** @return EventParticipation[] */

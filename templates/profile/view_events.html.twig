@@ -1,0 +1,123 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Événements de {{ profile_user.displayName }} — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    {{ m.back_button(path('app_profile_view', {username: profile_user.username}), 'Profil') }}
+
+    {# Header #}
+    <div class="flex items-center gap-3 mt-4 mb-4">
+        {{ m.avatar(profile_user, 'md') }}
+        <div class="flex-1 min-w-0">
+            <h1 class="text-xl font-semibold tracking-tight truncate" style="color: var(--fg-1); letter-spacing: -0.01em">
+                {{ is_self ? 'Mes événements' : 'Événements de ' ~ profile_user.displayName }}
+            </h1>
+            <p class="text-xs" style="color: var(--fg-4)">@{{ profile_user.username }}</p>
+        </div>
+    </div>
+
+    {# Segmented tab #}
+    <div class="iwt-segmented mb-4">
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, tab: 'past', page: null})) }}"
+           class="{{ tab == 'past' ? 'active' : '' }}">
+            Passés · {{ past_count }}
+        </a>
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, tab: 'upcoming', page: null})) }}"
+           class="{{ tab == 'upcoming' ? 'active' : '' }}">
+            À venir · {{ upcoming_count }}
+        </a>
+    </div>
+
+    {# Pill filters #}
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-3" style="scrollbar-width: none">
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: null, year: null, page: null})) }}"
+           class="iwt-pill{{ filter_type == '' and filter_year == '' ? ' active' : '' }}">Tous</a>
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'concert' ? null : 'concert', page: null})) }}"
+           class="iwt-pill{{ filter_type == 'concert' ? ' active' : '' }}">🎤 Concerts</a>
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'festival' ? null : 'festival', page: null})) }}"
+           class="iwt-pill{{ filter_type == 'festival' ? ' active' : '' }}">🎪 Festivals</a>
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'sport' ? null : 'sport', page: null})) }}"
+           class="iwt-pill{{ filter_type == 'sport' ? ' active' : '' }}">⚽ Sport</a>
+        {% for year in years %}
+        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, year: filter_year == year ~ '' ? null : year, page: null})) }}"
+           class="iwt-pill{{ filter_year == year ~ '' ? ' active' : '' }}">{{ year }}</a>
+        {% endfor %}
+    </div>
+
+    {# Events list #}
+    {% if participations|length == 0 %}
+        {{ m.empty_state(
+            tab == 'upcoming' ? '📅' : '🎵',
+            tab == 'upcoming' ? 'Aucun événement à venir' : 'Aucun événement',
+            filter_type or filter_year
+                ? 'Aucun résultat avec ces filtres'
+                : (is_self ? 'Commence à archiver tes événements' : profile_user.displayName ~ ' n\'a encore rien archivé ici')
+        ) }}
+    {% else %}
+        {# Group by year for past events #}
+        {% if tab == 'past' %}
+            {% set current_year = null %}
+            {% for p in participations %}
+                {% set event_year = p.event.date|date('Y') %}
+                {% if event_year != current_year %}
+                    {% if current_year is not null %}</div>{% endif %}
+                    <div class="iwt-year">
+                        <span class="iwt-year-num">{{ event_year }}</span>
+                    </div>
+                    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 16px">
+                    {% set current_year = event_year %}
+                {% endif %}
+
+                {{ m.event_row(p) }}
+
+                {% if loop.last %}</div>{% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="card" style="padding: 0; overflow: hidden">
+                {% for p in participations %}
+                    {{ m.event_row(p) }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Pagination #}
+        {% if total_pages > 1 %}
+        <div class="flex items-center justify-between gap-3 mt-5">
+            {% if page > 1 %}
+                <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, page: page - 1})) }}"
+                   class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+                    Précédent
+                </a>
+            {% else %}
+                <span class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm" style="opacity: 0.35; pointer-events: none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+                    Précédent
+                </span>
+            {% endif %}
+
+            <span class="text-xs font-medium flex-shrink-0" style="color: var(--fg-3); font-family: var(--font-mono)">
+                {{ page }} / {{ total_pages }}
+            </span>
+
+            {% if page < total_pages %}
+                <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, page: page + 1})) }}"
+                   class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm">
+                    Suivant
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
+            {% else %}
+                <span class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm" style="opacity: 0.35; pointer-events: none">
+                    Suivant
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% endif %}
+
+</div>
+{% endblock %}

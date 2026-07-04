@@ -350,6 +350,61 @@ class ProfileController extends AbstractController
         ]);
     }
 
+    #[Route('/{username}/events', name: 'app_profile_view_events')]
+    public function viewEvents(
+        string $username,
+        Request $request,
+        UserRepository $userRepo,
+        EventParticipationRepository $partRepo,
+        FriendRepository $friendRepo,
+    ): Response {
+        $profileUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$profileUser) {
+            throw $this->createNotFoundException();
+        }
+
+        $currentUser = $this->getUser();
+        $isSelf = $profileUser === $currentUser;
+        $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
+
+        $canViewHistory = $isSelf
+            || $profileUser->getProfileVisibility() === 'public'
+            || ($profileUser->getProfileVisibility() === 'friends' && $areFriends);
+
+        if (!$canViewHistory) {
+            return $this->redirectToRoute('app_profile_view', ['username' => $username]);
+        }
+
+        $tab = $request->query->get('tab', 'past') === 'upcoming' ? 'upcoming' : 'past';
+        $type = $request->query->get('type', '');
+        $year = $request->query->get('year', '');
+        $perPage = 20;
+
+        $pastCount = $partRepo->countHistory($profileUser, 'past', $type, $year);
+        $upcomingCount = $partRepo->countHistory($profileUser, 'upcoming', $type, $year);
+
+        $total = $tab === 'upcoming' ? $upcomingCount : $pastCount;
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min(max(1, $request->query->getInt('page', 1)), $totalPages);
+
+        $participations = $partRepo->findHistoryPage($profileUser, $tab, $type, $year, $page, $perPage);
+
+        return $this->render('profile/view_events.html.twig', [
+            'profile_user'   => $profileUser,
+            'is_self'        => $isSelf,
+            'participations' => $participations,
+            'tab'            => $tab,
+            'filter_type'    => $type,
+            'filter_year'    => $year,
+            'years'          => $partRepo->findHistoryYears($profileUser),
+            'past_count'     => $pastCount,
+            'upcoming_count' => $upcomingCount,
+            'page'           => $page,
+            'total_pages'    => $totalPages,
+            'total'          => $total,
+        ]);
+    }
+
     #[Route('/{username}', name: 'app_profile_view')]
     public function view(string $username, UserRepository $userRepo, EventParticipationRepository $partRepo, FriendRepository $friendRepo): Response
     {

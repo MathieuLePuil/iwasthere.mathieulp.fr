@@ -62,10 +62,11 @@
 
     {# Stats #}
     {% if can_view_history and total_events is not null %}
-    <div class="card mb-5 text-center py-4">
+    <a href="{{ path('app_profile_view_events', {username: profile_user.username}) }}"
+       class="card mb-5 text-center py-4 block no-underline">
         <p class="text-3xl font-black" style="color: var(--positive)">{{ total_events }}</p>
         <p class="text-sm mt-0.5" style="color: var(--fg-4)">événement{{ total_events > 1 ? 's' : '' }} vécu{{ total_events > 1 ? 's' : '' }}</p>
-    </div>
+    </a>
     {% endif %}
 
     {# Events history #}
@@ -76,7 +77,14 @@
                 <p class="font-medium" style="color: var(--fg-2)">Aucun événement pour l'instant</p>
             </div>
         {% else %}
-            <h2 class="font-medium mb-3" style="color: var(--fg-1)">Derniers événements</h2>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-medium" style="color: var(--fg-1)">Derniers événements</h2>
+                <a href="{{ path('app_profile_view_events', {username: profile_user.username}) }}"
+                   class="flex items-center gap-1 text-sm font-medium" style="color: var(--positive)">
+                    Voir tout
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
+            </div>
             <div class="space-y-3">
                 {% for p in events %}
                 <div class="card flex items-center gap-3">
