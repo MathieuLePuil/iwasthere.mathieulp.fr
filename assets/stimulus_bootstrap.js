@@ -10,6 +10,7 @@ import AutocompleteController from './controllers/autocomplete_controller.js';
 import UsernameCheckController from './controllers/username_check_controller.js';
 import EventFriendsController from './controllers/event_friends_controller.js';
 import NotificationBadgeController from './controllers/notification_badge_controller.js';
+import TicketController from './controllers/ticket_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -23,3 +24,4 @@ app.register('autocomplete', AutocompleteController);
 app.register('username-check', UsernameCheckController);
 app.register('event-friends', EventFriendsController);
 app.register('notification-badge', NotificationBadgeController);
+app.register('ticket', TicketController);
