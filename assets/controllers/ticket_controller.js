@@ -231,13 +231,13 @@ export default class extends Controller {
         {
             const isFestival = this.typeValue === 'festival';
             const base = ctx.createLinearGradient(x, y, x, y + headerH);
-            base.addColorStop(0, isFestival ? '#1A0808' : '#061119');
+            base.addColorStop(0, isFestival ? '#1A0E09' : '#061119');
             base.addColorStop(1, '#13161B');
             ctx.fillStyle = base;
             ctx.fillRect(x, y, w, headerH);
 
             const tint = ctx.createRadialGradient(x + w / 2, y + 120, 0, x + w / 2, y + 120, 620);
-            tint.addColorStop(0, isFestival ? 'rgba(92, 10, 10, 0.9)' : 'rgba(7, 51, 74, 0.9)');
+            tint.addColorStop(0, isFestival ? 'rgba(92, 49, 32, 0.9)' : 'rgba(7, 51, 74, 0.9)');
             tint.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = tint;
             ctx.fillRect(x, y, w, headerH);

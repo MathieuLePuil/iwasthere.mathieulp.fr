@@ -281,7 +281,7 @@
     text-transform: uppercase;
   }
   .badge-concert  { background: rgba(176, 96, 255, 0.15); color: #C890FF; }
-  .badge-festival { background: rgba(232, 155, 142, 0.14); color: #E89B8E; }
+  .badge-festival { background: rgba(214, 113, 74, 0.14); color: #D6714A; }
   .badge-football { background: rgba(74, 222, 128, 0.12);  color: #7EE8A2; }
   .badge-rugby    { background: rgba(163, 177, 138, 0.14); color: #A8B89A; }
   .badge-tennis   { background: rgba(234, 179, 8, 0.12);   color: #F4D04A; }
@@ -455,7 +455,7 @@
   }
   /* Type-specific art tag accent colors */
   .iwt-hero-art-tag--concert  { color: #C890FF; background: rgba(176, 96, 255, 0.12); }
-  .iwt-hero-art-tag--festival { color: #F0B0A0; background: rgba(232, 155, 142, 0.12); }
+  .iwt-hero-art-tag--festival { color: #E19779; background: rgba(214, 113, 74, 0.12); }
   .iwt-hero-art-tag--football { color: #7EE8A2; background: rgba(74, 222, 128, 0.10); }
   .iwt-hero-art-tag--rugby    { color: #B0BC9A; background: rgba(163, 177, 138, 0.10); }
   .iwt-hero-art-tag--tennis   { color: #F4D04A; background: rgba(234, 179, 8, 0.10); }
@@ -632,9 +632,9 @@
 }
 .poster-festival {
   background:
-    radial-gradient(120% 80% at 10% 10%, #5C0A0A 0%, transparent 55%),
-    radial-gradient(120% 100% at 95% 90%, #2A0F0A 0%, transparent 60%),
-    linear-gradient(135deg, #1A0808 0%, #0B0405 100%);
+    radial-gradient(120% 80% at 10% 10%, #5C3120 0%, transparent 55%),
+    radial-gradient(120% 100% at 95% 90%, #2A160F 0%, transparent 60%),
+    linear-gradient(135deg, #1A0E09 0%, #0B0604 100%);
 }
 .poster-football {
   background:
