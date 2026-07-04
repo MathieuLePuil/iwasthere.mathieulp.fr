@@ -12,6 +12,7 @@ export default class extends Controller {
         venue: String,
         city: String,
         date: String,
+        time: String,
         type: String,
         image: String,
     };
@@ -372,6 +373,12 @@ export default class extends Controller {
         ctx.font = this.font(600, 34);
         ctx.fillStyle = '#F3F4F6';
         ctx.fillText(dateText, x, y);
+
+        if (this.timeValue) {
+            ctx.font = this.font(400, 27);
+            ctx.fillStyle = 'rgba(243, 244, 246, 0.48)';
+            ctx.fillText(this.timeValue.replace(':', 'h'), x, y + 42);
+        }
 
         const venueLines = this.wrapText(ctx, this.venueValue || '—', w / 2 - 20, 2);
         let vy = y;

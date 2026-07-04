@@ -69,7 +69,7 @@
                 </div>
             </div>
             <div class="iwt-hero-body">
-                <div class="iwt-countdown" data-controller="countdown" data-countdown-date-value="{{ next_event.event.date|date('Y-m-d') }}T21:00:00">
+                <div class="iwt-countdown" data-controller="countdown" data-countdown-date-value="{{ next_event.event.startDateTime|date('Y-m-d\\TH:i:s') }}">
                     <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="days">--</span><span class="iwt-countdown-lbl">jours</span></div>
                     <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="hours">--</span><span class="iwt-countdown-lbl">h</span></div>
                     <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="minutes">--</span><span class="iwt-countdown-lbl">min</span></div>

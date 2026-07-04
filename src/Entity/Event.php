@@ -29,6 +29,9 @@ class Event
     #[ORM\Column]
     private \DateTimeImmutable $date;
 
+    #[ORM\Column(type: 'time_immutable', nullable: true)]
+    private ?\DateTimeImmutable $startTime = null;
+
     #[ORM\Column(type: 'uuid', nullable: true)]
     private ?Uuid $venueId = null;
 
@@ -139,6 +142,27 @@ class Event
         $this->date = $date;
 
         return $this;
+    }
+
+    public function getStartTime(): ?\DateTimeImmutable
+    {
+        return $this->startTime;
+    }
+
+    public function setStartTime(?\DateTimeImmutable $startTime): static
+    {
+        $this->startTime = $startTime;
+
+        return $this;
+    }
+
+    /** Date + heure de début ; défaut 21h (musique) ou 16h (sport) si non renseignée */
+    public function getStartDateTime(): \DateTimeImmutable
+    {
+        $time = $this->startTime?->format('H:i')
+            ?? ($this->category === 'sport' ? '16:00' : '21:00');
+
+        return new \DateTimeImmutable($this->date->format('Y-m-d') . ' ' . $time);
     }
 
     public function getVenueId(): ?Uuid

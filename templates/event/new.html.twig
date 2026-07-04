@@ -183,11 +183,17 @@
         </div>
 
         {# Common fields #}
-        <div>
-            <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date *</label>
-            <input type="date" name="date" id="input-date" class="input-field" required
-                   value="{{ 'now'|date('Y-m-d') }}"
-                   onchange="checkPastDate(this.value)">
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date *</label>
+                <input type="date" name="date" id="input-date" class="input-field" required
+                       value="{{ 'now'|date('Y-m-d') }}"
+                       onchange="checkPastDate(this.value)">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Heure de début</label>
+                <input type="time" name="start_time" class="input-field">
+            </div>
         </div>
 
         {# Venue search #}
