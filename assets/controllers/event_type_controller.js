@@ -13,6 +13,8 @@ export default class extends Controller {
 
     selectMusic() {
         document.getElementById('input-category').value = 'music';
+        const artistInput = document.querySelector('#music-fields input[name="artist_name"]');
+        if (artistInput) artistInput.required = true;
         document.getElementById('music-fields').classList.remove('hidden');
         document.getElementById('sport-fields').classList.add('hidden');
         document.getElementById('type-selector-music').classList.remove('hidden');
@@ -38,6 +40,8 @@ export default class extends Controller {
 
     selectSport() {
         document.getElementById('input-category').value = 'sport';
+        const artistInput = document.querySelector('#music-fields input[name="artist_name"]');
+        if (artistInput) artistInput.required = false;
         document.getElementById('sport-fields').classList.remove('hidden');
         document.getElementById('music-fields').classList.add('hidden');
         document.getElementById('type-selector-sport').classList.remove('hidden');
