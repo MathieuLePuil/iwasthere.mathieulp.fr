@@ -28,7 +28,7 @@
 
     {# Minimal confirm block (shown when existing event selected) #}
     <div id="existing-event-confirm" class="hidden space-y-4">
-        <form method="post" action="{{ path('app_event_new') }}" class="space-y-4">
+        <form method="post" action="{{ path('app_event_new') }}" class="space-y-4" data-controller="form-loader">
             <input type="hidden" name="category" value="music">
             <input type="hidden" name="type" value="concert">
             <input type="hidden" name="existing_event_id" id="input-existing-event-id" value="">
@@ -74,7 +74,7 @@
     </div>
     {% endif %}
 
-    <form method="post" action="{{ path('app_event_new') }}" class="space-y-5">
+    <form method="post" action="{{ path('app_event_new') }}" class="space-y-5" data-controller="form-loader">
         <input type="hidden" name="category" id="input-category" value="{{ category }}">
 
         {# Type selector (shown after category) #}

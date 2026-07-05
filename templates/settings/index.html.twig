@@ -11,7 +11,7 @@
     {# ── Profile section ── #}
     <div class="card">
         <h2 class="font-medium mb-4" style="color: var(--fg-1)">Mon profil</h2>
-        <form method="post" action="{{ path('app_settings_profile') }}">
+        <form method="post" action="{{ path('app_settings_profile') }}" data-controller="form-loader">
             <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Nom affiché</label>
@@ -172,7 +172,7 @@
     {# ── In-app notification preferences ── #}
     <div class="card">
         <h2 class="font-medium mb-4" style="color: var(--fg-1)">Préférences de notifications</h2>
-        <form method="post" action="{{ path('app_settings_notifications') }}">
+        <form method="post" action="{{ path('app_settings_notifications') }}" data-controller="form-loader">
             <div class="space-y-3">
                 <label class="flex items-center justify-between">
                     <p class="text-sm" style="color: var(--fg-2)">Rappel de complétion d'événement</p>
@@ -206,7 +206,7 @@
     {# ── Privacy section ── #}
     <div class="card">
         <h2 class="font-medium mb-4" style="color: var(--fg-1)">Confidentialité</h2>
-        <form method="post" action="{{ path('app_settings_privacy') }}">
+        <form method="post" action="{{ path('app_settings_privacy') }}" data-controller="form-loader">
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Visibilité du profil</label>
@@ -233,7 +233,7 @@
     {% if app.user.password %}
     <div class="card">
         <h2 class="font-medium mb-4" style="color: var(--fg-1)">Changer le mot de passe</h2>
-        <form method="post" action="{{ path('app_settings_password') }}">
+        <form method="post" action="{{ path('app_settings_password') }}" data-controller="form-loader">
             <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Mot de passe actuel</label>
