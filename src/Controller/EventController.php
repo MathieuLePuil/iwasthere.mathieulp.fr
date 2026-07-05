@@ -110,7 +110,8 @@ class EventController extends AbstractController
             if (!empty($finalScore)) {
                 $event->setFinalScore($finalScore);
             }
-            if (in_array($data['winner'] ?? '', ['1', '2'], true)) {
+            // Winner checkbox exists only for tennis; dual-score sports derive it from the score
+            if (($data['type'] ?? '') === 'tennis' && in_array($data['winner'] ?? '', ['1', '2'], true)) {
                 $event->setWinner($data['winner']);
             }
 
@@ -383,9 +384,11 @@ if (!empty($data['duration'])) {
                 $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
             }
             if ($event->getCategory() === 'sport') {
-                // Checkbox: '1'/'2' when checked, absent when cleared (draw/unknown)
+                // Winner checkbox exists only for tennis ('1'/'2' when checked, absent
+                // when cleared); the other sports derive the winner from the score.
                 $event->setWinner(
-                    in_array($data['winner'] ?? '', ['1', '2'], true) ? $data['winner'] : null
+                    $event->getType() === 'tennis' && in_array($data['winner'] ?? '', ['1', '2'], true)
+                        ? $data['winner'] : null
                 );
             }
 

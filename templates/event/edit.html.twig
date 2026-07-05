@@ -157,13 +157,15 @@
             <div>
                 <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Score final</label>
                 <input type="text" name="final_score" class="input-field"
-                       placeholder="ex: 3-1, 6/4 7/5" value="{{ event.finalScore }}">
+                       placeholder="{{ event.type == 'tennis' ? 'ex : 6-4, 7-5' : 'ex : 3-1' }}" value="{{ event.finalScore }}">
             </div>
+            {# Tennis only — for the other sports the winner is derived from the score #}
+            {% if event.type == 'tennis' %}
             <div>
                 <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</label>
                 {% set winnerParts = event.teams and ' vs ' in event.teams
                     ? event.teams|split(' vs ', 2)|map(t => t|trim)
-                    : ['Équipe / Joueur 1', 'Équipe / Joueur 2'] %}
+                    : ['Joueur 1', 'Joueur 2'] %}
                 <div class="grid grid-cols-2 gap-2">
                     {% for i in [1, 2] %}
                     <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
@@ -177,6 +179,7 @@
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
         {% endif %}
 
