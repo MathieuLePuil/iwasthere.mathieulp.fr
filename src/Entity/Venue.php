@@ -27,9 +27,6 @@ class Venue
     private string $address;
 
     #[ORM\Column(length: 100)]
-    private string $city;
-
-    #[ORM\Column(length: 100)]
     private string $country;
 
     #[ORM\Column]
@@ -97,18 +94,6 @@ class Venue
     public function setAddress(string $address): static
     {
         $this->address = $address;
-
-        return $this;
-    }
-
-    public function getCity(): string
-    {
-        return $this->city;
-    }
-
-    public function setCity(string $city): static
-    {
-        $this->city = $city;
 
         return $this;
     }

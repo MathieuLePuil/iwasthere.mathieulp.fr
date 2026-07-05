@@ -52,7 +52,7 @@
                         <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
                             {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
                         </p>
-                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.city ?: p.event.venue.name }}{% endif %}</p>
+                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.name }}{% endif %}</p>
                     </div>
                 </label>
                 {% endfor %}

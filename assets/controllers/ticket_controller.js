@@ -10,7 +10,6 @@ export default class extends Controller {
         artist: String,
         tour: String,
         venue: String,
-        city: String,
         date: String,
         time: String,
         type: String,
@@ -385,11 +384,6 @@ export default class extends Controller {
         for (const line of venueLines) {
             ctx.fillText(line, colRight, vy);
             vy += 42;
-        }
-        if (this.cityValue) {
-            ctx.font = this.font(400, 27);
-            ctx.fillStyle = 'rgba(243, 244, 246, 0.48)';
-            ctx.fillText(this.cityValue, colRight, vy);
         }
 
         this.drawBarcode(ctx, py + 208);

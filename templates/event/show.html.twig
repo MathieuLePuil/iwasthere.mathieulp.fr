@@ -47,7 +47,7 @@
             <span>📅 {{ event.date|date('d/m/Y') }}</span>
         </div>
         {% if event.venue %}
-        <p class="text-sm mt-1" style="color: var(--fg-3)">📍 {{ event.venue.name }}{% if event.venue.city %}, {{ event.venue.city }}{% endif %}</p>
+        <p class="text-sm mt-1" style="color: var(--fg-3)">📍 {{ event.venue.name }}</p>
         {% endif %}
         {% if event.tourName %}
         <p class="text-sm mt-1" style="color: var(--fg-3)">🎫 {{ event.tourName }}</p>
@@ -172,7 +172,6 @@
              data-ticket-artist-value="{{ event.artistName ?? 'Événement' }}"
              data-ticket-tour-value="{{ event.tourName ?? '' }}"
              data-ticket-venue-value="{{ event.venue ? event.venue.name : '' }}"
-             data-ticket-city-value="{{ event.venue ? event.venue.city : '' }}"
              data-ticket-date-value="{{ event.date|date('Y-m-d') }}"
              data-ticket-time-value="{{ event.startTime ? event.startTime|date('H:i') : '' }}"
              data-ticket-type-value="{{ event.type }}"

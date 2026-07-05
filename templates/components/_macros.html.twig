@@ -71,7 +71,7 @@
                 {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
             </p>
             <p class="text-xs mt-0.5" style="color: var(--fg-3)">
-                {% if p.event.venue %}{{ p.event.venue.name }}{% if p.event.venue.city %} · {{ p.event.venue.city }}{% endif %}{% endif %}
+                {% if p.event.venue %}{{ p.event.venue.name }}{% endif %}
             </p>
         </div>
         <div class="flex flex-col items-end gap-1 flex-shrink-0">

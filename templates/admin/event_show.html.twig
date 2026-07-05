@@ -23,7 +23,7 @@
 {% if event.teams %}<div class="flex gap-2"><dt style="color: var(--fg-4)">Équipes</dt><dd style="color: var(--fg-1)">{{ event.teams }}</dd></div>{% endif %}
             {% if event.venue %}
             <div class="flex gap-2"><dt style="color: var(--fg-4)">Lieu</dt>
-                <dd style="color: var(--fg-1)">{{ event.venue.name }}, {{ event.venue.city }}</dd>
+                <dd style="color: var(--fg-1)">{{ event.venue.name }}</dd>
             </div>
             {% endif %}
             <div class="flex gap-2"><dt style="color: var(--fg-4)">Participants</dt><dd class="font-semibold" style="color: var(--positive)">{{ event.participantCount }}</dd></div>

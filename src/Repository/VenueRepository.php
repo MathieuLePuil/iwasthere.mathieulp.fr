@@ -21,19 +21,6 @@ class VenueRepository extends ServiceEntityRepository
     /**
      * @return Venue[]
      */
-    public function findByCity(string $city): array
-    {
-        return $this->createQueryBuilder('v')
-            ->andWhere('v.city = :city')
-            ->setParameter('city', $city)
-            ->orderBy('v.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Venue[]
-     */
     public function findByCountry(string $country): array
     {
         return $this->createQueryBuilder('v')
@@ -64,7 +51,7 @@ class VenueRepository extends ServiceEntityRepository
     public function search(string $query): array
     {
         return $this->createQueryBuilder('v')
-            ->where('v.name LIKE :q OR v.city LIKE :q')
+            ->where('v.name LIKE :q')
             ->setParameter('q', '%' . $query . '%')
             ->orderBy('v.name', 'ASC')
             ->setMaxResults(10)

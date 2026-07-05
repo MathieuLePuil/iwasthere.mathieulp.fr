@@ -161,7 +161,7 @@ class EventRepository extends ServiceEntityRepository
 
         foreach ($words as $i => $word) {
             $p = 'w' . $i;
-            $qb->andWhere("e.artistName LIKE :$p OR e.tournamentName LIKE :$p OR v.name LIKE :$p OR v.city LIKE :$p OR e.teams LIKE :$p")
+            $qb->andWhere("e.artistName LIKE :$p OR e.tournamentName LIKE :$p OR v.name LIKE :$p OR e.teams LIKE :$p")
                ->setParameter($p, '%' . $word . '%');
         }
 

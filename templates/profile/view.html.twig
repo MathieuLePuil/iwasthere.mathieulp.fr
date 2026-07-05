@@ -99,7 +99,7 @@
                         <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
                             {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
                         </p>
-                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.city }}{% endif %}</p>
+                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}</p>
                     </div>
                     {% if p.rating %}{{ m.star_rating(p.rating) }}{% else %}{{ m.event_badge(p.event.type) }}{% endif %}
                 </div>

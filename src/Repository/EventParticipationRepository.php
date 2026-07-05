@@ -403,7 +403,7 @@ class EventParticipationRepository extends ServiceEntityRepository
 
         $concerts = 0; $festivals = 0; $sports = 0;
         $totalDuration = 0; $totalRating = 0; $ratingCount = 0;
-        $artists = []; $venues = []; $cities = []; $years = []; $months = []; $weekdays = [];
+        $artists = []; $venues = []; $years = []; $months = []; $weekdays = [];
         $sportTypes = ['football' => 0, 'rugby' => 0, 'tennis' => 0];
         $friends = [];
         $byYear = []; $heatmap = [];
@@ -474,8 +474,6 @@ class EventParticipationRepository extends ServiceEntityRepository
             if ($e->getVenue()) {
                 $vName = $e->getVenue()->getName();
                 $venues[$vName] = ($venues[$vName] ?? 0) + 1;
-                $city = $e->getVenue()->getCity();
-                $cities[$city] = ($cities[$city] ?? 0) + 1;
             }
 
             foreach ($p->getFriends() ?? [] as $f) {
@@ -493,7 +491,7 @@ class EventParticipationRepository extends ServiceEntityRepository
         unset($fg);
         usort($festivalGroups, fn($a, $b) => $b['count'] <=> $a['count']);
 
-        arsort($artists); arsort($venues); arsort($cities); arsort($friends);
+        arsort($artists); arsort($venues); arsort($friends);
         arsort($byYear);
 
         $topYear = $byYear ? array_key_first($byYear) : null;
@@ -503,7 +501,6 @@ class EventParticipationRepository extends ServiceEntityRepository
         $topVenueCount = $venues ? max($venues) : 0;
         $topVenues = $topVenueCount > 0 ? array_keys(array_filter($venues, fn($c) => $c === $topVenueCount)) : [];
         $topVenue = $topVenues ? implode(', ', $topVenues) : null;
-        $topCity = $cities ? array_key_first($cities) : null;
         $topFriend = $friends ? array_key_first($friends) : null;
 
         ksort($heatmap);
@@ -562,9 +559,6 @@ class EventParticipationRepository extends ServiceEntityRepository
             'venues' => array_slice($venues, 0, 5, true),
             'venues_count' => count($venues),
             'top_venue' => $topVenue,
-            'cities' => array_slice($cities, 0, 5, true),
-            'cities_count' => count($cities),
-            'top_city' => $topCity,
             'friends_stats' => array_slice($friends, 0, 5, true),
             'top_friend' => $topFriend,
             'streak' => $streak,

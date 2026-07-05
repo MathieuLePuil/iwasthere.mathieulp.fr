@@ -233,15 +233,6 @@
     </div>
     {% endif %}
 
-    {# Top city #}
-    {% if stats.top_city %}
-    <div class="card text-center py-4 mb-4">
-        <p class="text-2xl mb-1">📍</p>
-        <p class="text-xs" style="color: var(--fg-4)">Ville préférée</p>
-        <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_city }}</p>
-    </div>
-    {% endif %}
-
     {# First & last event #}
     {% if stats.first_date %}
     <div class="card mb-4">

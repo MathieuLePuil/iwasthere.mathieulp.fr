@@ -30,7 +30,7 @@ export default class extends Controller {
                     <span style="font-size:11px;background:var(--bg-3);color:var(--fg-3);padding:2px 7px;border-radius:999px;text-transform:capitalize">${e.type}</span>
                 </div>
                 <div style="font-size:12px;color:var(--fg-4);margin-top:2px">
-                    ${e.date}${e.venue ? ' · ' + e.venue : ''}${e.city ? ', ' + e.city : ''}
+                    ${e.date}${e.venue ? ' · ' + e.venue : ''}
                     <span style="color:var(--positive);margin-left:4px">👥 ${e.participants}</span>
                 </div>
             </button>

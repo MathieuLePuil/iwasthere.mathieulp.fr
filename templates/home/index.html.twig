@@ -62,7 +62,7 @@
                 <div class="poster-title">
                     <span class="name">{{ next_event.event.artistName ?? next_event.event.tournamentName ?? 'Événement' }}</span>
                     {% if next_event.event.venue %}
-                    <span class="when">{{ next_event.event.date|date('d/m/Y') }} · {{ next_event.event.venue.city }}</span>
+                    <span class="when">{{ next_event.event.date|date('d/m/Y') }} · {{ next_event.event.venue.name }}</span>
                     {% else %}
                     <span class="when">{{ next_event.event.date|date('d/m/Y') }}</span>
                     {% endif %}

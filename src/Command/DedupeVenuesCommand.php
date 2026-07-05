@@ -124,8 +124,7 @@ class DedupeVenuesCommand extends Command
 
     private function completeness(Venue $venue): int
     {
-        return ($venue->getCity() !== '' ? 1 : 0)
-            + ($venue->getAddress() !== '' ? 1 : 0)
+        return ($venue->getAddress() !== '' ? 1 : 0)
             + (($venue->getLatitude() !== 0.0 || $venue->getLongitude() !== 0.0) ? 1 : 0);
     }
 
