@@ -51,6 +51,15 @@ class Event
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $tourName = null;
 
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $finalScore = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $intermediateScores = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $winner = null;
+
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $setlist = null;
 
@@ -236,6 +245,95 @@ class Event
         $this->tourName = $tourName;
 
         return $this;
+    }
+
+    public function getFinalScore(): ?string
+    {
+        return $this->finalScore;
+    }
+
+    public function setFinalScore(?string $finalScore): static
+    {
+        $this->finalScore = $finalScore;
+
+        return $this;
+    }
+
+    public function getIntermediateScores(): ?array
+    {
+        return $this->intermediateScores;
+    }
+
+    public function setIntermediateScores(?array $intermediateScores): static
+    {
+        $this->intermediateScores = $intermediateScores;
+
+        return $this;
+    }
+
+    public function getWinner(): ?string
+    {
+        return $this->winner;
+    }
+
+    public function setWinner(?string $winner): static
+    {
+        $this->winner = $winner;
+
+        return $this;
+    }
+
+    /**
+     * Score line ready for display: both sides, the score and the winning
+     * side (1, 2 or null on draw/unknown). Tennis scores are set-based
+     * ("6-4, 7-5"), the other sports use a plain "2 - 0" total.
+     * Returns null when there is no score or the teams can't be split.
+     */
+    public function getScoreline(): ?array
+    {
+        if (!$this->finalScore || !$this->teams || !str_contains($this->teams, ' vs ')) {
+            return null;
+        }
+        [$team1, $team2] = array_map('trim', explode(' vs ', $this->teams, 2));
+
+        // Explicit winner ('1'/'2' from the checkbox; legacy rows may hold a name)
+        if ($this->winner !== null && $this->winner !== '') {
+            $explicit = match (trim($this->winner)) {
+                '1' => 1,
+                '2' => 2,
+                default => strcasecmp(trim($this->winner), $team1) === 0 ? 1
+                    : (strcasecmp(trim($this->winner), $team2) === 0 ? 2 : null),
+            };
+            if ($explicit !== null) {
+                return [
+                    'team1' => $team1,
+                    'team2' => $team2,
+                    'score' => trim($this->finalScore),
+                    'winner' => $explicit,
+                ];
+            }
+        }
+
+        $cmp = 0;
+        if ($this->type === 'tennis') {
+            $won1 = $won2 = 0;
+            foreach (explode(',', $this->finalScore) as $set) {
+                if (preg_match('/(\d+)\s*-\s*(\d+)/', $set, $m)) {
+                    $won1 += (int) $m[1] > (int) $m[2] ? 1 : 0;
+                    $won2 += (int) $m[2] > (int) $m[1] ? 1 : 0;
+                }
+            }
+            $cmp = $won1 <=> $won2;
+        } elseif (preg_match('/^\s*(\d+)\s*-\s*(\d+)\s*$/', $this->finalScore, $m)) {
+            $cmp = (int) $m[1] <=> (int) $m[2];
+        }
+
+        return [
+            'team1' => $team1,
+            'team2' => $team2,
+            'score' => trim($this->finalScore),
+            'winner' => $cmp === 0 ? null : ($cmp > 0 ? 1 : 2),
+        ];
     }
 
     public function getSetlist(): ?array

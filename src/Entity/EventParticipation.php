@@ -47,15 +47,6 @@ class EventParticipation
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $imageUrl = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $finalScore = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $intermediateScores = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $winner = null;
-
     #[ORM\Column(length: 20, options: ['default' => 'friends'])]
     private string $visibility = 'friends';
 
@@ -182,42 +173,6 @@ public function getFriends(): array
     public function setImageUrl(?string $imageUrl): static
     {
         $this->imageUrl = $imageUrl;
-
-        return $this;
-    }
-
-    public function getFinalScore(): ?string
-    {
-        return $this->finalScore;
-    }
-
-    public function setFinalScore(?string $finalScore): static
-    {
-        $this->finalScore = $finalScore;
-
-        return $this;
-    }
-
-    public function getIntermediateScores(): ?array
-    {
-        return $this->intermediateScores;
-    }
-
-    public function setIntermediateScores(?array $intermediateScores): static
-    {
-        $this->intermediateScores = $intermediateScores;
-
-        return $this;
-    }
-
-    public function getWinner(): ?string
-    {
-        return $this->winner;
-    }
-
-    public function setWinner(?string $winner): static
-    {
-        $this->winner = $winner;
 
         return $this;
     }

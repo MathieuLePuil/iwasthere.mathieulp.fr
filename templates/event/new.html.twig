@@ -166,6 +166,7 @@
                            placeholder="ex : PSG"
                            data-autocomplete-target="input"
                            data-action="input->autocomplete#search focus->autocomplete#search"
+                           oninput="syncWinnerLabels()"
                            autocomplete="off">
                     <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
@@ -176,6 +177,7 @@
                            placeholder="ex : OM"
                            data-autocomplete-target="input"
                            data-action="input->autocomplete#search focus->autocomplete#search"
+                           oninput="syncWinnerLabels()"
                            autocomplete="off">
                     <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
@@ -239,6 +241,24 @@
                 <div id="score-tennis" class="hidden">
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Score (sets)</label>
                     <input type="text" name="final_score" id="input-final-score" class="input-field" placeholder="ex : 6-4, 7-5">
+                </div>
+                {# Winner checkboxes #}
+                <div class="mt-3">
+                    <p class="text-sm font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
+                               style="border-color: var(--border-default); background: var(--bg-2)">
+                            <input type="checkbox" name="winner" value="1"
+                                   style="accent-color: var(--positive)" onchange="exclusiveWinner(this)">
+                            <span id="winner-label-team1" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Équipe 1</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
+                               style="border-color: var(--border-default); background: var(--bg-2)">
+                            <input type="checkbox" name="winner" value="2"
+                                   style="accent-color: var(--positive)" onchange="exclusiveWinner(this)">
+                            <span id="winner-label-team2" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Équipe 2</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -358,6 +378,26 @@
         if (!dual || !tennis) return;
         dual.classList.toggle('hidden', isTennis);
         tennis.classList.toggle('hidden', !isTennis);
+        syncWinnerLabels();
+    }
+
+    function exclusiveWinner(el) {
+        if (!el.checked) return;
+        document.querySelectorAll('input[name="winner"]').forEach(function (c) {
+            if (c !== el) c.checked = false;
+        });
+    }
+
+    function syncWinnerLabels() {
+        const checked = document.querySelector('#type-selector-sport input:checked');
+        const isTennis = checked && checked.value === 'tennis';
+        const fallback = isTennis ? 'Joueur' : 'Équipe';
+        const t1 = document.querySelector('input[name="team1"]');
+        const t2 = document.querySelector('input[name="team2"]');
+        const l1 = document.getElementById('winner-label-team1');
+        const l2 = document.getElementById('winner-label-team2');
+        if (l1) l1.textContent = '🏆 ' + ((t1 && t1.value.trim()) || fallback + ' 1');
+        if (l2) l2.textContent = '🏆 ' + ((t2 && t2.value.trim()) || fallback + ' 2');
     }
     document.addEventListener('DOMContentLoaded', function () {
         const d = document.getElementById('input-date');

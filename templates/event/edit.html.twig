@@ -82,6 +82,12 @@
                 div.style.background  = radio.checked ? 'var(--positive-soft)' : 'var(--bg-2)';
             });
         }
+        function exclusiveWinner(el) {
+            if (!el.checked) return;
+            document.querySelectorAll('input[name="winner"]').forEach(function(c) {
+                if (c !== el) c.checked = false;
+            });
+        }
         </script>
 
         {# Rating — toujours affiché (statut déduit de la date) #}
@@ -151,12 +157,25 @@
             <div>
                 <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Score final</label>
                 <input type="text" name="final_score" class="input-field"
-                       placeholder="ex: 3-1, 6/4 7/5" value="{{ participation.finalScore }}">
+                       placeholder="ex: 3-1, 6/4 7/5" value="{{ event.finalScore }}">
             </div>
             <div>
                 <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</label>
-                <input type="text" name="winner" class="input-field"
-                       placeholder="Nom de l'équipe ou du joueur vainqueur" value="{{ participation.winner }}">
+                {% set winnerParts = event.teams and ' vs ' in event.teams
+                    ? event.teams|split(' vs ', 2)|map(t => t|trim)
+                    : ['Équipe / Joueur 1', 'Équipe / Joueur 2'] %}
+                <div class="grid grid-cols-2 gap-2">
+                    {% for i in [1, 2] %}
+                    <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
+                           style="border-color: var(--border-default); background: var(--bg-2)">
+                        <input type="checkbox" name="winner" value="{{ i }}"
+                               style="accent-color: var(--positive)"
+                               onchange="exclusiveWinner(this)"
+                               {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winnerParts[i-1]|lower) %}checked{% endif %}>
+                        <span class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 {{ winnerParts[i-1] }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endif %}

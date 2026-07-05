@@ -98,6 +98,23 @@ class EventController extends AbstractController
                 $em->persist($event);
             }
 
+            // Match result is shared event data — set it whether the event is new
+            // or joined, so every participant sees the same score/winner.
+            $finalScore = $data['final_score'] ?? '';
+            if (empty($finalScore) && isset($data['score_team1'], $data['score_team2'])) {
+                $s1 = trim($data['score_team1']);
+                $s2 = trim($data['score_team2']);
+                if ($s1 !== '' || $s2 !== '') {
+                    $finalScore = ($s1 !== '' ? $s1 : '0') . ' - ' . ($s2 !== '' ? $s2 : '0');
+                }
+            }
+            if (!empty($finalScore)) {
+                $event->setFinalScore($finalScore);
+            }
+            if (in_array($data['winner'] ?? '', ['1', '2'], true)) {
+                $event->setWinner($data['winner']);
+            }
+
             // Create participation
             $existing = $em->getRepository(EventParticipation::class)->findOneBy([
                 'event' => $event,
@@ -113,17 +130,6 @@ class EventController extends AbstractController
 
 if (!empty($data['duration'])) {
                     $participation->setDuration((int) $data['duration']);
-                }
-                $finalScore = $data['final_score'] ?? '';
-                if (empty($finalScore) && isset($data['score_team1'], $data['score_team2'])) {
-                    $s1 = trim($data['score_team1']);
-                    $s2 = trim($data['score_team2']);
-                    if ($s1 !== '' || $s2 !== '') {
-                        $finalScore = ($s1 !== '' ? $s1 : '0') . ' - ' . ($s2 !== '' ? $s2 : '0');
-                    }
-                }
-                if (!empty($finalScore)) {
-                    $participation->setFinalScore($finalScore);
                 }
                 if (!empty($data['rating'])) {
                     $participation->setRating((int) $data['rating']);
@@ -375,6 +381,17 @@ if (!empty($data['duration'])) {
                 $event->setTournamentName($data['tournament_name']);
             }
 
+            // Sport specific — score and winner are shared event data
+            if (isset($data['final_score'])) {
+                $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
+            }
+            if ($event->getCategory() === 'sport') {
+                // Checkbox: '1'/'2' when checked, absent when cleared (draw/unknown)
+                $event->setWinner(
+                    in_array($data['winner'] ?? '', ['1', '2'], true) ? $data['winner'] : null
+                );
+            }
+
             // Update setlist if manually entered (allow editing even setlist_fm sources)
             if (isset($data['setlist']) && is_array($data['setlist'])) {
                 $setlistLines = array_values(array_filter(array_map('trim', $data['setlist'])));
@@ -401,14 +418,6 @@ if (!empty($data['duration'])) {
             $participation->setStatus(
                 $event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past'
             );
-
-            // Sport specific
-            if (isset($data['final_score'])) {
-                $participation->setFinalScore($data['final_score']);
-            }
-            if (isset($data['winner'])) {
-                $participation->setWinner($data['winner']);
-            }
 
             // Friends
             $oldAppFriendIds = array_column(

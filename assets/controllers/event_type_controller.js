@@ -85,11 +85,13 @@ export default class extends Controller {
         if (tennis) tennis.classList.toggle('hidden', !isTennis);
 
         if (!isTennis) {
-            const isPlayer = checked.value === 'tennis';
             const label1 = document.getElementById('score-label-team1');
             const label2 = document.getElementById('score-label-team2');
-            if (label1) label1.textContent = checked.value === 'tennis' ? 'Joueur 1' : 'Équipe 1';
-            if (label2) label2.textContent = checked.value === 'tennis' ? 'Joueur 2' : 'Équipe 2';
+            if (label1) label1.textContent = 'Équipe 1';
+            if (label2) label2.textContent = 'Équipe 2';
         }
+
+        // Winner checkbox labels live in the page's inline script
+        if (typeof window.syncWinnerLabels === 'function') window.syncWinnerLabels();
     }
 }

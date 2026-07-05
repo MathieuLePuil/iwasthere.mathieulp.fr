@@ -135,8 +135,8 @@
                 {% if participation.duration %}
                 <span>⏱ {{ (participation.duration // 60) ~ 'h' }}{% if participation.duration % 60 %}{{ '%02d'|format(participation.duration % 60) }}{% endif %}</span>
                 {% endif %}
-{% if participation.finalScore %}
-                <span>🏆 {{ participation.finalScore }}</span>
+{% if event.finalScore %}
+                <span>🏆 {{ event.finalScore }}</span>
                 {% endif %}
             </div>
 
