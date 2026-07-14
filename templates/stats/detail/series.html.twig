@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Mes séries — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Mes séries</h1>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--positive)">{{ data.max_streak }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Record de jours consécutifs</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: {{ data.current_streak > 0 ? '#FBBF24' : 'var(--fg-4)' }}">{{ data.current_streak }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Série en cours</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: #60A5FA">{{ data.active_days }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Jours avec événement</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--negative)">{{ data.multi_event_days }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Jours à plusieurs événements</p>
+        </div>
+    </div>
+
+    {% if data.busiest %}
+    <div class="card mb-4">
+        <div class="flex items-center gap-3">
+            <span class="text-4xl">🤯</span>
+            <div>
+                <p class="text-xs" style="color: var(--fg-4)">Journée la plus chargée</p>
+                <p class="font-semibold" style="color: var(--fg-1)">{{ data.busiest.date|date('d/m/Y') }}</p>
+                <p class="text-sm" style="color: var(--fg-3)">{{ data.busiest.count }} événements le même jour</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if data.runs|length > 0 %}
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Meilleures séries</h2>
+        <div class="space-y-2">
+            {% for run in data.runs %}
+            <div class="flex items-center justify-between">
+                <span class="text-sm" style="color: var(--fg-3)">
+                    Du {{ run.start|date('d/m/Y') }} au {{ run.end|date('d/m/Y') }}
+                </span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-bold" style="color: var(--positive); background: var(--bg-3)">🔥 {{ run.length }} jours</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card mb-4">
+        <p class="text-sm" style="color: var(--fg-3)">Pas encore de série de plusieurs jours consécutifs. Enchaîne deux événements sur deux jours pour démarrer une série ! 🔥</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

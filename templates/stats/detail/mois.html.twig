@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Par mois — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Par mois</h1>
+    </div>
+
+    {% set month_names = {1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril', 5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août', 9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'} %}
+    {% set weekday_names = {1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi', 7: 'Dimanche'} %}
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-2xl mb-1">📅</p>
+            <p class="text-xs" style="color: var(--fg-4)">Mois préféré</p>
+            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ month_names[data.top_month] }}</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-2xl mb-1">🗓️</p>
+            <p class="text-xs" style="color: var(--fg-4)">Jour préféré</p>
+            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ weekday_names[data.top_weekday] }}</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Répartition par mois</h2>
+        {% set max_month = max(data.months) %}
+        <div class="space-y-2">
+            {% for mo in 1..12 %}
+            {% set count = data.months[mo] %}
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium w-20 flex-shrink-0" style="color: var(--fg-3)">{{ month_names[mo] }}</span>
+                <div class="flex-1 h-5 rounded-lg overflow-hidden" style="background: var(--bg-3)">
+                    {% if count > 0 %}
+                    <div class="h-full rounded-lg flex items-center px-2"
+                         style="width: max({{ max_month > 0 ? (count / max_month * 100)|round : 0 }}%, 22px); background: var(--positive)">
+                        <span class="text-xs font-bold" style="color: #0B0D10">{{ count }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Répartition par jour de la semaine</h2>
+        {% set max_day = max(data.weekdays) %}
+        <div class="space-y-2">
+            {% for d in 1..7 %}
+            {% set count = data.weekdays[d] %}
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium w-20 flex-shrink-0" style="color: var(--fg-3)">{{ weekday_names[d] }}</span>
+                <div class="flex-1 h-5 rounded-lg overflow-hidden" style="background: var(--bg-3)">
+                    {% if count > 0 %}
+                    <div class="h-full rounded-lg flex items-center px-2"
+                         style="width: max({{ max_day > 0 ? (count / max_day * 100)|round : 0 }}%, 22px); background: #60A5FA">
+                        <span class="text-xs font-bold" style="color: #0B0D10">{{ count }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

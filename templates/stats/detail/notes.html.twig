@@ -1,0 +1,77 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Mes notes — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Mes notes</h1>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: #FBBF24">{{ data.avg ? data.avg ~ '/5' : '—' }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Note moyenne</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--positive)">{{ data.rated }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Événement{{ data.rated > 1 ? 's' : '' }} noté{{ data.rated > 1 ? 's' : '' }}</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Distribution des notes</h2>
+        {% set max_dist = max(data.distribution) %}
+        <div class="space-y-2">
+            {% for note, count in data.distribution %}
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium w-8 flex-shrink-0" style="color: #FBBF24">{{ note }} ★</span>
+                <div class="flex-1 h-6 rounded-lg overflow-hidden" style="background: var(--bg-3)">
+                    {% if count > 0 %}
+                    <div class="h-full rounded-lg flex items-center px-2"
+                         style="width: max({{ max_dist > 0 ? (count / max_dist * 100)|round : 0 }}%, 24px); background: #FBBF24">
+                        <span class="text-xs font-bold" style="color: #0B0D10">{{ count }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if data.unrated > 0 %}
+        <p class="text-xs mt-3" style="color: var(--fg-4)">{{ data.unrated }} événement{{ data.unrated > 1 ? 's' : '' }} sans note</p>
+        {% endif %}
+    </div>
+
+    {% if data.by_type|length > 0 %}
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Moyenne par type</h2>
+        <div class="space-y-2">
+            {% for t in data.by_type %}
+            <div class="flex items-center justify-between">
+                {{ m.event_badge(t.type) }}
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold" style="color: #FBBF24">★ {{ t.avg }}</span>
+                    <span class="text-xs" style="color: var(--fg-4)">({{ t.count }} noté{{ t.count > 1 ? 's' : '' }})</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if data.best|length > 0 %}
+    <div class="mb-4">
+        <h2 class="font-medium mb-2 px-1" style="color: var(--fg-1)">Mes meilleures notes</h2>
+        <div class="card p-0 overflow-hidden">
+            {% for p in data.best %}
+                {{ m.event_row(p) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

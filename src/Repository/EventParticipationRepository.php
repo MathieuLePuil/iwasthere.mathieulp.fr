@@ -383,11 +383,15 @@ class EventParticipationRepository extends ServiceEntityRepository
         return array_column($result, 'year');
     }
 
-    public function computeStats(User $user): array
+    /**
+     * @return EventParticipation[] participations passées, triées par date croissante
+     */
+    public function findPastParticipations(User $user): array
     {
-        $pastParts = $this->createQueryBuilder('p')
+        return $this->createQueryBuilder('p')
             ->join('p.event', 'e')
             ->leftJoin('e.venue', 'v')
+            ->addSelect('e', 'v')
             ->where('p.user = :user')
             ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
@@ -395,6 +399,11 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->orderBy('e.date', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    public function computeStats(User $user): array
+    {
+        $pastParts = $this->findPastParticipations($user);
 
         $total = count($pastParts);
         if ($total === 0) {

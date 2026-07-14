@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Repository\EventParticipationRepository;
+use App\Service\StatsDetailService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,5 +22,20 @@ class StatsController extends AbstractController
         $stats = $repo->computeStats($user);
 
         return $this->render('stats/index.html.twig', ['stats' => $stats]);
+    }
+
+    #[Route('/{topic}', name: 'app_stats_detail')]
+    public function detail(string $topic, StatsDetailService $details): Response
+    {
+        if (!in_array($topic, StatsDetailService::TOPICS, true)) {
+            throw $this->createNotFoundException();
+        }
+
+        $data = $details->compute($this->getUser(), $topic);
+        if ($data === null) {
+            return $this->redirectToRoute('app_stats');
+        }
+
+        return $this->render('stats/detail/' . $topic . '.html.twig', ['data' => $data]);
     }
 }

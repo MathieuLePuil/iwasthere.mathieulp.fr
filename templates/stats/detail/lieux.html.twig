@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Mes lieux — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Mes lieux</h1>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--positive)">{{ data.venues|length }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Lieux visités</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--positive)">{{ data.total }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Événements</p>
+        </div>
+    </div>
+
+    {% if data.venues|length > 0 %}
+    <div class="card">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Classement</h2>
+        {% set top_count = data.venues[0].count %}
+        <div class="space-y-3">
+            {% set prev_count = null %}
+            {% set rank = 0 %}
+            {% set shown = 0 %}
+            {% for v in data.venues %}
+            {% if v.count != prev_count %}{% set rank = shown + 1 %}{% endif %}
+            {% set shown = shown + 1 %}
+            {% set prev_count = v.count %}
+            <div class="flex items-start gap-3">
+                <span class="text-sm font-bold w-5 pt-0.5" style="color: var(--fg-4)">{{ rank }}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium truncate" style="color: var(--fg-1)">{{ v.name }}</span>
+                        <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                            {% if v.avg_rating %}
+                            <span class="text-xs" style="color: #FBBF24">★ {{ v.avg_rating }}</span>
+                            {% endif %}
+                            <span style="color: var(--fg-4)">{{ v.count }}x</span>
+                        </div>
+                    </div>
+                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                        <div class="h-full rounded-full" style="width: {{ (v.count / top_count * 100)|round }}%; background: var(--positive)"></div>
+                    </div>
+                    <p class="text-xs mt-1" style="color: var(--fg-4)">
+                        {% if v.first|date('Y-m-d') == v.last|date('Y-m-d') %}
+                            Visité le {{ v.first|date('d/m/Y') }}
+                        {% else %}
+                            Du {{ v.first|date('d/m/Y') }} au {{ v.last|date('d/m/Y') }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if data.no_venue > 0 %}
+        <p class="text-xs mt-4" style="color: var(--fg-4)">{{ data.no_venue }} événement{{ data.no_venue > 1 ? 's' : '' }} sans lieu renseigné</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

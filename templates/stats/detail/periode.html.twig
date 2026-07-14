@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Ma période — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Ma période</h1>
+    </div>
+
+    <div class="card text-center py-5 mb-5">
+        <p class="text-3xl font-black" style="color: var(--positive)">
+            {% if data.span_years > 0 %}
+                {{ data.span_years }} an{{ data.span_years > 1 ? 's' : '' }}{% if data.span_months > 0 %} et {{ data.span_months }} mois{% endif %}
+            {% elseif data.span_months > 0 %}
+                {{ data.span_months }} mois
+            {% else %}
+                {{ data.span_days }} jour{{ data.span_days > 1 ? 's' : '' }}
+            {% endif %}
+        </p>
+        <p class="text-xs mt-1" style="color: var(--fg-4)">entre le premier et le dernier événement</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: #60A5FA">{{ data.active_years }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Année{{ data.active_years > 1 ? 's' : '' }} active{{ data.active_years > 1 ? 's' : '' }}</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: #FBBF24">{{ data.avg_per_year }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Événements / année active</p>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h2 class="font-medium mb-2 px-1" style="color: var(--fg-1)">Mon premier événement</h2>
+        <div class="card p-0 overflow-hidden">
+            {{ m.event_row(data.first) }}
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h2 class="font-medium mb-2 px-1" style="color: var(--fg-1)">Mon dernier événement</h2>
+        <div class="card p-0 overflow-hidden">
+            {{ m.event_row(data.last) }}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

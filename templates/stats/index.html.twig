@@ -18,28 +18,28 @@
 
     {# Hero stats #}
     <div class="grid grid-cols-2 gap-3 mb-5">
-        <div class="card text-center py-5">
+        <a href="{{ path('app_stats_detail', {topic: 'evenements'}) }}" class="card block text-center py-5 no-underline">
             <p class="text-4xl font-black" style="color: var(--positive)">{{ stats.total }}</p>
             <p class="text-xs mt-1" style="color: var(--fg-4)">Événements</p>
-        </div>
-        <div class="card text-center py-5">
+        </a>
+        <a href="{{ path('app_stats_detail', {topic: 'lieux'}) }}" class="card block text-center py-5 no-underline">
             <p class="text-2xl mb-1">🏟️</p>
             <p class="text-xs" style="color: var(--fg-4)">Lieu préféré</p>
             <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_venue ?? '—' }}</p>
-        </div>
-        <div class="card text-center py-5">
+        </a>
+        <a href="{{ path('app_stats_detail', {topic: 'notes'}) }}" class="card block text-center py-5 no-underline">
             <p class="text-4xl font-black" style="color: #FBBF24">{{ stats.avg_rating ? stats.avg_rating ~ '/5' : '—' }}</p>
             <p class="text-xs mt-1" style="color: var(--fg-4)">Note moyenne</p>
-        </div>
-        <div class="card text-center py-5">
+        </a>
+        <a href="{{ path('app_stats_detail', {topic: 'lieux'}) }}" class="card block text-center py-5 no-underline">
             <p class="text-4xl font-black" style="color: var(--positive)">{{ stats.venues_count }}</p>
             <p class="text-xs mt-1" style="color: var(--fg-4)">Lieux visités</p>
-        </div>
+        </a>
     </div>
 
     {# Music vs Sport breakdown #}
     {% if stats.concerts > 0 or stats.festivals > 0 or stats.sports > 0 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'repartition'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Répartition</h2>
         <div class="space-y-2">
             {% if stats.concerts > 0 %}
@@ -85,12 +85,12 @@
             </div>
             {% endif %}
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# Top artist #}
     {% if stats.top_artist %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'artistes'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center gap-3">
             <span class="text-4xl">🏆</span>
             <div>
@@ -99,12 +99,12 @@
                 <p class="text-sm" style="color: var(--fg-3)">{{ stats.top_artist_count }} fois</p>
             </div>
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# Festival stats #}
     {% if stats.top_festival %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'festivals'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🎪</span>
             <h2 class="font-medium" style="color: var(--fg-1)">Festivals</h2>
@@ -143,12 +143,12 @@
             {% endfor %}
         </div>
         {% endif %}
-    </div>
+    </a>
     {% endif %}
 
     {# Top artists list #}
     {% if stats.artists|length > 1 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'artistes'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Top Artistes</h2>
         <div class="space-y-2">
             {% set prev_count = null %}
@@ -172,12 +172,12 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# Events per year #}
     {% if stats.by_year|length > 1 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'annees'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par année</h2>
         {% set max_year = max(stats.by_year) %}
         <div class="space-y-2">
@@ -194,12 +194,12 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# By month #}
     {% if stats.by_month|length > 0 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'mois'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par mois</h2>
         {% set month_names = {1: 'Jan', 2: 'Fév', 3: 'Mar', 4: 'Avr', 5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Aoû', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Déc'} %}
         {% set max_month = max(stats.by_month) %}
@@ -214,12 +214,12 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# Streak #}
     {% if stats.max_streak > 1 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'series'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-xs" style="color: var(--fg-4)">Meilleure série</p>
@@ -230,12 +230,12 @@
         {% if stats.streak > 0 %}
         <p class="text-sm mt-1" style="color: var(--fg-3)">Série actuelle : <span class="font-bold" style="color: var(--positive)">{{ stats.streak }} jour{{ stats.streak > 1 ? 's' : '' }}</span></p>
         {% endif %}
-    </div>
+    </a>
     {% endif %}
 
     {# First & last event #}
     {% if stats.first_date %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'periode'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Période</h2>
         <div class="flex justify-between">
             <div>
@@ -247,12 +247,12 @@
                 <p class="font-semibold" style="color: var(--fg-1)">{{ stats.last_date|date('d/m/Y') }}</p>
             </div>
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {# Friends at events #}
     {% if stats.friends_stats|length > 0 %}
-    <div class="card mb-4">
+    <a href="{{ path('app_stats_detail', {topic: 'compagnons'}) }}" class="card block mb-4 no-underline">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Meilleurs compagnons</h2>
         <div class="space-y-2">
             {% for name, count in stats.friends_stats %}
@@ -262,7 +262,7 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </a>
     {% endif %}
 
     {% endif %} {# end has_data #}

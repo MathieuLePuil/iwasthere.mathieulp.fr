@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Répartition — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Répartition</h1>
+    </div>
+
+    {% set type_labels = {
+        'concert':  {label: 'Concerts',  emoji: '🎤', color: 'var(--positive)'},
+        'festival': {label: 'Festivals', emoji: '🎪', color: 'var(--negative)'},
+        'football': {label: 'Football',  emoji: '⚽', color: '#60A5FA'},
+        'rugby':    {label: 'Rugby',     emoji: '🏉', color: '#A8B89A'},
+        'tennis':   {label: 'Tennis',    emoji: '🎾', color: '#F4D04A'},
+    } %}
+
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par type d'événement</h2>
+        <div class="space-y-2">
+            {% for type, count in data.types %}
+            {% set cfg = type_labels[type] ?? {label: type, emoji: '🎟️', color: 'var(--positive)'} %}
+            <div class="flex items-center gap-3">
+                <span class="text-xl">{{ cfg.emoji }}</span>
+                <div class="flex-1">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium" style="color: var(--fg-1)">{{ cfg.label }}</span>
+                        <span style="color: var(--fg-4)">{{ count }} · {{ (count / data.total * 100)|round }}%</span>
+                    </div>
+                    <div class="h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                        <div class="h-full rounded-full" style="width: {{ (count / data.total * 100)|round }}%; background: {{ cfg.color }}"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if data.by_year|length > 0 %}
+    <div class="card mb-4">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Musique vs Sport par année</h2>
+        <div class="space-y-3">
+            {% for year, cats in data.by_year %}
+            {% set year_total = cats.music + cats.sport %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium" style="color: var(--fg-3)">{{ year }}</span>
+                    <span class="text-xs" style="color: var(--fg-4)">
+                        🎵 {{ cats.music }} · ⚽ {{ cats.sport }}
+                    </span>
+                </div>
+                <div class="flex h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                    {% if cats.music > 0 %}
+                    <div class="h-full" style="width: {{ (cats.music / year_total * 100)|round }}%; background: var(--positive)"></div>
+                    {% endif %}
+                    {% if cats.sport > 0 %}
+                    <div class="h-full" style="width: {{ (cats.sport / year_total * 100)|round }}%; background: #60A5FA"></div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
