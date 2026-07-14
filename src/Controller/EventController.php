@@ -14,6 +14,7 @@ use App\Repository\FriendRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Service\DeezerArtistService;
 use App\Service\EventImageService;
 use App\Service\NotificationService;
 use App\Service\SetlistFmService;
@@ -39,6 +40,7 @@ class EventController extends AbstractController
         UserRepository $userRepo,
         SetlistFmService $setlistFm,
         NotificationService $push,
+        DeezerArtistService $deezer,
     ): Response {
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
@@ -95,6 +97,11 @@ class EventController extends AbstractController
                     $event->setTeams($teams);
                 }
                 $em->persist($event);
+            }
+
+            // Artist picture via Deezer (new event, or joined one still missing it)
+            if ($event && !$event->getArtistImageUrl()) {
+                $deezer->applyToEvent($event);
             }
 
             // Souvenir data (score, note, durée…) only exists once the event is past
@@ -349,6 +356,7 @@ if (!empty($data['duration'])) {
         FriendRepository $friendRepo,
         UserRepository $userRepo,
         NotificationService $push,
+        DeezerArtistService $deezer,
     ): Response {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
@@ -379,7 +387,14 @@ if (!empty($data['duration'])) {
                 $event->setType($data['type']);
             }
             if (!empty($data['artist_name'])) {
+                $previousArtist = $event->getArtistName();
                 $event->setArtistName($data['artist_name']);
+                if ($event->getArtistName() !== $previousArtist) {
+                    $event->setArtistImageUrl(null);
+                }
+            }
+            if ($event->getCategory() === 'music' && !$event->getArtistImageUrl()) {
+                $deezer->applyToEvent($event);
             }
             if (!empty($data['teams'])) {
                 $event->setTeams($data['teams']);

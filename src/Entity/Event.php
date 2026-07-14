@@ -42,6 +42,9 @@ class Event
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $artistName = null;
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $artistImageUrl = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $tournamentName = null;
 
@@ -214,6 +217,18 @@ class Event
     {
         $artistName = $artistName !== null ? preg_replace('/^\s+|\s+$/u', '', $artistName) : null;
         $this->artistName = $artistName !== '' ? $artistName : null;
+
+        return $this;
+    }
+
+    public function getArtistImageUrl(): ?string
+    {
+        return $this->artistImageUrl;
+    }
+
+    public function setArtistImageUrl(?string $artistImageUrl): static
+    {
+        $this->artistImageUrl = $artistImageUrl;
 
         return $this;
     }

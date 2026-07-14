@@ -33,6 +33,11 @@
             {% set prev_count = a.count %}
             <div class="flex items-start gap-3">
                 <span class="text-sm font-bold w-5 pt-0.5" style="color: var(--fg-4)">{{ rank }}</span>
+                {% if a.image %}
+                <img src="{{ a.image }}" alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0">
+                {% else %}
+                <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-sm" style="background: var(--bg-3)">🎤</div>
+                {% endif %}
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between text-sm mb-1">
                         <span class="font-medium truncate" style="color: var(--fg-1)">{{ a.name }}</span>

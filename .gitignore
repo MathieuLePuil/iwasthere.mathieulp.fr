@@ -21,5 +21,6 @@
 .claude/
 
 public/phpmyadmin/
+public/uploads/artists/
 public/uploads/avatars/
 public/uploads/events/

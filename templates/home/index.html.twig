@@ -57,7 +57,8 @@
         {% if next_event %}
         {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
         <div class="iwt-hero">
-            <div class="iwt-hero-poster poster-{{ next_event.event.type ?? 'default' }}">
+            <div class="iwt-hero-poster{% if not next_event.event.artistImageUrl %} poster-{{ next_event.event.type ?? 'default' }}{% endif %}"
+                 {% if next_event.event.artistImageUrl %}style="background: linear-gradient(180deg, rgba(11,13,16,0.2) 0%, rgba(11,13,16,0.75) 100%), url('{{ next_event.event.artistImageUrl }}') center 25%/cover"{% endif %}>
                 <span class="iwt-hero-art-tag iwt-hero-art-tag--{{ next_event.event.type ?? 'default' }}">{{ type_emoji[next_event.event.type] ?? '🎫' }} {{ next_event.event.type ? next_event.event.type|capitalize : 'Événement' }}</span>
                 <div class="poster-title">
                     <span class="name">{{ next_event.event.artistName ?? next_event.event.tournamentName ?? 'Événement' }}</span>
@@ -104,13 +105,7 @@
                class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
                style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}"
 >
-                <div class="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
-                    <div class="w-full h-full poster-{{ p.event.type ?? 'default' }} flex items-center justify-center">
-                        <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
-                            {{ p.event.date|date('d') }}<br><span style="font-size:9px; opacity:0.6">{{ p.event.date|date('M')|upper }}</span>
-                        </span>
-                    </div>
-                </div>
+                {{ m.event_thumb(p.event) }}
                 <div class="flex-1 min-w-0">
                     <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}</p>
                     <p class="text-xs mt-0.5" style="color: var(--fg-3)">

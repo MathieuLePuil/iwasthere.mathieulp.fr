@@ -5,7 +5,7 @@ import { Controller } from '@hotwired/stimulus';
  * on a canvas and lets the user save it to their photo gallery.
  */
 export default class extends Controller {
-    static targets = ['modal', 'preview'];
+    static targets = ['modal', 'preview', 'dots'];
     static values = {
         artist: String,
         tour: String,
@@ -14,6 +14,7 @@ export default class extends Controller {
         time: String,
         type: String,
         image: String,
+        artistImage: String,
     };
 
     W = 1000;
@@ -27,10 +28,23 @@ export default class extends Controller {
         document.body.style.overflow = '';
     }
 
-    async open() {
-        if (!this.blob) {
-            await this.generate();
+    /* One ticket variant per available visual: personal photo, artist photo, plain */
+    get variants() {
+        if (!this._variants) {
+            this._variants = [];
+            if (this.imageValue) {
+                this._variants.push({ kind: 'photo', label: 'Ma photo', src: this.imageValue });
+            }
+            if (this.artistImageValue) {
+                this._variants.push({ kind: 'artist', label: 'Photo artiste', src: this.artistImageValue });
+            }
+            this._variants.push({ kind: 'plain', label: 'Sans photo', src: null });
         }
+        return this._variants;
+    }
+
+    async open() {
+        await this.show(this.index ?? 0);
         this.modalTarget.classList.remove('hidden');
         this.modalTarget.classList.add('flex');
         document.body.style.overflow = 'hidden';
@@ -42,14 +56,105 @@ export default class extends Controller {
         document.body.style.overflow = '';
     }
 
+    /* direction: -1 slides in from the left, 1 from the right, 0 no animation */
+    async show(index, direction = 0) {
+        if (this.animating) return;
+        index = Math.max(0, Math.min(index, this.variants.length - 1));
+        if (direction !== 0 && index === this.index) return;
+        this.animating = true;
+
+        try {
+            const variant = this.variants[index];
+            if (!variant.blob) {
+                await this.generate(variant);
+            }
+
+            const img = this.previewTarget;
+            if (direction !== 0) {
+                img.style.transition = 'transform 0.16s ease-in, opacity 0.16s ease-in';
+                img.style.transform = 'translateX(' + (-direction * 28) + 'px)';
+                img.style.opacity = '0';
+                await new Promise((resolve) => setTimeout(resolve, 160));
+            }
+
+            this.index = index;
+            img.src = variant.dataUrl;
+            this.renderDots();
+
+            if (direction !== 0) {
+                img.style.transition = 'none';
+                img.style.transform = 'translateX(' + (direction * 28) + 'px)';
+                img.offsetHeight; // reflow so the incoming slide animates
+                img.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+                img.style.transform = 'translateX(0)';
+                img.style.opacity = '1';
+            }
+        } finally {
+            this.animating = false;
+        }
+    }
+
+    prev() {
+        if (this.index > 0) this.show(this.index - 1, -1);
+    }
+
+    next() {
+        if (this.index < this.variants.length - 1) this.show(this.index + 1, 1);
+    }
+
+    goTo(event) {
+        const target = parseInt(event.currentTarget.dataset.index, 10);
+        this.show(target, Math.sign(target - this.index));
+    }
+
+    /* Tap on the left/right half of the preview also navigates (desktop) */
+    previewClick(event) {
+        if (this.variants.length < 2) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        (event.clientX - rect.left) < rect.width / 2 ? this.prev() : this.next();
+    }
+
+    touchStart(event) {
+        const t = event.changedTouches[0];
+        this.touch = { x: t.clientX, y: t.clientY };
+    }
+
+    touchEnd(event) {
+        if (!this.touch) return;
+        const t = event.changedTouches[0];
+        const dx = t.clientX - this.touch.x;
+        const dy = t.clientY - this.touch.y;
+        this.touch = null;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+        dx < 0 ? this.next() : this.prev();
+    }
+
+    renderDots() {
+        if (!this.hasDotsTarget) return;
+        if (this.variants.length < 2) {
+            this.dotsTarget.innerHTML = '';
+            return;
+        }
+        const dots = this.variants.map((v, i) =>
+            '<button type="button" data-action="ticket#goTo" data-index="' + i + '" aria-label="' + v.label + '"'
+            + ' style="width:' + (i === this.index ? 22 : 8) + 'px;height:8px;border-radius:4px;border:0;padding:0;cursor:pointer;transition:all .2s;'
+            + 'background:' + (i === this.index ? '#B060FF' : 'rgba(243,244,246,0.35)') + '"></button>'
+        ).join('');
+        this.dotsTarget.innerHTML =
+            '<div class="flex items-center justify-center gap-2">' + dots + '</div>'
+            + '<p class="text-xs text-center mt-2" style="color:rgba(243,244,246,0.55)">'
+            + this.variants[this.index].label + ' \u00b7 swipe pour changer</p>';
+    }
+
     async save() {
-        if (!this.blob) return;
+        const variant = this.variants[this.index ?? 0];
+        if (!variant || !variant.blob) return;
 
         const slug = (this.artistValue || 'concert')
             .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const filename = 'ticket-' + slug + '-' + (this.dateValue || '').slice(0, 4) + '.png';
-        const file = new File([this.blob], filename, { type: 'image/png' });
+        const file = new File([variant.blob], filename, { type: 'image/png' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
@@ -60,7 +165,7 @@ export default class extends Controller {
             }
         }
 
-        const url = URL.createObjectURL(this.blob);
+        const url = URL.createObjectURL(variant.blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
@@ -70,17 +175,17 @@ export default class extends Controller {
         setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
-    async generate() {
+    async generate(variant) {
         const canvas = document.createElement('canvas');
         canvas.width = this.W;
         canvas.height = this.H;
         const ctx = canvas.getContext('2d');
 
         let image = null;
-        if (this.imageValue) {
+        if (variant.src) {
             try {
                 image = new Image();
-                image.src = this.imageValue;
+                image.src = variant.src;
                 await image.decode();
             } catch (e) {
                 image = null;
@@ -91,7 +196,7 @@ export default class extends Controller {
         this.drawTicketBase(ctx);
         const perforationY = this.TICKET_Y + this.TICKET_H - 420;
         if (image) {
-            this.drawPhotoHeader(ctx, image, perforationY);
+            this.drawPhotoHeader(ctx, image, perforationY, variant.kind);
             this.drawTitleBlock(ctx, { bottom: perforationY - 56 });
         } else {
             const headerBottom = this.drawHeader(ctx);
@@ -100,8 +205,8 @@ export default class extends Controller {
         this.drawPerforation(ctx, perforationY);
         this.drawStub(ctx, perforationY);
 
-        this.blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-        this.previewTarget.src = canvas.toDataURL('image/png');
+        variant.blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        variant.dataUrl = canvas.toDataURL('image/png');
     }
 
     /* ── Drawing helpers ── */
@@ -180,31 +285,63 @@ export default class extends Controller {
         ctx.stroke();
     }
 
-    drawPhotoHeader(ctx, image, perforationY) {
+    drawPhotoHeader(ctx, image, perforationY, kind) {
         const x = this.TICKET_X;
         const y = this.TICKET_Y;
         const w = this.TICKET_W;
         const h = perforationY - y;
 
+        if (kind === 'artist') {
+            // Artist picture: full ticket width at its native 1:1 ratio —
+            // never zoomed/cropped — melting into the ticket body below.
+            ctx.save();
+            this.roundRectPath(ctx, x, y, w, w, [44, 44, 0, 0]);
+            ctx.clip();
+
+            const scale = Math.max(w / image.width, w / image.height);
+            const dw = image.width * scale;
+            const dh = image.height * scale;
+            ctx.drawImage(image, x + (w - dw) / 2, y + (w - dh) / 2, dw, dh);
+
+            const fade = ctx.createLinearGradient(0, y + w - 300, 0, y + w);
+            fade.addColorStop(0, 'rgba(19, 22, 27, 0)');
+            fade.addColorStop(0.6, 'rgba(19, 22, 27, 0.55)');
+            fade.addColorStop(1, '#13161B');
+            ctx.fillStyle = fade;
+            ctx.fillRect(x, y + w - 300, w, 300);
+
+            ctx.restore();
+            return;
+        }
+
         ctx.save();
         this.roundRectPath(ctx, x, y, w, h, [44, 44, 0, 0]);
         ctx.clip();
 
-        // Blurred echo of the photo fills the zone behind the uncropped image
-        const cover = Math.max(w / image.width, h / image.height);
-        const cw = image.width * cover;
-        const ch = image.height * cover;
-        ctx.filter = 'blur(60px)';
-        ctx.drawImage(image, x + (w - cw) / 2, y + (h - ch) / 2, cw, ch);
-        ctx.filter = 'none';
-        ctx.fillStyle = 'rgba(11, 13, 16, 0.55)';
-        ctx.fillRect(x, y, w, h);
+        if (image.width <= image.height * 1.15) {
+            // Square or portrait (artist pictures, phone shots): fill the whole
+            // header edge to edge, biasing the crop toward the top (faces).
+            const scale = Math.max(w / image.width, h / image.height);
+            const dw = image.width * scale;
+            const dh = image.height * scale;
+            ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) * 0.3, dw, dh);
+        } else {
+            // Wide landscape photo: cover-cropping would gut it, so show it
+            // whole over a blurred echo of itself.
+            const cover = Math.max(w / image.width, h / image.height);
+            const cw = image.width * cover;
+            const ch = image.height * cover;
+            ctx.filter = 'blur(60px)';
+            ctx.drawImage(image, x + (w - cw) / 2, y + (h - ch) / 2, cw, ch);
+            ctx.filter = 'none';
+            ctx.fillStyle = 'rgba(11, 13, 16, 0.55)';
+            ctx.fillRect(x, y, w, h);
 
-        // Full photo at its own aspect ratio — never cropped or stretched
-        const scale = Math.min(w / image.width, h / image.height);
-        const dw = image.width * scale;
-        const dh = image.height * scale;
-        ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) * 0.35, dw, dh);
+            const scale = Math.min(w / image.width, h / image.height);
+            const dw = image.width * scale;
+            const dh = image.height * scale;
+            ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) * 0.35, dw, dh);
+        }
 
         // Scrim so the title stays readable over the photo
         const fade = ctx.createLinearGradient(0, perforationY - 560, 0, perforationY);

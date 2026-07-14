@@ -176,9 +176,10 @@ class StatsDetailService
             $variants[$key] ??= [
                 'names' => [], 'count' => 0,
                 'total_rating' => 0, 'rating_count' => 0,
-                'first' => null, 'last' => null,
+                'first' => null, 'last' => null, 'image' => null,
             ];
             $variants[$key]['names'][$name] = ($variants[$key]['names'][$name] ?? 0) + 1;
+            $variants[$key]['image'] ??= $e->getArtistImageUrl();
             $variants[$key]['count']++;
             if ($p->getRating()) {
                 $variants[$key]['total_rating'] += $p->getRating();
@@ -198,6 +199,7 @@ class StatsDetailService
             arsort($v['names']);
             $artists[] = [
                 'name' => array_key_first($v['names']),
+                'image' => $v['image'],
                 'count' => $v['count'],
                 'avg_rating' => $v['rating_count'] > 0 ? round($v['total_rating'] / $v['rating_count'], 1) : null,
                 'first' => $v['first'],
