@@ -97,6 +97,14 @@ class EventController extends AbstractController
                 $em->persist($event);
             }
 
+            // Souvenir data (score, note, durée…) only exists once the event is past
+            if (!$event->isPast()) {
+                unset(
+                    $data['final_score'], $data['score_team1'], $data['score_team2'],
+                    $data['winner'], $data['duration'], $data['rating'], $data['comment'],
+                );
+            }
+
             // Match result is shared event data — set it whether the event is new
             // or joined, so every participant sees the same score/winner.
             $finalScore = $data['final_score'] ?? '';
@@ -379,11 +387,19 @@ if (!empty($data['duration'])) {
                 $event->setTournamentName($data['tournament_name']);
             }
 
+            // Souvenir data (score, setlist, note, durée…) only once the event is past
+            if (!$event->isPast()) {
+                unset(
+                    $data['final_score'], $data['winner'], $data['setlist'],
+                    $data['setlist_encores'], $data['rating'], $data['comment'], $data['duration'],
+                );
+            }
+
             // Sport specific — score and winner are shared event data
             if (isset($data['final_score'])) {
                 $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
             }
-            if ($event->getCategory() === 'sport') {
+            if ($event->getCategory() === 'sport' && $event->isPast()) {
                 // Winner checkbox exists only for tennis ('1'/'2' when checked, absent
                 // when cleared); the other sports derive the winner from the score.
                 $event->setWinner(
@@ -504,6 +520,11 @@ if (!empty($data['duration'])) {
         $participation = $participationRepo->findByUserAndEvent($user, $event);
         if (!$participation) {
             throw $this->createAccessDeniedException();
+        }
+
+        if (!$event->isPast()) {
+            $this->addFlash('error', 'Tu pourras ajouter une photo une fois l\'événement passé.');
+            return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
         $file = $request->files->get('image');

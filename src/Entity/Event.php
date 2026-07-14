@@ -153,6 +153,12 @@ class Event
         return $this;
     }
 
+    /** Même convention que le statut de participation : date >= aujourd'hui ⇒ à venir */
+    public function isPast(): bool
+    {
+        return $this->date < new \DateTimeImmutable('today');
+    }
+
     public function getStartTime(): ?\DateTimeImmutable
     {
         return $this->startTime;

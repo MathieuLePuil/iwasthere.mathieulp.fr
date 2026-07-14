@@ -90,7 +90,16 @@
         }
         </script>
 
-        {# Rating — toujours affiché (statut déduit de la date) #}
+        {# Souvenir data (ressenti, setlist, résultats, durée) — only once the event is past #}
+        {% if not event.isPast %}
+        <div class="card text-center py-5">
+            <p class="text-2xl mb-1">📅</p>
+            <p class="text-sm font-medium" style="color: var(--fg-2)">Événement à venir</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Note, setlist, photo et souvenirs seront disponibles une fois l'événement passé.</p>
+        </div>
+        {% else %}
+
+        {# Rating #}
         <div class="card">
             <p class="section-title mb-3">Mon ressenti</p>
             <div class="flex gap-2 justify-center" data-controller="star-rating">
@@ -190,6 +199,8 @@
                    placeholder="120" min="0" value="{{ participation.duration }}">
         </div>
 
+        {% endif %}
+
         {# Factual event data #}
         {% if event.category == 'music' or event.category == 'sport' or event.tournamentName %}
         <details class="card cursor-pointer" {% if event.category == 'music' and not event.artistName %}open{% endif %}>
@@ -246,7 +257,7 @@
                     style="border-color: var(--border-default); background: var(--bg-2)">
                 <span class="flex items-center gap-2 text-sm font-medium" style="color: var(--fg-2)">
                     <span class="text-lg">👥</span>
-                    J'y étais avec des amis
+                    J'y {{ event.isPast ? 'étais' : 'serai' }} avec des amis
                     {% if savedFriends|length > 0 %}
                         <span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--positive-soft); color: var(--positive)">{{ savedFriends|length }}</span>
                     {% endif %}

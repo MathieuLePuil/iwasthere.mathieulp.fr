@@ -63,8 +63,8 @@
             {% endif %}
         </div>
 
-        {# My photo of the event #}
-        {% if participation and participation.imageUrl %}
+        {# My photo of the event — only once the event is past #}
+        {% if participation and event.isPast and participation.imageUrl %}
         <div class="relative mt-3 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle)">
             <img src="{{ participation.imageUrl }}"
                  alt="Ma photo de {{ event.artistName ?? event.tournamentName ?? 'l\'événement' }}"
@@ -90,7 +90,7 @@
                 </form>
             </div>
         </div>
-        {% elseif participation %}
+        {% elseif participation and event.isPast %}
         <form method="post" action="{{ path('app_event_image', {id: event.id}) }}" enctype="multipart/form-data" class="mt-3">
             <label class="flex items-center justify-center gap-2.5 py-4 rounded-2xl cursor-pointer select-none transition-all"
                    style="border: 1.5px dashed var(--border-default); background: var(--bg-2)">
@@ -123,8 +123,10 @@
                     {{ m.star_rating(participation.rating) }}
                     <span class="text-sm" style="color: var(--fg-3)">{{ participation.rating }}/5</span>
                 </div>
-            {% else %}
+            {% elseif event.isPast %}
                 <p class="text-sm mb-2" style="color: var(--fg-3)">⭐ Note non renseignée</p>
+            {% else %}
+                <p class="text-sm mb-2" style="color: var(--fg-3)">📅 À venir — tu pourras noter l'événement une fois passé</p>
             {% endif %}
 
             {% if participation.comment %}
@@ -166,8 +168,18 @@
         </div>
         {% endif %}
 
-        {# Souvenir ticket #}
-        {% if participation and event.category == 'music' %}
+        {# Souvenir ticket — only once the event is past #}
+        {% if participation and event.category == 'music' and not event.isPast %}
+        <div class="card w-full flex items-center gap-3 opacity-60">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--bg-3)">
+                <span class="text-xl">🎟️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm" style="color: var(--fg-2)">Ticket souvenir</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Disponible une fois l'événement passé</p>
+            </div>
+        </div>
+        {% elseif participation and event.category == 'music' %}
         <div data-controller="ticket"
              data-ticket-artist-value="{{ event.artistName ?? 'Événement' }}"
              data-ticket-tour-value="{{ event.tourName ?? '' }}"
@@ -264,7 +276,9 @@
         <div class="card text-center py-6">
             <p class="text-3xl mb-2">🎵</p>
             <p class="text-sm font-medium" style="color: var(--fg-2)">Setlist non disponible</p>
-            {% if event.setlistRetryCount < 24 and event.date < date() %}
+            {% if not event.isPast %}
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Elle sera disponible une fois l'événement passé</p>
+            {% elseif event.setlistRetryCount < 24 and event.date < date() %}
             <p class="text-xs mt-1" style="color: var(--fg-4)">Recherche automatique en cours sur Setlist.fm…</p>
             {% else %}
             <a href="{{ path('app_event_edit', {id: event.id}) }}" class="text-xs font-medium mt-2 block" style="color: var(--positive)">
