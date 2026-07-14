@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Repository\EventParticipationRepository;
 use App\Repository\UserRepository;
 use App\Service\NotificationService;
+use App\Service\SetlistFmService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,6 +24,7 @@ class SendEventRemindersCommand extends Command
         private readonly UserRepository $userRepo,
         private readonly EventParticipationRepository $participationRepo,
         private readonly NotificationService $notificationService,
+        private readonly SetlistFmService $setlistFmService,
     ) {
         parent::__construct();
     }
@@ -31,7 +33,8 @@ class SendEventRemindersCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $currentTime = (new \DateTimeImmutable())->format('H:i');
+        // Les utilisateurs saisissent leur heure de rappel en heure française ; le serveur est en UTC
+        $currentTime = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('H:i');
 
         $users = $this->userRepo->findBy(['notifCompletionEnabled' => true]);
         $io->info(sprintf('%d user(s) with completion reminders enabled', count($users)));
@@ -43,6 +46,10 @@ class SendEventRemindersCommand extends Command
             if ($configuredTime !== $currentTime) {
                 continue;
             }
+
+            // Sans cela, les participations restent "upcoming" tant que l'utilisateur
+            // n'a pas ouvert l'app, et findPendingReminders ne les voit pas
+            $this->participationRepo->updateStaleUpcoming($user);
 
             $reminders = $this->participationRepo->findPendingReminders($user);
             if (empty($reminders)) {
@@ -58,6 +65,18 @@ class SendEventRemindersCommand extends Command
             $this->notificationService->sendNotification($title, $body, (string) $user->getId());
             $io->writeln(sprintf('  → %s (%d event(s))', $user->getUsername(), $count));
             $sent++;
+
+            foreach ($reminders as $reminder) {
+                $event = $reminder->getEvent();
+                if (!empty($event->getSetlist())) {
+                    continue;
+                }
+                if ($this->setlistFmService->tryImportSetlist($event)) {
+                    $io->writeln(sprintf('    ♪ Setlist importée : %s', $event->getArtistName()));
+                }
+                // Respect API rate limit (2 req/s on free plan)
+                usleep(600_000);
+            }
         }
 
         $io->success(sprintf('Reminders sent to %d user(s)', $sent));

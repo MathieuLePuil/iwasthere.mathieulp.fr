@@ -206,7 +206,8 @@ class Event
 
     public function setArtistName(?string $artistName): static
     {
-        $this->artistName = $artistName;
+        $artistName = $artistName !== null ? preg_replace('/^\s+|\s+$/u', '', $artistName) : null;
+        $this->artistName = $artistName !== '' ? $artistName : null;
 
         return $this;
     }

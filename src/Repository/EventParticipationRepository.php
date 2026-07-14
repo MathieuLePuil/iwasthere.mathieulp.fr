@@ -403,7 +403,7 @@ class EventParticipationRepository extends ServiceEntityRepository
 
         $concerts = 0; $festivals = 0; $sports = 0;
         $totalDuration = 0; $totalRating = 0; $ratingCount = 0;
-        $artists = []; $venues = []; $years = []; $months = []; $weekdays = [];
+        $artistVariants = []; $venues = []; $years = []; $months = []; $weekdays = [];
         $sportTypes = ['football' => 0, 'rugby' => 0, 'tennis' => 0];
         $friends = [];
         $byYear = []; $heatmap = [];
@@ -453,7 +453,9 @@ class EventParticipationRepository extends ServiceEntityRepository
                     $concerts++;
                 }
                 if ($e->getArtistName()) {
-                    $artists[$e->getArtistName()] = ($artists[$e->getArtistName()] ?? 0) + 1;
+                    $artistName = trim($e->getArtistName());
+                    $artistKey = mb_strtolower($artistName);
+                    $artistVariants[$artistKey][$artistName] = ($artistVariants[$artistKey][$artistName] ?? 0) + 1;
                 }
             } else {
                 $sports++;
@@ -490,6 +492,13 @@ class EventParticipationRepository extends ServiceEntityRepository
         }
         unset($fg);
         usort($festivalGroups, fn($a, $b) => $b['count'] <=> $a['count']);
+
+        // Regroupe les graphies d'un même artiste (casse, espaces) sous la variante la plus fréquente
+        $artists = [];
+        foreach ($artistVariants as $variants) {
+            arsort($variants);
+            $artists[array_key_first($variants)] = array_sum($variants);
+        }
 
         arsort($artists); arsort($venues); arsort($friends);
         arsort($byYear);
