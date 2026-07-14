@@ -61,8 +61,11 @@ class SendEventRemindersCommand extends Command
             $body = $count === 1
                 ? 'Tu n\'as pas encore rempli ta fiche pour ' . ($reminders[0]->getEvent()->getArtistName() ?? 'ton dernier événement') . '.'
                 : sprintf('%d événements attendent ta note et tes commentaires.', $count);
+            $url = $count === 1
+                ? '/event/' . $reminders[0]->getEvent()->getId() . '/edit'
+                : '/';
 
-            $this->notificationService->sendNotification($title, $body, (string) $user->getId());
+            $this->notificationService->sendNotification($title, $body, (string) $user->getId(), $url);
             $io->writeln(sprintf('  → %s (%d event(s))', $user->getUsername(), $count));
             $sent++;
 

@@ -138,6 +138,7 @@ class ProfileController extends AbstractController
             'Nouvelle demande d\'ami',
             '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
             (string) $targetUser->getId(),
+            $this->generateUrl('app_notifications'),
         );
 
         $this->addFlash('success', 'Demande d\'ami envoyée à @' . $targetUser->getUsername() . ' !');
@@ -192,6 +193,7 @@ class ProfileController extends AbstractController
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
             (string) $friend->getOwner()->getId(),
+            $this->generateUrl('app_profile', ['tab' => 'amis']),
         );
 
         $this->addFlash('success', 'Ami ajouté !');
@@ -334,6 +336,7 @@ class ProfileController extends AbstractController
                     $user->getDisplayName() . ' t\'a ajouté à ' . ($count > 1 ? $count . ' événements' : 'un événement'),
                     'Consulte tes notifications pour confirmer ta présence.',
                     $friendId,
+                    $this->generateUrl('app_notifications'),
                 );
 
                 $this->addFlash('success', $friendUser->getDisplayName() . ' a été invité' . ($count > 1 ? ' à ' . $count . ' événements' : ' à 1 événement') . ' !');

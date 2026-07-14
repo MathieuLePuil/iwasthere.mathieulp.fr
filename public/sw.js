@@ -24,6 +24,7 @@ self.addEventListener('push', function(event) {
         tag: 'iwt-notification',
         renotify: true,
         requireInteraction: true,
+        data: { url: data.url || '/' },
         actions: [
             { action: 'view', title: 'Voir l\'app' },
             { action: 'close', title: 'Fermer' }
@@ -40,17 +41,28 @@ self.addEventListener('notificationclick', function(event) {
         return;
     }
 
+    const targetUrl = new URL(
+        (event.notification.data && event.notification.data.url) || '/',
+        self.location.origin
+    ).href;
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then(function(clientList) {
                 for (let i = 0; i < clientList.length; i++) {
                     const client = clientList[i];
                     if ('focus' in client) {
-                        return client.focus();
+                        const focused = client.focus();
+                        if ('navigate' in client) {
+                            return focused.then(function(c) {
+                                return (c || client).navigate(targetUrl);
+                            });
+                        }
+                        return focused;
                     }
                 }
                 if (clients.openWindow) {
-                    return clients.openWindow('/');
+                    return clients.openWindow(targetUrl);
                 }
             })
     );

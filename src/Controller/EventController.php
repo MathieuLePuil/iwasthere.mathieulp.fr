@@ -199,6 +199,7 @@ if (!empty($data['duration'])) {
                         $me->getDisplayName() . ' t\'a ajouté à un événement',
                         $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
                         (string) $taggedUser->getId(),
+                        $this->generateUrl('app_notifications'),
                     );
                 }
                 if (!empty($friendsData)) {
@@ -490,6 +491,7 @@ if (!empty($data['duration'])) {
                     $me->getDisplayName() . ' t\'a ajouté à un événement',
                     $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
                     (string) $taggedUser->getId(),
+                    $this->generateUrl('app_notifications'),
                 );
             }
             $em->flush();

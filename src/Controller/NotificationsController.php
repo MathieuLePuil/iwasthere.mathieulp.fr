@@ -103,6 +103,7 @@ class NotificationsController extends AbstractController
             'Demande d\'ami acceptée',
             '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
             (string) $friend->getOwner()->getId(),
+            $this->generateUrl('app_profile', ['tab' => 'amis']),
         );
 
         $this->addFlash('success', 'Demande d\'ami acceptée !');

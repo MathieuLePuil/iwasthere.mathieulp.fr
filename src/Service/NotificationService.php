@@ -30,7 +30,7 @@ class NotificationService
         $this->subscriptionsFile = $projectDir . '/var/subscriptions.json';
     }
 
-    public function sendNotification(string $title, string $body, ?string $userId = null): array
+    public function sendNotification(string $title, string $body, ?string $userId = null, ?string $url = null): array
     {
         $subscriptions = $this->getSubscriptions();
 
@@ -49,6 +49,7 @@ class NotificationService
             'title' => $title,
             'body' => $body,
             'icon' => '/icons/icon-192.png',
+            'url' => $url ?? '/',
         ]);
 
         $sent = 0;
