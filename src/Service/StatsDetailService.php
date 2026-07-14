@@ -11,7 +11,7 @@ use App\Repository\EventParticipationRepository;
 class StatsDetailService
 {
     public const TOPICS = [
-        'evenements', 'lieux', 'notes', 'repartition', 'artistes',
+        'evenements', 'lieux', 'notes', 'repartition', 'artistes', 'morceaux',
         'festivals', 'annees', 'mois', 'series', 'periode', 'compagnons',
     ];
 
@@ -32,6 +32,7 @@ class StatsDetailService
             'notes' => $this->ratings($parts),
             'repartition' => $this->breakdown($parts),
             'artistes' => $this->artists($parts),
+            'morceaux' => $this->songs($parts),
             'festivals' => $this->festivals($parts),
             'annees' => $this->years($parts),
             'mois' => $this->months($parts),
@@ -209,6 +210,69 @@ class StatsDetailService
         usort($artists, fn ($a, $b) => [$b['count'], mb_strtolower($a['name'])] <=> [$a['count'], mb_strtolower($b['name'])]);
 
         return ['artists' => $artists, 'total' => count($artists)];
+    }
+
+    /** @param EventParticipation[] $parts */
+    private function songs(array $parts): array
+    {
+        $variants = [];
+        $totalPlays = 0;
+        foreach ($parts as $p) {
+            $e = $p->getEvent();
+            if ($e->getCategory() !== 'music') {
+                continue;
+            }
+            $artist = trim((string) $e->getArtistName());
+            $date = $e->getDate();
+            $allSongs = array_merge($e->getSetlistNormalized(), $e->getSetlistEncoresNormalized());
+            foreach ($allSongs as $s) {
+                if (!empty($s['tape'])) {
+                    continue;
+                }
+                $name = trim((string) ($s['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $totalPlays++;
+                $key = mb_strtolower($artist) . '|' . mb_strtolower($name);
+                $variants[$key] ??= [
+                    'names' => [], 'artist' => $artist, 'count' => 0,
+                    'first' => null, 'last' => null,
+                ];
+                $variants[$key]['names'][$name] = ($variants[$key]['names'][$name] ?? 0) + 1;
+                $variants[$key]['count']++;
+                if (!$variants[$key]['first'] || $date < $variants[$key]['first']) {
+                    $variants[$key]['first'] = $date;
+                }
+                if (!$variants[$key]['last'] || $date > $variants[$key]['last']) {
+                    $variants[$key]['last'] = $date;
+                }
+            }
+        }
+
+        $songs = [];
+        foreach ($variants as $v) {
+            if ($v['count'] < 2) {
+                continue;
+            }
+            arsort($v['names']);
+            $songs[] = [
+                // (string) : un titre purement numérique devient une clé int en PHP
+                'name' => (string) array_key_first($v['names']),
+                'artist' => $v['artist'],
+                'count' => $v['count'],
+                'first' => $v['first'],
+                'last' => $v['last'],
+            ];
+        }
+        usort($songs, fn ($a, $b) => [$b['count'], mb_strtolower($a['name'])] <=> [$a['count'], mb_strtolower($b['name'])]);
+
+        return [
+            'songs' => $songs,
+            'distinct' => count($variants),
+            'total_plays' => $totalPlays,
+            'once_count' => count($variants) - count($songs),
+        ];
     }
 
     /** @param EventParticipation[] $parts */

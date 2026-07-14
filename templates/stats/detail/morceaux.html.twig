@@ -1,0 +1,84 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Mes morceaux live — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Mes morceaux live</h1>
+    </div>
+
+    {% if data.distinct == 0 %}
+        {{ m.empty_state('🎵', 'Aucune setlist', 'Ajoute des setlists à tes concerts pour voir tes morceaux ici', path('app_event_new'), '+ Ajouter un événement') }}
+    {% else %}
+
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--positive)">{{ data.distinct }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Morceau{{ data.distinct > 1 ? 'x' : '' }} différent{{ data.distinct > 1 ? 's' : '' }}</p>
+        </div>
+        <div class="card text-center py-5">
+            <p class="text-4xl font-black" style="color: var(--negative)">{{ data.total_plays }}</p>
+            <p class="text-xs mt-1" style="color: var(--fg-4)">Écoute{{ data.total_plays > 1 ? 's' : '' }} en live</p>
+        </div>
+    </div>
+
+    {% if data.songs|length == 0 %}
+    <div class="card text-center py-8">
+        <p class="text-4xl mb-3">🎵</p>
+        <p class="font-semibold text-sm mb-1" style="color: var(--fg-1)">Pas encore de morceau réentendu</p>
+        <p class="text-sm" style="color: var(--fg-3)">Aucun morceau entendu plus d'une fois pour l'instant</p>
+    </div>
+    {% else %}
+
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Les plus entendus</h2>
+        <p class="text-xs mb-3" style="color: var(--fg-4)">Morceaux entendus au moins deux fois en live</p>
+        {% set top_count = data.songs[0].count %}
+        <div class="space-y-3">
+            {% set prev_count = null %}
+            {% set rank = 0 %}
+            {% set shown = 0 %}
+            {% for s in data.songs %}
+            {% if s.count != prev_count %}{% set rank = shown + 1 %}{% endif %}
+            {% set shown = shown + 1 %}
+            {% set prev_count = s.count %}
+            <div class="flex items-start gap-3">
+                <span class="text-sm font-bold w-5 pt-0.5" style="color: var(--fg-4)">{{ rank }}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between text-sm mb-1">
+                        <div class="flex items-baseline gap-1.5 min-w-0">
+                            <span class="font-medium truncate" style="color: var(--fg-1)">{{ s.name }}</span>
+                            {% if s.artist %}
+                            <span class="text-xs truncate flex-shrink-0" style="color: var(--fg-4)">{{ s.artist }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="flex-shrink-0 ml-2" style="color: var(--fg-4)">{{ s.count }}x</span>
+                    </div>
+                    <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                        <div class="h-full rounded-full" style="width: {{ (s.count / top_count * 100)|round }}%; background: var(--positive)"></div>
+                    </div>
+                    <p class="text-xs mt-1" style="color: var(--fg-4)">
+                        Entendu du {{ s.first|date('d/m/Y') }} au {{ s.last|date('d/m/Y') }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if data.once_count > 0 %}
+    <p class="text-xs text-center mt-4" style="color: var(--fg-4)">
+        + {{ data.once_count }} morceau{{ data.once_count > 1 ? 'x' : '' }} entendu{{ data.once_count > 1 ? 's' : '' }} une seule fois
+    </p>
+    {% endif %}
+
+    {% endif %}
+
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -418,6 +418,7 @@ class EventParticipationRepository extends ServiceEntityRepository
         $byYear = []; $heatmap = [];
         $firstDate = null; $lastDate = null;
         $festivalGroups = [];
+        $songVariants = [];
 
         foreach ($pastParts as $p) {
             $e = $p->getEvent();
@@ -466,6 +467,19 @@ class EventParticipationRepository extends ServiceEntityRepository
                     $artistKey = mb_strtolower($artistName);
                     $artistVariants[$artistKey][$artistName] = ($artistVariants[$artistKey][$artistName] ?? 0) + 1;
                 }
+                $songArtist = trim((string) $e->getArtistName());
+                foreach (array_merge($e->getSetlistNormalized(), $e->getSetlistEncoresNormalized()) as $s) {
+                    if (!empty($s['tape'])) {
+                        continue;
+                    }
+                    $songName = trim((string) ($s['name'] ?? ''));
+                    if ($songName === '') {
+                        continue;
+                    }
+                    $songKey = mb_strtolower($songArtist) . '|' . mb_strtolower($songName);
+                    $songVariants[$songKey] ??= ['names' => [], 'artist' => $songArtist];
+                    $songVariants[$songKey]['names'][$songName] = ($songVariants[$songKey]['names'][$songName] ?? 0) + 1;
+                }
             } else {
                 $sports++;
                 $t = $e->getType();
@@ -508,6 +522,18 @@ class EventParticipationRepository extends ServiceEntityRepository
             arsort($variants);
             $artists[array_key_first($variants)] = array_sum($variants);
         }
+
+        $songs = [];
+        foreach ($songVariants as $v) {
+            arsort($v['names']);
+            $songs[] = [
+                // (string) : un titre purement numérique devient une clé int en PHP
+                'name' => (string) array_key_first($v['names']),
+                'artist' => $v['artist'],
+                'count' => array_sum($v['names']),
+            ];
+        }
+        usort($songs, fn($a, $b) => [$b['count'], mb_strtolower($a['name'])] <=> [$a['count'], mb_strtolower($b['name'])]);
 
         arsort($artists); arsort($venues); arsort($friends);
         arsort($byYear);
@@ -572,6 +598,8 @@ class EventParticipationRepository extends ServiceEntityRepository
             'by_weekday' => $weekdays,
             'artists' => array_slice($artists, 0, 10, true),
             'artists_count' => count($artists),
+            'songs' => array_slice($songs, 0, 5),
+            'songs_count' => count($songs),
             'top_artist' => $topArtist,
             'top_artist_count' => $topArtistCount,
             'venues' => array_slice($venues, 0, 5, true),

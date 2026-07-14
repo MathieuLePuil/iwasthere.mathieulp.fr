@@ -175,6 +175,44 @@
     </a>
     {% endif %}
 
+    {# Top songs heard live #}
+    {% if stats.songs|length > 0 %}
+    <a href="{{ path('app_stats_detail', {topic: 'morceaux'}) }}" class="card block mb-4 no-underline">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🎵</span>
+            <h2 class="font-medium" style="color: var(--fg-1)">Morceaux les plus entendus</h2>
+        </div>
+        {% set top_song_count = stats.songs[0].count %}
+        <div class="space-y-2">
+            {% set prev_count = null %}
+            {% set rank = 0 %}
+            {% set shown = 0 %}
+            {% for song in stats.songs %}
+            {% if song.count != prev_count %}{% set rank = shown + 1 %}{% endif %}
+            {% set shown = shown + 1 %}
+            {% set prev_count = song.count %}
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-bold w-5" style="color: var(--fg-4)">{{ rank }}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between text-sm">
+                        <div class="flex items-baseline gap-1.5 min-w-0">
+                            <span class="font-medium truncate" style="color: var(--fg-1)">{{ song.name }}</span>
+                            {% if song.artist %}
+                            <span class="text-xs truncate flex-shrink-0" style="color: var(--fg-4)">{{ song.artist }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="flex-shrink-0 ml-2" style="color: var(--fg-4)">{{ song.count }}x</span>
+                    </div>
+                    <div class="h-1.5 rounded-full mt-1 overflow-hidden" style="background: var(--bg-3)">
+                        <div class="h-full rounded-full" style="width: {{ (song.count / top_song_count * 100)|round }}%; background: var(--positive)"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </a>
+    {% endif %}
+
     {# Events per year #}
     {% if stats.by_year|length > 1 %}
     <a href="{{ path('app_stats_detail', {topic: 'annees'}) }}" class="card block mb-4 no-underline">
