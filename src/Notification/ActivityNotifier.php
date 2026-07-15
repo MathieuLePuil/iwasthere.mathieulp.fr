@@ -45,18 +45,13 @@ final class ActivityNotifier
         $upcoming = $event->getDate() >= new \DateTimeImmutable('today');
 
         foreach ($this->audience($participation) as $friend) {
-            $alsoGoing = $this->participationRepo->findByUserForEvents($friend, [$event]) !== [];
+            $theirs = $this->participationRepo->findByUserAndEvent($friend, $event);
 
-            if ($alsoGoing) {
-                $this->notifier->dispatch(
-                    $friend,
-                    NotificationType::FriendSameEvent,
-                    $upcoming ? 'Tu y seras avec ' . $author->getDisplayName() : 'Vous y étiez tous les deux',
-                    '@' . $author->getUsername() . ($upcoming ? ' sera aussi à ' : ' était aussi à ') . $name . '.',
-                    $this->eventUrl($event),
-                    ['eventId' => (string) $event->getId()],
-                    dedupeKey: 'same:' . $participation->getId(),
-                );
+            // Deux amis sur le même événement : plutôt que de l'annoncer, on leur
+            // demande s'ils y vont ensemble — l'information a plus de valeur, et
+            // c'est la seule façon de la connaître
+            if ($theirs !== null) {
+                $this->askTogether($participation, $theirs);
                 continue;
             }
 
@@ -70,6 +65,63 @@ final class ActivityNotifier
                 dedupeKey: 'activity:' . $participation->getId(),
             );
         }
+    }
+
+    /**
+     * Demande aux deux participants s'ils y vont ensemble. Chacun a sa question,
+     * qui portera sa réponse : la relation n'est créée que si les deux répondent
+     * oui (voir EventController::togetherYes). Ne demande rien s'ils sont déjà
+     * liés, ou si l'un des deux a déjà été interrogé pour cette paire.
+     */
+    private function askTogether(EventParticipation $a, EventParticipation $b): void
+    {
+        if ($this->alreadyCompanions($a, $b)) {
+            return;
+        }
+
+        $event = $a->getEvent();
+        $upcoming = $event->getDate() >= new \DateTimeImmutable('today');
+        $name = $this->eventName($event);
+
+        // Clé commune à la paire, dans un ordre stable : que ce soit A ou B qui
+        // ajoute en premier, la question n'est posée qu'une fois à chacun
+        $ids = [(string) $a->getUser()->getId(), (string) $b->getUser()->getId()];
+        sort($ids);
+        $key = 'together:' . $event->getId() . ':' . implode(':', $ids);
+
+        foreach ([[$a, $b], [$b, $a]] as [$self, $other]) {
+            $otherUser = $other->getUser();
+            $this->notifier->dispatch(
+                $self->getUser(),
+                NotificationType::FriendSameEvent,
+                ($upcoming ? 'Tu y vas avec ' : 'Tu y étais avec ') . $otherUser->getDisplayName() . ' ?',
+                '@' . $otherUser->getUsername() . ($upcoming ? ' va aussi à ' : ' était aussi à ') . $name . '.',
+                $this->eventUrl($event),
+                [
+                    'eventId' => (string) $event->getId(),
+                    'otherUserId' => (string) $otherUser->getId(),
+                    'eventName' => $name,
+                ],
+                dedupeKey: $key,
+            );
+        }
+    }
+
+    /** L'un des deux a-t-il déjà tagué l'autre comme accompagnant ? */
+    private function alreadyCompanions(EventParticipation $a, EventParticipation $b): bool
+    {
+        return $this->tags($a, $b->getUser()) || $this->tags($b, $a->getUser());
+    }
+
+    private function tags(EventParticipation $participation, User $user): bool
+    {
+        foreach ($participation->getFriends() as $f) {
+            if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === (string) $user->getId()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Un ami vient de raconter un événement : note, commentaire ou photo. */

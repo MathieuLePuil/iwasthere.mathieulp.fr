@@ -83,6 +83,23 @@
                         </div>
                         {% endif %}
 
+                        {# « Vous y allez ensemble ? » : la relation demande l'accord des deux,
+                           tant que l'autre n'a pas répondu la question reste en attente #}
+                        {% if notif.type == 'friend_same_event' and notif.data and notif.data.otherUserId is defined %}
+                            {% if notif.data.answer is defined %}
+                            <p class="text-xs mt-2 font-medium" style="color: var(--fg-4)">⏳ Tu as répondu oui — en attente de sa réponse</p>
+                            {% else %}
+                            <div class="flex gap-2 mt-2">
+                                <form method="post" action="{{ path('app_event_together_yes', {id: notif.id}) }}">
+                                    <button class="btn-primary text-xs py-1.5 px-3">Oui, ensemble</button>
+                                </form>
+                                <form method="post" action="{{ path('app_event_together_no', {id: notif.id}) }}">
+                                    <button class="btn-secondary text-xs py-1.5 px-3">Non, chacun de son côté</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
                         {% if notif.type == 'friend_tagged_in_event' and notif.data %}
                         <div class="flex gap-2 mt-2">
                             <form method="post" action="{{ path('app_event_tag_accept', {id: notif.id}) }}">

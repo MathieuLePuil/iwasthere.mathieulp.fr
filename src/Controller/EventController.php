@@ -6,6 +6,8 @@ namespace App\Controller;
 
 use App\Entity\Event;
 use App\Entity\EventParticipation;
+use App\Entity\Notification;
+use App\Entity\User;
 use App\Entity\Venue;
 use App\Notification\ActivityNotifier;
 use App\Notification\NotificationDispatcher;
@@ -98,7 +100,16 @@ class EventController extends AbstractController
                     $teams = $team2 ? "$team1 vs $team2" : $team1;
                     $event->setTeams($teams);
                 }
-                $em->persist($event);
+
+                // Le formulaire ne renvoie `existing_event_id` que si l'utilisateur a
+                // cliqué une suggestion ; en saisissant le nom à la main il créerait un
+                // jumeau. On rattache donc à l'existant, sinon deux amis au même concert
+                // se retrouvent sur deux lignes et ne se voient jamais.
+                if ($twin = $eventRepo->findDuplicate($event)) {
+                    $event = $twin;
+                } else {
+                    $em->persist($event);
+                }
             }
 
             // Artist picture via Deezer (new event, or joined one still missing it)
@@ -639,6 +650,148 @@ if (!empty($data['duration'])) {
         $em->flush();
 
         return $this->redirectToRoute('app_notifications');
+    }
+
+    /**
+     * « Oui, on y va ensemble. » L'accord doit être mutuel : tant que l'autre n'a
+     * pas répondu oui de son côté, on ne fait qu'enregistrer la réponse et la
+     * question reste en attente. C'est le second oui qui crée la relation.
+     */
+    #[Route('/together/{id}/yes', name: 'app_event_together_yes', methods: ['POST'])]
+    public function togetherYes(
+        Notification $notification,
+        EntityManagerInterface $em,
+        UserRepository $userRepo,
+        EventRepository $eventRepo,
+        EventParticipationRepository $participationRepo,
+        NotificationRepository $notifRepo,
+        NotificationDispatcher $notifier,
+    ): Response {
+        $user = $this->getUser();
+        [$event, $other] = $this->resolveTogether($notification, $user, $eventRepo, $userRepo);
+
+        $mine = $participationRepo->findByUserAndEvent($user, $event);
+        $theirs = $participationRepo->findByUserAndEvent($other, $event);
+        if (!$mine || !$theirs) {
+            // L'un des deux s'est retiré entre-temps : la question n'a plus d'objet
+            $em->remove($notification);
+            $em->flush();
+            $this->addFlash('info', 'Cet événement n\'est plus partagé avec ' . $other->getDisplayName() . '.');
+
+            return $this->redirectToRoute('app_notifications');
+        }
+
+        $theirQuestion = $notifRepo->findTogetherQuestion($other, (string) $event->getId(), (string) $user->getId());
+        $theySaidYes = ($theirQuestion?->getData()['answer'] ?? null) === 'yes';
+
+        if (!$theySaidYes) {
+            $data = $notification->getData() ?? [];
+            $data['answer'] = 'yes';
+            $notification->setData($data);
+            $em->flush();
+
+            $this->addFlash('success', 'C\'est noté — en attente de la réponse de ' . $other->getDisplayName() . '.');
+
+            return $this->redirectToRoute('app_notifications');
+        }
+
+        $this->linkCompanions($mine, $theirs);
+        $em->remove($notification);
+        $em->remove($theirQuestion);
+        $em->flush();
+
+        // L'autre a dit oui en premier : sans ça, il n'apprendrait jamais l'issue
+        $notifier->dispatch(
+            $other,
+            NotificationType::FriendSameEvent,
+            'Vous y allez ensemble',
+            $user->getDisplayName() . ' a confirmé — vous êtes notés ensemble sur '
+                . ($event->getArtistName() ?? $event->getTournamentName() ?? $event->getTeams() ?? 'cet événement') . '.',
+            $this->generateUrl('app_event_show', ['id' => (string) $event->getId()]),
+            ['eventId' => (string) $event->getId()],
+        );
+
+        $this->addFlash('success', 'Vous y allez ensemble avec ' . $other->getDisplayName() . ' !');
+
+        return $this->redirectToRoute('app_event_show', ['id' => (string) $event->getId()]);
+    }
+
+    /**
+     * « Non. » Un seul refus tranche pour la paire : les deux questions tombent,
+     * et chacun garde l'événement de son côté.
+     */
+    #[Route('/together/{id}/no', name: 'app_event_together_no', methods: ['POST'])]
+    public function togetherNo(
+        Notification $notification,
+        EntityManagerInterface $em,
+        UserRepository $userRepo,
+        EventRepository $eventRepo,
+        NotificationRepository $notifRepo,
+    ): Response {
+        $user = $this->getUser();
+        [$event, $other] = $this->resolveTogether($notification, $user, $eventRepo, $userRepo);
+
+        $theirQuestion = $notifRepo->findTogetherQuestion($other, (string) $event->getId(), (string) $user->getId());
+        if ($theirQuestion) {
+            $em->remove($theirQuestion);
+        }
+        $em->remove($notification);
+        $em->flush();
+
+        $this->addFlash('info', 'C\'est noté — vous y allez chacun de votre côté.');
+
+        return $this->redirectToRoute('app_notifications');
+    }
+
+    /**
+     * Valide que la notification est bien une question « ensemble ? » adressée à
+     * cet utilisateur, et en extrait l'événement et l'autre participant.
+     *
+     * @return array{0: Event, 1: User}
+     */
+    private function resolveTogether(
+        Notification $notification,
+        User $user,
+        EventRepository $eventRepo,
+        UserRepository $userRepo,
+    ): array {
+        if ($notification->getRecipient() !== $user
+            || $notification->getType() !== NotificationType::FriendSameEvent->value) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $data = $notification->getData() ?? [];
+        $event = isset($data['eventId']) ? $eventRepo->find($data['eventId']) : null;
+        $other = isset($data['otherUserId']) ? $userRepo->find($data['otherUserId']) : null;
+
+        if (!$event || !$other) {
+            throw $this->createNotFoundException();
+        }
+
+        return [$event, $other];
+    }
+
+    /** Inscrit chacun comme accompagnant de l'autre — la relation est symétrique. */
+    private function linkCompanions(EventParticipation $a, EventParticipation $b): void
+    {
+        foreach ([[$a, $b], [$b, $a]] as [$participation, $companion]) {
+            $user = $companion->getUser();
+            $friends = $participation->getFriends();
+
+            foreach ($friends as $f) {
+                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === (string) $user->getId()) {
+                    continue 2;
+                }
+            }
+
+            $friends[] = [
+                'type' => 'app',
+                'userId' => (string) $user->getId(),
+                'username' => $user->getUsername(),
+                'displayName' => $user->getDisplayName(),
+            ];
+            $participation->setFriends($friends);
+        }
     }
 
     #[Route('/participation/{id}/remove-me', name: 'app_event_participation_remove_me', methods: ['POST'])]

@@ -46,7 +46,7 @@ enum NotificationType: string
             self::FriendAccepted => 'Ta demande d\'ami a été acceptée',
             self::FriendTaggedInEvent => 'Un ami t\'ajoute comme accompagnant sur un événement',
             self::FriendActivity => 'Un ami ajoute un événement ou publie un souvenir',
-            self::FriendSameEvent => 'Un ami ajoute un événement où tu vas aussi',
+            self::FriendSameEvent => 'On te demande si vous y allez ensemble',
             self::EventDay => 'Le matin de ton événement',
             self::EventCompletion => 'Le lendemain, pour noter et raconter',
         };

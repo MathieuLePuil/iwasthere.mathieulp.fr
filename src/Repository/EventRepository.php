@@ -19,6 +19,48 @@ class EventRepository extends ServiceEntityRepository
     }
 
     /**
+     * L'événement déjà en base qui décrit la même sortie : même type, même jour,
+     * même lieu, même nom. Sert à rattacher un ajout à l'existant au lieu d'en
+     * créer un jumeau, pour que deux amis au même concert partagent bien la même
+     * ligne — c'est ce qui rend visible qu'ils y sont ensemble.
+     *
+     * Le nom est comparé sans casse ni espaces de bord ; un lieu absent ne
+     * s'apparie qu'avec un lieu absent. Sans lieu ni nom, on ne conclut rien :
+     * trop peu pour affirmer que c'est la même sortie.
+     */
+    public function findDuplicate(Event $candidate): ?Event
+    {
+        $name = $candidate->getArtistName() ?? $candidate->getTeams() ?? $candidate->getTournamentName();
+        if ($name === null || trim($name) === '') {
+            return null;
+        }
+
+        $qb = $this->createQueryBuilder('e')
+            ->where('e.type = :type')
+            ->andWhere('e.date = :date')
+            ->setParameter('type', $candidate->getType())
+            ->setParameter('date', $candidate->getDate())
+            ->setMaxResults(1);
+
+        if ($venue = $candidate->getVenue()) {
+            $qb->andWhere('e.venue = :venue')->setParameter('venue', $venue->getId()->toBinary());
+        } else {
+            $qb->andWhere('e.venue IS NULL');
+        }
+
+        // Le nom vit dans une colonne différente selon le type d'événement
+        $field = match (true) {
+            $candidate->getArtistName() !== null => 'artistName',
+            $candidate->getTeams() !== null => 'teams',
+            default => 'tournamentName',
+        };
+        $qb->andWhere(sprintf('LOWER(TRIM(e.%s)) = :name', $field))
+            ->setParameter('name', mb_strtolower(trim($name)));
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /**
      * @return Event[]
      */
     public function findByCategory(string $category): array

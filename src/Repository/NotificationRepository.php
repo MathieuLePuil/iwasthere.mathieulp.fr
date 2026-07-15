@@ -112,6 +112,31 @@ class NotificationRepository extends ServiceEntityRepository
     }
 
     /**
+     * La question « vous y allez ensemble ? » posée à l'autre pour le même
+     * événement. C'est elle qui porte sa réponse : l'accord n'est conclu que
+     * lorsque les deux questions portent « oui ».
+     */
+    public function findTogetherQuestion(User $recipient, string $eventId, string $otherUserId): ?Notification
+    {
+        $results = $this->createQueryBuilder('n')
+            ->where('n.recipient = :recipient')
+            ->andWhere('n.type = :type')
+            ->setParameter('recipient', $recipient->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('type', 'friend_same_event')
+            ->getQuery()
+            ->getResult();
+
+        foreach ($results as $n) {
+            $data = $n->getData() ?? [];
+            if (($data['eventId'] ?? null) === $eventId && ($data['otherUserId'] ?? null) === $otherUserId) {
+                return $n;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Une notification de ce type porte-t-elle déjà cette clé ? Garde-fou des
      * rappels : le cron tourne chaque minute et rejouerait sinon l'envoi.
      */
