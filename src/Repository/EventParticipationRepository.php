@@ -149,6 +149,39 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les événements tombant un jour comme aujourd'hui, les années précédentes —
+     * matière de la carte et du rappel « il y a un an ».
+     *
+     * On compare le jour et le mois plutôt qu'une date calculée : un « -1 an »
+     * sur le 29 février n'existe pas trois années sur quatre, et cadrer sur une
+     * seule année ferait passer à la trappe les anniversaires plus anciens. Un
+     * 29 février ne ressort donc que les 29 février, ce qui est le comportement
+     * voulu — c'est le jour où l'on y était.
+     *
+     * `e.date < :today` écarte l'édition de cette année s'il y en a une : sur un
+     * festival annuel, l'événement du jour n'est pas son propre anniversaire.
+     *
+     * @return EventParticipation[] du plus récent au plus ancien
+     */
+    public function findAnniversaries(User $user, \DateTimeImmutable $today): array
+    {
+        return $this->createQueryBuilder('p')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
+            ->where('p.user = :user')
+            ->andWhere('MONTH(e.date) = :month')
+            ->andWhere('DAY(e.date) = :day')
+            ->andWhere('e.date < :today')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('month', (int) $today->format('n'))
+            ->setParameter('day', (int) $today->format('j'))
+            ->setParameter('today', $today->setTime(0, 0))
+            ->orderBy('e.date', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Les événements de l'utilisateur qui ont lieu aujourd'hui — matière du
      * rappel « jour J ».
      *

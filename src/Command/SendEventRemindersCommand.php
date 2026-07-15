@@ -66,6 +66,10 @@ class SendEventRemindersCommand extends Command
             if ($user->wantsPush(NotificationType::EventCompletion)) {
                 $sent += $this->remindCompletion($user, $today, $io) ? 1 : 0;
             }
+
+            if ($user->wantsPush(NotificationType::EventAnniversary)) {
+                $sent += $this->remindAnniversary($user, $now, $io) ? 1 : 0;
+            }
         }
 
         $io->success(sprintf('%d reminder(s) sent', $sent));
@@ -141,6 +145,51 @@ class SendEventRemindersCommand extends Command
         if ($created) {
             $io->writeln(sprintf('  ⭐ %s (%d fiche(s))', $user->getUsername(), $count));
             $this->importSetlists($reminders, $io);
+        }
+
+        return $created;
+    }
+
+    /**
+     * « Il y a un an » — un événement vécu un jour comme aujourd'hui.
+     *
+     * Le libellé ne dit pas « ce soir » : le rappel part à l'heure choisie par
+     * l'utilisateur (08h00 par défaut), « ce soir » serait faux la plupart du temps.
+     */
+    private function remindAnniversary(User $user, \DateTimeImmutable $now, SymfonyStyle $io): bool
+    {
+        $anniversaries = $this->participationRepo->findAnniversaries($user, $now);
+        if ($anniversaries === []) {
+            return false;
+        }
+
+        // Le plus récent d'abord (tri de la requête) : entre un souvenir d'un an et un
+        // de dix ans le même jour, c'est celui d'un an qui parle le plus.
+        $first = $anniversaries[0]->getEvent();
+        $years = (int) $now->format('Y') - (int) $first->getDate()->format('Y');
+        $count = count($anniversaries);
+
+        $title = $years === 1 ? 'Il y a un an, jour pour jour…' : sprintf('Il y a %d ans, jour pour jour…', $years);
+        $body = $this->eventName($first);
+        if ($place = $this->placeAndTime($first)) {
+            $body .= ', ' . $place;
+        }
+        if ($count > 1) {
+            $body .= sprintf(' (+%d autre%s souvenir%s ce jour-là)', $count - 1, $count > 2 ? 's' : '', $count > 2 ? 's' : '');
+        }
+
+        $created = $this->notifier->dispatch(
+            $user,
+            NotificationType::EventAnniversary,
+            $title,
+            $body,
+            '/event/' . $first->getId(),
+            // Une seule fois par jour : le cron tourne chaque minute
+            dedupeKey: 'anniversary:' . $now->format('Y-m-d'),
+        );
+
+        if ($created) {
+            $io->writeln(sprintf('  🕰️ %s (%d souvenir(s), il y a %d an(s))', $user->getUsername(), $count, $years));
         }
 
         return $created;

@@ -41,8 +41,20 @@ class HomeController extends AbstractController
         $unreadCount = $notifRepo->countUnread($user);
 
         // Micro-stat sous le prénom : événements déjà vécus dans l'année en cours
-        $currentYear = (int) (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('Y');
+        $today = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
+        $currentYear = (int) $today->format('Y');
         $yearCount = $participationRepo->countHistory($user, 'past', '', (string) $currentYear);
+
+        // « Il y a un an » — les événements tombant un jour comme aujourd'hui. Le
+        // nombre d'années est calculé ici : la requête ne cadre pas sur une année
+        // précise, c'est ce qui permet de remonter aussi les souvenirs plus vieux.
+        $anniversaries = [];
+        foreach ($participationRepo->findAnniversaries($user, $today) as $participation) {
+            $anniversaries[] = [
+                'participation' => $participation,
+                'years' => $currentYear - (int) $participation->getEvent()->getDate()->format('Y'),
+            ];
+        }
 
         // Friends activity preview (full feed lives at /feed)
         $feed = $feedService->buildFeed($user);
@@ -71,6 +83,7 @@ class HomeController extends AbstractController
             'feed_friend_count' => $feed['friend_count'],
             'year_count' => $yearCount,
             'current_year' => $currentYear,
+            'anniversaries' => $anniversaries,
         ]);
     }
 }
