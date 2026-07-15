@@ -149,6 +149,30 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les événements de l'utilisateur qui ont lieu aujourd'hui — matière du
+     * rappel « jour J ».
+     *
+     * @return EventParticipation[]
+     */
+    public function findToday(User $user): array
+    {
+        $today = new \DateTimeImmutable('today');
+
+        return $this->createQueryBuilder('p')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
+            ->where('p.user = :user')
+            ->andWhere('e.date >= :today')
+            ->andWhere('e.date < :tomorrow')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('today', $today)
+            ->setParameter('tomorrow', $today->modify('+1 day'))
+            ->orderBy('e.date', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * @return EventParticipation[]
      */
     public function findVisibleForEvent(Event $event, User $currentUser): array

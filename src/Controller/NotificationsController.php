@@ -6,8 +6,9 @@ namespace App\Controller;
 
 use App\Entity\Friend;
 use App\Entity\Notification;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\NotificationRepository;
-use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -74,7 +75,7 @@ class NotificationsController extends AbstractController
         Friend $friend,
         EntityManagerInterface $em,
         NotificationRepository $notifRepo,
-        NotificationService $push,
+        NotificationDispatcher $notifier,
         Request $request,
     ): Response {
         $user = $this->getUser();
@@ -89,21 +90,15 @@ class NotificationsController extends AbstractController
             $em->remove($requestNotif);
         }
 
-        // Notify the sender that their request was accepted
-        $notif = new Notification();
-        $notif->setRecipient($friend->getOwner())
-            ->setType('friend_accepted')
-            ->setTitle('Demande d\'ami acceptée')
-            ->setBody('@' . $user->getUsername() . ' a accepté votre demande d\'ami.');
-        $em->persist($notif);
-
         $em->flush();
 
-        $push->sendNotification(
+        $notifier->dispatch(
+            $friend->getOwner(),
+            NotificationType::FriendAccepted,
             'Demande d\'ami acceptée',
-            '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            (string) $friend->getOwner()->getId(),
+            '@' . $user->getUsername() . ' a accepté votre demande d\'ami.',
             $this->generateUrl('app_profile', ['tab' => 'amis']),
+            pushBody: '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
         );
 
         $this->addFlash('success', 'Demande d\'ami acceptée !');

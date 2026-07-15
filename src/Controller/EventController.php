@@ -6,8 +6,10 @@ namespace App\Controller;
 
 use App\Entity\Event;
 use App\Entity\EventParticipation;
-use App\Entity\Notification;
 use App\Entity\Venue;
+use App\Notification\ActivityNotifier;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\FriendRepository;
@@ -16,7 +18,6 @@ use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
 use App\Service\DeezerArtistService;
 use App\Service\EventImageService;
-use App\Service\NotificationService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -39,7 +40,8 @@ class EventController extends AbstractController
         FriendRepository $friendRepo,
         UserRepository $userRepo,
         SetlistFmService $setlistFm,
-        NotificationService $push,
+        NotificationDispatcher $notifier,
+        ActivityNotifier $activity,
         DeezerArtistService $deezer,
     ): Response {
         if ($request->isMethod('POST')) {
@@ -191,27 +193,26 @@ if (!empty($data['duration'])) {
                     if (!$taggedUser) {
                         continue;
                     }
-                    $notif = new Notification();
-                    $notif->setRecipient($taggedUser)
-                        ->setType('friend_tagged_in_event')
-                        ->setTitle($me->getDisplayName() . ' t\'a ajouté à un événement')
-                        ->setBody($event->getArtistName() ?? $event->getTournamentName() ?? 'Événement')
-                        ->setData([
+                    $notifier->dispatch(
+                        $taggedUser,
+                        NotificationType::FriendTaggedInEvent,
+                        $me->getDisplayName() . ' t\'a ajouté à un événement',
+                        $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                        $this->generateUrl('app_notifications'),
+                        [
                             'eventId'         => (string) $event->getId(),
                             'participationId' => (string) $participation->getId(),
                             'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                        ]);
-                    $em->persist($notif);
-                    $push->sendNotification(
-                        $me->getDisplayName() . ' t\'a ajouté à un événement',
-                        $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                        (string) $taggedUser->getId(),
-                        $this->generateUrl('app_notifications'),
+                        ],
                     );
                 }
                 if (!empty($friendsData)) {
                     $em->flush();
                 }
+
+                // Annonce aux autres amis : « X ira à », ou « X y sera aussi »
+                // pour ceux qui ont déjà cet événement
+                $activity->announceParticipation($participation);
 
                 // Auto-import setlist for past music events
                 if ($event->getCategory() === 'music' && $event->getDate() < new \DateTimeImmutable('today')) {
@@ -355,7 +356,8 @@ if (!empty($data['duration'])) {
         EventParticipationRepository $participationRepo,
         FriendRepository $friendRepo,
         UserRepository $userRepo,
-        NotificationService $push,
+        NotificationDispatcher $notifier,
+        ActivityNotifier $activity,
         DeezerArtistService $deezer,
     ): Response {
         $user = $this->getUser();
@@ -491,25 +493,26 @@ if (!empty($data['duration'])) {
                 if (!$taggedUser) {
                     continue;
                 }
-                $notif = new Notification();
-                $notif->setRecipient($taggedUser)
-                    ->setType('friend_tagged_in_event')
-                    ->setTitle($me->getDisplayName() . ' t\'a ajouté à un événement')
-                    ->setBody($event->getArtistName() ?? $event->getTournamentName() ?? 'Événement')
-                    ->setData([
+                $notifier->dispatch(
+                    $taggedUser,
+                    NotificationType::FriendTaggedInEvent,
+                    $me->getDisplayName() . ' t\'a ajouté à un événement',
+                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    $this->generateUrl('app_notifications'),
+                    [
                         'eventId'         => (string) $event->getId(),
                         'participationId' => (string) $participation->getId(),
                         'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                    ]);
-                $em->persist($notif);
-                $push->sendNotification(
-                    $me->getDisplayName() . ' t\'a ajouté à un événement',
-                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                    (string) $taggedUser->getId(),
-                    $this->generateUrl('app_notifications'),
+                    ],
                 );
             }
             $em->flush();
+
+            // Le souvenir n'est annoncé qu'une fois : `announceMemory` se
+            // dédoublonne sur la participation, les retouches ne repoussent pas
+            if ($participation->getRating() || $participation->getComment() || $participation->getImageUrl()) {
+                $activity->announceMemory($participation);
+            }
 
             $this->addFlash('success', 'Fiche mise à jour !');
 

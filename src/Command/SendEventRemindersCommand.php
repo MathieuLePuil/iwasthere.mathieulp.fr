@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\Event;
+use App\Entity\EventParticipation;
+use App\Entity\User;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\EventParticipationRepository;
 use App\Repository\UserRepository;
-use App\Service\NotificationService;
 use App\Service\SetlistFmService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -14,16 +18,27 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * Les rappels programmés, tournés chaque minute par le cron : chaque utilisateur
+ * a une heure d'envoi, on ne traite que ceux dont l'heure tombe maintenant.
+ *
+ *  - jour J     : le matin même, « c'est aujourd'hui »
+ *  - complétion : les jours suivants, tant que la fiche n'est pas notée
+ *
+ * Contrairement aux notifications sociales, un rappel désactivé n'est pas produit
+ * du tout — le rappel *est* la notification, il n'y a pas de fait sous-jacent à
+ * archiver dans le fil. D'où le `wantsPush` en amont, et non dans le dispatcher.
+ */
 #[AsCommand(
     name: 'app:notifications:send-reminders',
-    description: 'Send post-event reminder notifications to users who have not rated their events',
+    description: 'Send day-of and completion reminders to users whose reminder time is now',
 )]
 class SendEventRemindersCommand extends Command
 {
     public function __construct(
         private readonly UserRepository $userRepo,
         private readonly EventParticipationRepository $participationRepo,
-        private readonly NotificationService $notificationService,
+        private readonly NotificationDispatcher $notifier,
         private readonly SetlistFmService $setlistFmService,
     ) {
         parent::__construct();
@@ -34,56 +49,142 @@ class SendEventRemindersCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         // Les utilisateurs saisissent leur heure de rappel en heure française ; le serveur est en UTC
-        $currentTime = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('H:i');
-
-        $users = $this->userRepo->findBy(['notifCompletionEnabled' => true]);
-        $io->info(sprintf('%d user(s) with completion reminders enabled', count($users)));
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
+        $currentTime = $now->format('H:i');
+        $today = $now->format('Y-m-d');
 
         $sent = 0;
-        foreach ($users as $user) {
-            $configuredTime = $user->getNotifCompletionTime() ?? '08:00';
-
-            if ($configuredTime !== $currentTime) {
+        foreach ($this->userRepo->findAll() as $user) {
+            if (($user->getNotifCompletionTime() ?? '08:00') !== $currentTime) {
                 continue;
             }
 
-            // Sans cela, les participations restent "upcoming" tant que l'utilisateur
-            // n'a pas ouvert l'app, et findPendingReminders ne les voit pas
-            $this->participationRepo->updateStaleUpcoming($user);
-
-            $reminders = $this->participationRepo->findPendingReminders($user);
-            if (empty($reminders)) {
-                continue;
+            if ($user->wantsPush(NotificationType::EventDay)) {
+                $sent += $this->remindDayOf($user, $io) ? 1 : 0;
             }
 
-            $count = count($reminders);
-            $title = 'Comment s\'était ce concert ?';
-            $body = $count === 1
-                ? 'Tu n\'as pas encore rempli ta fiche pour ' . ($reminders[0]->getEvent()->getArtistName() ?? 'ton dernier événement') . '.'
-                : sprintf('%d événements attendent ta note et tes commentaires.', $count);
-            $url = $count === 1
-                ? '/event/' . $reminders[0]->getEvent()->getId() . '/edit'
-                : '/';
-
-            $this->notificationService->sendNotification($title, $body, (string) $user->getId(), $url);
-            $io->writeln(sprintf('  → %s (%d event(s))', $user->getUsername(), $count));
-            $sent++;
-
-            foreach ($reminders as $reminder) {
-                $event = $reminder->getEvent();
-                if (!empty($event->getSetlist())) {
-                    continue;
-                }
-                if ($this->setlistFmService->tryImportSetlist($event)) {
-                    $io->writeln(sprintf('    ♪ Setlist importée : %s', $event->getArtistName()));
-                }
-                // Respect API rate limit (2 req/s on free plan)
-                usleep(600_000);
+            if ($user->wantsPush(NotificationType::EventCompletion)) {
+                $sent += $this->remindCompletion($user, $today, $io) ? 1 : 0;
             }
         }
 
-        $io->success(sprintf('Reminders sent to %d user(s)', $sent));
+        $io->success(sprintf('%d reminder(s) sent', $sent));
 
         return Command::SUCCESS;
+    }
+
+    /** « C'est aujourd'hui » — le matin de l'événement. */
+    private function remindDayOf(User $user, SymfonyStyle $io): bool
+    {
+        $today = $this->participationRepo->findToday($user);
+        if ($today === []) {
+            return false;
+        }
+
+        $first = $today[0]->getEvent();
+        $count = count($today);
+
+        if ($count === 1) {
+            $title = 'Aujourd\'hui : ' . $this->eventName($first);
+            $body = $this->placeAndTime($first) ?? 'C\'est aujourd\'hui !';
+            $url = '/event/' . $first->getId();
+        } else {
+            $title = $count . ' événements aujourd\'hui';
+            $body = implode(', ', array_map(fn (EventParticipation $p) => $this->eventName($p->getEvent()), $today));
+            $url = '/';
+        }
+
+        // Une seule fois par jour, quoi qu'il arrive : le cron tourne chaque
+        // minute et un double passage rejouerait l'envoi
+        $created = $this->notifier->dispatch(
+            $user,
+            NotificationType::EventDay,
+            $title,
+            $body,
+            $url,
+            dedupeKey: 'day:' . $first->getDate()->format('Y-m-d'),
+        );
+
+        if ($created) {
+            $io->writeln(sprintf('  📅 %s (%d aujourd\'hui)', $user->getUsername(), $count));
+        }
+
+        return $created;
+    }
+
+    /** « Raconte-nous » — tant que la fiche d'un événement passé n'est pas notée. */
+    private function remindCompletion(User $user, string $today, SymfonyStyle $io): bool
+    {
+        // Sans cela, les participations restent "upcoming" tant que l'utilisateur
+        // n'a pas ouvert l'app, et findPendingReminders ne les voit pas
+        $this->participationRepo->updateStaleUpcoming($user);
+
+        $reminders = $this->participationRepo->findPendingReminders($user);
+        if ($reminders === []) {
+            return false;
+        }
+
+        $count = count($reminders);
+        $first = $reminders[0]->getEvent();
+
+        $created = $this->notifier->dispatch(
+            $user,
+            NotificationType::EventCompletion,
+            'Comment s\'était ce concert ?',
+            $count === 1
+                ? 'Tu n\'as pas encore rempli ta fiche pour ' . $this->eventName($first) . '.'
+                : sprintf('%d événements attendent ta note et tes commentaires.', $count),
+            $count === 1 ? '/event/' . $first->getId() . '/edit' : '/',
+            dedupeKey: 'completion:' . $today,
+        );
+
+        if ($created) {
+            $io->writeln(sprintf('  ⭐ %s (%d fiche(s))', $user->getUsername(), $count));
+            $this->importSetlists($reminders, $io);
+        }
+
+        return $created;
+    }
+
+    /** @param EventParticipation[] $reminders */
+    private function importSetlists(array $reminders, SymfonyStyle $io): void
+    {
+        foreach ($reminders as $reminder) {
+            $event = $reminder->getEvent();
+            if (!empty($event->getSetlist())) {
+                continue;
+            }
+            if ($this->setlistFmService->tryImportSetlist($event)) {
+                $io->writeln(sprintf('    ♪ Setlist importée : %s', $event->getArtistName()));
+            }
+            // Respect API rate limit (2 req/s on free plan)
+            usleep(600_000);
+        }
+    }
+
+    /** « à l'Olympia à 21h », selon ce qui est renseigné ; null si on ne sait rien */
+    private function placeAndTime(Event $event): ?string
+    {
+        $parts = [];
+        if ($venue = $event->getVenue()) {
+            $parts[] = 'à ' . $venue->getName();
+        }
+        // L'heure n'est affichée que si elle a été saisie : sinon c'est une
+        // valeur par défaut, qu'on ne présente pas comme un horaire réel
+        if ($startTime = $event->getStartTime()) {
+            $parts[] = 'à ' . ($startTime->format('i') === '00'
+                ? $startTime->format('G') . 'h'
+                : $startTime->format('G\hi'));
+        }
+
+        return $parts === [] ? null : implode(' ', $parts);
+    }
+
+    private function eventName(Event $event): string
+    {
+        return $event->getArtistName()
+            ?? $event->getTournamentName()
+            ?? $event->getTeams()
+            ?? 'ton événement';
     }
 }

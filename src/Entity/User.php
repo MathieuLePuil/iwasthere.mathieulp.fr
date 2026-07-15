@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -47,20 +48,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 20, options: ['default' => 'friends'])]
     private string $defaultEventVisibility = 'friends';
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notificationsEnabled = true;
+    /**
+     * Push autorisés, par type de notification. Une clé absente vaut « activé » :
+     * un type ajouté plus tard est reçu sans avoir à retoucher les lignes existantes.
+     *
+     * @var array<string, bool>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $notifPrefs = [];
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notifCompletionEnabled = false;
-
+    /** Heure d'envoi des rappels programmés (jour J, complétion), en heure française */
     #[ORM\Column(length: 5, nullable: true, options: ['default' => '08:00'])]
     private ?string $notifCompletionTime = '08:00';
-
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notifPresenceEnabled = false;
-
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notifFriendRequestEnabled = false;
 
     #[ORM\Column(length: 20, options: ['default' => 'user'])]
     private string $role = 'user';
@@ -196,28 +195,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function isNotificationsEnabled(): bool
+    /** @return array<string, bool> */
+    public function getNotifPrefs(): array
     {
-        return $this->notificationsEnabled;
+        return $this->notifPrefs;
     }
 
-    public function setNotificationsEnabled(bool $notificationsEnabled): static
+    /** @param array<string, bool> $notifPrefs */
+    public function setNotifPrefs(array $notifPrefs): static
     {
-        $this->notificationsEnabled = $notificationsEnabled;
+        $this->notifPrefs = $notifPrefs;
 
         return $this;
     }
 
-    public function isNotifCompletionEnabled(): bool
+    /**
+     * L'utilisateur veut-il un push pour ce type ? Activé tant qu'il n'a pas été
+     * décoché. Couper tout se fait en se désabonnant depuis les Paramètres, ce
+     * qui retire l'abonnement navigateur — il n'y a pas d'interrupteur en base.
+     */
+    public function wantsPush(NotificationType $type): bool
     {
-        return $this->notifCompletionEnabled;
-    }
-
-    public function setNotifCompletionEnabled(bool $notifCompletionEnabled): static
-    {
-        $this->notifCompletionEnabled = $notifCompletionEnabled;
-
-        return $this;
+        return (bool) ($this->notifPrefs[$type->value] ?? true);
     }
 
     public function getNotifCompletionTime(): ?string
@@ -228,30 +227,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setNotifCompletionTime(?string $notifCompletionTime): static
     {
         $this->notifCompletionTime = $notifCompletionTime;
-
-        return $this;
-    }
-
-    public function isNotifPresenceEnabled(): bool
-    {
-        return $this->notifPresenceEnabled;
-    }
-
-    public function setNotifPresenceEnabled(bool $notifPresenceEnabled): static
-    {
-        $this->notifPresenceEnabled = $notifPresenceEnabled;
-
-        return $this;
-    }
-
-    public function isNotifFriendRequestEnabled(): bool
-    {
-        return $this->notifFriendRequestEnabled;
-    }
-
-    public function setNotifFriendRequestEnabled(bool $notifFriendRequestEnabled): static
-    {
-        $this->notifFriendRequestEnabled = $notifFriendRequestEnabled;
 
         return $this;
     }

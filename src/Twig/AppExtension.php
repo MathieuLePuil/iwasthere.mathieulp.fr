@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Twig;
 
+use App\Notification\NotificationType;
 use App\Repository\NotificationRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 use Twig\Extension\AbstractExtension;
@@ -21,7 +22,18 @@ class AppExtension extends AbstractExtension
     {
         return [
             new TwigFunction('unread_notifications_count', $this->getUnreadCount(...)),
+            new TwigFunction('notification_type', $this->notificationType(...)),
         ];
+    }
+
+    /**
+     * Le cas du catalogue derrière la colonne `type`, pour que le fil lise son
+     * icône et sa couleur à la source plutôt que de les redéclarer.
+     * null si la notification est d'un type retiré du catalogue depuis.
+     */
+    public function notificationType(string $type): ?NotificationType
+    {
+        return NotificationType::tryFrom($type);
     }
 
     public function getFilters(): array

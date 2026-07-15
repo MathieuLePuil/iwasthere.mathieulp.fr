@@ -32,14 +32,11 @@ class NotificationService
 
     public function sendNotification(string $title, string $body, ?string $userId = null, ?string $url = null): array
     {
-        $subscriptions = $this->getSubscriptions();
+        $all = $this->getSubscriptions();
 
-        if ($userId !== null) {
-            $subscriptions = array_values(array_filter(
-                $subscriptions,
-                fn ($sub) => ($sub['userId'] ?? null) === $userId,
-            ));
-        }
+        $subscriptions = $userId === null
+            ? $all
+            : array_values(array_filter($all, fn ($sub) => ($sub['userId'] ?? null) === $userId));
 
         if (empty($subscriptions)) {
             return ['sent' => 0, 'failed' => 0, 'message' => 'No subscriptions found'];
@@ -72,12 +69,13 @@ class NotificationService
             }
         }
 
+        // On repart de la liste complète, pas de celle filtrée par utilisateur :
+        // n'y réécrire que les abonnements d'un seul effacerait ceux des autres
         if (!empty($expiredEndpoints)) {
-            $filtered = array_values(array_filter(
-                $subscriptions,
+            $this->saveSubscriptions(array_values(array_filter(
+                $all,
                 fn ($sub) => !in_array($sub['endpoint'] ?? '', $expiredEndpoints, true),
-            ));
-            $this->saveSubscriptions($filtered);
+            )));
         }
 
         return ['sent' => $sent, 'failed' => $failed];

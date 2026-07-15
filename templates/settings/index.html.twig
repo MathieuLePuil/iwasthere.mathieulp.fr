@@ -169,37 +169,40 @@
     </script>
     {% endif %}
 
-    {# ── In-app notification preferences ── #}
+    {# ── Notification preferences: one row per NotificationType, grouped ── #}
     <div class="card">
-        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Préférences de notifications</h2>
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Préférences de notifications</h2>
+        <p class="text-xs mb-4" style="color: var(--fg-3)">
+            Ces réglages ne concernent que les push. Tout reste consultable dans tes notifications.
+        </p>
         <form method="post" action="{{ path('app_settings_notifications') }}" data-controller="form-loader">
+            {% for group, types in notif_groups %}
+            <p class="text-[11px] font-bold uppercase tracking-wider mt-4 mb-2" style="color: var(--fg-4); font-family: var(--font-mono)">{{ group }}</p>
             <div class="space-y-3">
-                <label class="flex items-center justify-between">
-                    <p class="text-sm" style="color: var(--fg-2)">Rappel de complétion d'événement</p>
-                    <input type="checkbox" name="notif_completion_enabled" value="1"
-                           class="w-5 h-5 rounded accent-[#3DDC97]"
-                           {{ app.user.notifCompletionEnabled ? 'checked' : '' }}>
+                {% for type in types %}
+                {# Une clé absente vaut « activé » : un type ajouté après coup est reçu par défaut #}
+                <label class="flex items-start justify-between gap-3 cursor-pointer">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm" style="color: var(--fg-2)">{{ type.icon }} {{ type.label }}</p>
+                        <p class="text-xs mt-0.5" style="color: var(--fg-4)">{{ type.description }}</p>
+                    </div>
+                    <input type="checkbox" name="notif_{{ type.value }}" value="1"
+                           class="w-5 h-5 rounded accent-[#3DDC97] flex-shrink-0 mt-0.5"
+                           {{ app.user.notifPrefs[type.value] ?? true ? 'checked' : '' }}>
                 </label>
-                <div>
-                    <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure de rappel</label>
-                    <input type="time" name="notif_completion_time"
-                           value="{{ app.user.notifCompletionTime ?? '08:00' }}"
-                           class="input-field w-auto">
-                </div>
-                <label class="flex items-center justify-between">
-                    <p class="text-sm" style="color: var(--fg-2)">Confirmation de présence</p>
-                    <input type="checkbox" name="notif_presence_enabled" value="1"
-                           class="w-5 h-5 rounded accent-[#3DDC97]"
-                           {{ app.user.notifPresenceEnabled ? 'checked' : '' }}>
-                </label>
-                <label class="flex items-center justify-between">
-                    <p class="text-sm" style="color: var(--fg-2)">Demandes d'ami</p>
-                    <input type="checkbox" name="notif_friend_request_enabled" value="1"
-                           class="w-5 h-5 rounded accent-[#3DDC97]"
-                           {{ app.user.notifFriendRequestEnabled ? 'checked' : '' }}>
-                </label>
-                <button type="submit" class="btn-primary w-full py-3 mt-2">Sauvegarder</button>
+                {% endfor %}
             </div>
+            {% endfor %}
+
+            <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle)">
+                <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure des rappels</label>
+                <p class="text-xs mb-2" style="color: var(--fg-4)">Quand partent le rappel du jour J et celui de complétion.</p>
+                <input type="time" name="notif_completion_time"
+                       value="{{ app.user.notifCompletionTime ?? '08:00' }}"
+                       class="input-field w-auto">
+            </div>
+
+            <button type="submit" class="btn-primary w-full py-3 mt-4">Sauvegarder</button>
         </form>
     </div>
 

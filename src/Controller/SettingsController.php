@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,7 +27,9 @@ class SettingsController extends AbstractController
     #[Route('', name: 'app_settings')]
     public function index(): Response
     {
-        return $this->render('settings/index.html.twig');
+        return $this->render('settings/index.html.twig', [
+            'notif_groups' => NotificationType::groups(),
+        ]);
     }
 
     #[Route('/check-username', name: 'app_settings_check_username', methods: ['GET'])]
@@ -47,11 +50,18 @@ class SettingsController extends AbstractController
     public function saveNotifications(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        $user->setNotifCompletionEnabled($request->request->getBoolean('notif_completion_enabled'))
-            ->setNotifCompletionTime($request->request->get('notif_completion_time', '08:00'))
-            ->setNotifPresenceEnabled($request->request->getBoolean('notif_presence_enabled'))
-            ->setNotifFriendRequestEnabled($request->request->getBoolean('notif_friend_request_enabled'));
+
+        // Une case non cochée n'est pas postée : on part du catalogue et non de
+        // la requête, sinon un type absent du formulaire serait réactivé en douce
+        $prefs = [];
+        foreach (NotificationType::cases() as $type) {
+            $prefs[$type->value] = $request->request->getBoolean('notif_' . $type->value);
+        }
+
+        $user->setNotifPrefs($prefs)
+            ->setNotifCompletionTime($request->request->get('notif_completion_time', '08:00'));
         $em->flush();
+
         $this->addFlash('success', 'Préférences de notifications sauvegardées.');
         return $this->redirectToRoute('app_settings');
     }

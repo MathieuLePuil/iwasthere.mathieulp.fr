@@ -52,17 +52,13 @@
     {% else %}
         <div class="space-y-2">
             {% for notif in notifications %}
+            {# Icône et couleur viennent du catalogue (NotificationType), pas d'une liste redéclarée ici #}
+            {% set type = notification_type(notif.type) %}
             <div class="card {% if not notif.isRead %}notif-unread{% endif %}" style="position: relative; {% if notif.isRead %}opacity: 0.7{% endif %}">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
-                         style="background: {% if notif.type == 'friend_request' %}rgba(96,165,250,0.15){% elseif notif.type == 'friend_accepted' %}rgba(61,220,151,0.15){% elseif notif.type == 'friend_tagged_in_event' %}rgba(176,96,255,0.15){% elseif notif.type == 'completion_reminder' %}rgba(251,191,36,0.15){% elseif notif.type == 'presence_confirmation' %}rgba(61,220,151,0.15){% else %}var(--bg-3){% endif %}">
-                        {% if notif.type == 'friend_request' %}👥
-                        {% elseif notif.type == 'friend_accepted' %}✅
-                        {% elseif notif.type == 'friend_tagged_in_event' %}🎟️
-                        {% elseif notif.type == 'completion_reminder' %}⏰
-                        {% elseif notif.type == 'presence_confirmation' %}✅
-                        {% elseif notif.type == 'setlist_updated' %}🎵
-                        {% else %}🔔{% endif %}
+                         style="background: {{ type ? type.accent : 'var(--bg-3)' }}">
+                        {{ type ? type.icon : '🔔' }}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">

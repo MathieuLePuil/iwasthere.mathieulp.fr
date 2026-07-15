@@ -112,6 +112,30 @@ class NotificationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Une notification de ce type porte-t-elle déjà cette clé ? Garde-fou des
+     * rappels : le cron tourne chaque minute et rejouerait sinon l'envoi.
+     */
+    public function existsForDedupeKey(User $recipient, string $type, string $dedupeKey): bool
+    {
+        $results = $this->createQueryBuilder('n')
+            ->select('n.data')
+            ->where('n.recipient = :recipient')
+            ->andWhere('n.type = :type')
+            ->setParameter('recipient', $recipient->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('type', $type)
+            ->getQuery()
+            ->getArrayResult();
+
+        foreach ($results as $row) {
+            if (($row['data']['dedupeKey'] ?? null) === $dedupeKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @return Notification[]
      */
     public function findForUser(User $user, int $limit = 20): array

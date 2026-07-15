@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Friend;
-use App\Entity\Notification;
 use App\Entity\User;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\EventParticipationRepository;
 use App\Repository\FriendRepository;
 use App\Repository\UserRepository;
 use App\Service\AvatarService;
-use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -97,7 +97,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/add/{id}', name: 'app_friend_add', methods: ['POST'])]
-    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, NotificationService $push): Response
+    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, NotificationDispatcher $notifier): Response
     {
         $user = $this->getUser();
 
@@ -125,20 +125,14 @@ class ProfileController extends AbstractController
         $em->persist($friend);
         $em->flush();
 
-        $notif = new Notification();
-        $notif->setRecipient($targetUser)
-            ->setType('friend_request')
-            ->setTitle('Nouvelle demande d\'ami')
-            ->setBody('@' . $user->getUsername() . ' veut vous ajouter en ami.')
-            ->setData(['friendId' => (string) $friend->getId()]);
-        $em->persist($notif);
-        $em->flush();
-
-        $push->sendNotification(
+        $notifier->dispatch(
+            $targetUser,
+            NotificationType::FriendRequest,
             'Nouvelle demande d\'ami',
-            '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
-            (string) $targetUser->getId(),
+            '@' . $user->getUsername() . ' veut vous ajouter en ami.',
             $this->generateUrl('app_notifications'),
+            ['friendId' => (string) $friend->getId()],
+            pushBody: '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
         );
 
         $this->addFlash('success', 'Demande d\'ami envoyée à @' . $targetUser->getUsername() . ' !');
@@ -173,7 +167,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/accept/{id}', name: 'app_friend_accept', methods: ['POST'])]
-    public function acceptFriend(Friend $friend, EntityManagerInterface $em, NotificationService $push): Response
+    public function acceptFriend(Friend $friend, EntityManagerInterface $em, NotificationDispatcher $notifier): Response
     {
         $user = $this->getUser();
         if ($friend->getFriendUser() !== $user) {
@@ -181,19 +175,15 @@ class ProfileController extends AbstractController
         }
         $friend->setStatus('confirmed');
 
-        $notif = new Notification();
-        $notif->setRecipient($friend->getOwner())
-            ->setType('friend_accepted')
-            ->setTitle('Demande d\'ami acceptée')
-            ->setBody('@' . $user->getUsername() . ' a accepté votre demande d\'ami.');
-        $em->persist($notif);
         $em->flush();
 
-        $push->sendNotification(
+        $notifier->dispatch(
+            $friend->getOwner(),
+            NotificationType::FriendAccepted,
             'Demande d\'ami acceptée',
-            '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            (string) $friend->getOwner()->getId(),
+            '@' . $user->getUsername() . ' a accepté votre demande d\'ami.',
             $this->generateUrl('app_profile', ['tab' => 'amis']),
+            pushBody: '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
         );
 
         $this->addFlash('success', 'Ami ajouté !');
@@ -255,7 +245,7 @@ class ProfileController extends AbstractController
         FriendRepository $friendRepo,
         EventParticipationRepository $partRepo,
         EntityManagerInterface $em,
-        NotificationService $push,
+        NotificationDispatcher $notifier,
     ): Response {
         $friendUser = $userRepo->findOneBy(['username' => $username]);
         if (!$friendUser) {
@@ -313,29 +303,30 @@ class ProfileController extends AbstractController
                 $participation->setFriends($friends);
 
                 $event = $participation->getEvent();
-                $notif = new Notification();
-                $notif->setRecipient($friendUser)
-                    ->setType('friend_tagged_in_event')
-                    ->setTitle($user->getDisplayName() . ' t\'a ajouté à un événement')
-                    ->setBody($event->getArtistName() ?? $event->getTournamentName() ?? 'Événement')
-                    ->setData([
+                $notifier->record(
+                    $friendUser,
+                    NotificationType::FriendTaggedInEvent,
+                    $user->getDisplayName() . ' t\'a ajouté à un événement',
+                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    data: [
                         'eventId'         => (string) $event->getId(),
                         'participationId' => (string) $participation->getId(),
                         'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                    ]);
-                $em->persist($notif);
+                    ],
+                );
                 $count++;
             }
 
             if ($count > 0) {
                 $em->flush();
 
-                // A single push covering all invitations; per-event notifications
-                // remain available in the app for individual accept/decline.
-                $push->sendNotification(
+                // Un seul push pour tout le lot ; le fil garde une entrée par
+                // événement, chacune avec son accepter/refuser.
+                $notifier->push(
+                    $friendUser,
+                    NotificationType::FriendTaggedInEvent,
                     $user->getDisplayName() . ' t\'a ajouté à ' . ($count > 1 ? $count . ' événements' : 'un événement'),
                     'Consulte tes notifications pour confirmer ta présence.',
-                    $friendId,
                     $this->generateUrl('app_notifications'),
                 );
 
