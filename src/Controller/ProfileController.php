@@ -13,6 +13,7 @@ use App\Repository\EventParticipationRepository;
 use App\Repository\FriendRepository;
 use App\Repository\UserRepository;
 use App\Service\AvatarService;
+use App\Service\InCommonService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -361,6 +362,32 @@ class ProfileController extends AbstractController
         return $this->render('profile/invite_events.html.twig', [
             'friend_user'    => $friendUser,
             'participations' => array_values($eligible),
+        ]);
+    }
+
+    #[Route('/{username}/en-commun', name: 'app_profile_in_common')]
+    public function inCommon(
+        string $username,
+        UserRepository $userRepo,
+        FriendRepository $friendRepo,
+        InCommonService $inCommon,
+    ): Response {
+        $profileUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$profileUser) {
+            throw $this->createNotFoundException();
+        }
+
+        $user = $this->getUser();
+        if ($profileUser === $user || !$friendRepo->areFriends($user, $profileUser)) {
+            throw $this->createAccessDeniedException();
+        }
+        if ($profileUser->getProfileVisibility() === 'private') {
+            throw $this->createAccessDeniedException();
+        }
+
+        return $this->render('profile/in_common.html.twig', [
+            'profile_user' => $profileUser,
+            'data' => $inCommon->forUsers($user, $profileUser),
         ]);
     }
 

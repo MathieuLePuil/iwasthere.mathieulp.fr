@@ -1,0 +1,186 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}En commun avec {{ profile_user.displayName }} — IWasThere{% endblock %}
+
+{# Note compacte « ★4 », ou « — » quand la personne n'a pas noté. #}
+{% macro rating_pill(who, rating) %}
+    <span style="color: var(--fg-4)">{{ who }}</span>
+    <span class="font-medium" style="color: {{ rating ? 'var(--positive)' : 'var(--fg-4)' }}">
+        {{ rating ? '★' ~ rating : '—' }}
+    </span>
+{% endmacro %}
+
+{% macro together_row(t, profile_user) %}
+    {% import 'components/_macros.html.twig' as m %}
+    {% import _self as c %}
+    <a href="{{ path('app_event_show', {id: t.event.id}) }}"
+       class="flex items-center gap-3 px-4 py-3 no-underline"
+       style="border-bottom: 1px solid var(--border-subtle)">
+        {{ m.event_thumb(t.event) }}
+        <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                {{ t.event.artistName ?? t.event.tournamentName ?? 'Événement' }}
+            </p>
+            <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                {{ t.event.date|date('d/m/Y') }}{% if t.event.venue %} · {{ t.event.venue.name }}{% endif %}
+            </p>
+            {% if not t.both %}
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">
+                    Ajouté par {{ t.mine ? 'toi' : profile_user.displayName }}
+                </p>
+            {% elseif t.mine.rating or t.theirs.rating %}
+                {# Les deux ont leur fiche : on confronte les notes. #}
+                <p class="text-xs mt-0.5 truncate">
+                    {{ c.rating_pill('Toi', t.mine.rating) }}
+                    <span style="color: var(--fg-4)"> · </span>
+                    {{ c.rating_pill(profile_user.displayName|split(' ')|first, t.theirs.rating) }}
+                </p>
+            {% endif %}
+        </div>
+        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+            {{ m.event_badge(t.event.type) }}
+            {% if not t.both and t.mine and t.mine.rating %}{{ m.star_rating(t.mine.rating) }}{% endif %}
+        </div>
+    </a>
+{% endmacro %}
+
+{% block body %}
+{% import _self as c %}
+<div class="px-4 py-5">
+
+    {{ m.back_button(path('app_profile_view', {username: profile_user.username}), profile_user.displayName) }}
+
+    <div class="flex items-center gap-3 mt-4 mb-5">
+        {{ m.avatar(app.user, 'md') }}
+        {{ m.avatar(profile_user, 'md') }}
+        <div class="flex-1 min-w-0">
+            <h1 class="text-xl font-semibold" style="color: var(--fg-1)">En commun</h1>
+            <p class="text-sm" style="color: var(--fg-3)">Toi et {{ profile_user.displayName }}</p>
+        </div>
+    </div>
+
+    {% set c_counts = data.counts %}
+    {% if c_counts.total == 0 and data.together_upcoming|length == 0 and data.artists|length == 0 %}
+        {{ m.empty_state('🤝', 'Rien en commun pour l\'instant', 'Aucun événement vécu ensemble, aucun artiste vu par vous deux. Taggue ' ~ profile_user.displayName ~ ' dans tes événements pour que ça change.', path('app_profile_invite_events', {username: profile_user.username}), '🎟️ Inviter à mes événements') }}
+    {% else %}
+
+    {# Compteur ensemble #}
+    <div class="card text-center py-5 mb-5">
+        <p class="text-4xl font-black" style="color: var(--positive)">{{ c_counts.total }}</p>
+        <p class="text-xs mt-1" style="color: var(--fg-4)">
+            Événement{{ c_counts.total > 1 ? 's' : '' }} vécu{{ c_counts.total > 1 ? 's' : '' }} ensemble
+        </p>
+        {% if c_counts.total > 0 %}
+            {% set parts = [] %}
+            {% if c_counts.concert %}{% set parts = parts|merge([c_counts.concert ~ ' concert' ~ (c_counts.concert > 1 ? 's' : '')]) %}{% endif %}
+            {% if c_counts.festival %}{% set parts = parts|merge([c_counts.festival ~ ' festival' ~ (c_counts.festival > 1 ? 's' : '')]) %}{% endif %}
+            {% if c_counts.sport %}{% set parts = parts|merge([c_counts.sport ~ ' match' ~ (c_counts.sport > 1 ? 's' : '')]) %}{% endif %}
+            {% set head = parts|slice(0, parts|length - 1) %}
+            <p class="text-sm mt-3" style="color: var(--fg-2)">
+                Vous avez fait {% if head|length %}{{ head|join(', ') }} et {% endif %}{{ parts|last }} ensemble.
+            </p>
+        {% endif %}
+    </div>
+
+    {# Accord sur les notes #}
+    {% if data.ratings.both > 0 %}
+    <div class="card mb-5">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Vos notes</h2>
+        <p class="text-sm" style="color: var(--fg-2)">
+            Vous avez noté {{ data.ratings.both }} événement{{ data.ratings.both > 1 ? 's' : '' }} tous les deux
+            {% if data.ratings.agree > 0 %}
+                et mis la même note {{ data.ratings.agree }} fois.
+            {% else %}
+                — jamais la même note.
+            {% endif %}
+            {# En français le pluriel ne commence qu'à 2 : « 1,5 étoile ». #}
+            Écart moyen : {{ data.ratings.avg_gap|number_format(1, ',') }} étoile{{ data.ratings.avg_gap >= 2 ? 's' : '' }}.
+        </p>
+        {% if data.ratings.mine_higher != data.ratings.theirs_higher %}
+        <p class="text-xs mt-2" style="color: var(--fg-4)">
+            {% if data.ratings.mine_higher > data.ratings.theirs_higher %}
+                Tu notes plus généreusement ({{ data.ratings.mine_higher }} fois au-dessus contre {{ data.ratings.theirs_higher }}).
+            {% else %}
+                {{ profile_user.displayName }} note plus généreusement ({{ data.ratings.theirs_higher }} fois au-dessus contre {{ data.ratings.mine_higher }}).
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# Première et dernière fois #}
+    {% if data.first %}
+    <div class="card mb-5">
+        <div class="flex items-center justify-between text-sm">
+            <span style="color: var(--fg-4)">Première fois ensemble</span>
+            <span class="font-medium text-right ml-3 truncate" style="color: var(--fg-1)">
+                {{ data.first.artistName ?? data.first.tournamentName ?? 'Événement' }}
+                <span style="color: var(--fg-3)">· {{ data.first.date|date('m/Y') }}</span>
+            </span>
+        </div>
+        {% if data.last is not same as(data.first) %}
+        <div class="flex items-center justify-between text-sm mt-2 pt-2" style="border-top: 1px solid var(--border-subtle)">
+            <span style="color: var(--fg-4)">Dernière fois ensemble</span>
+            <span class="font-medium text-right ml-3 truncate" style="color: var(--fg-1)">
+                {{ data.last.artistName ?? data.last.tournamentName ?? 'Événement' }}
+                <span style="color: var(--fg-3)">· {{ data.last.date|date('m/Y') }}</span>
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# À venir ensemble #}
+    {% if data.together_upcoming|length > 0 %}
+    <h2 class="font-medium mb-3" style="color: var(--fg-1)">À venir ensemble</h2>
+    <div class="card mb-5" style="padding: 0; overflow: hidden">
+        {% for t in data.together_upcoming %}
+            {{ c.together_row(t, profile_user) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Historique ensemble #}
+    {% if data.together_past|length > 0 %}
+    <h2 class="font-medium mb-3" style="color: var(--fg-1)">Vos événements ensemble</h2>
+    <div class="card mb-5" style="padding: 0; overflow: hidden">
+        {% for t in data.together_past %}
+            {{ c.together_row(t, profile_user) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Artistes vus tous les deux #}
+    {% if data.artists|length > 0 %}
+    <h2 class="font-medium mb-1" style="color: var(--fg-1)">Artistes vus tous les deux</h2>
+    <p class="text-xs mb-3" style="color: var(--fg-4)">
+        {{ data.artists|length }} artiste{{ data.artists|length > 1 ? 's' : '' }} que vous avez vu{{ data.artists|length > 1 ? 's' : '' }} chacun, ensemble ou non
+    </p>
+    <div class="card" style="padding: 0; overflow: hidden">
+        {% for a in data.artists %}
+        <div class="flex items-center justify-between gap-3 px-4 py-3" style="border-bottom: 1px solid var(--border-subtle)">
+            <div class="min-w-0">
+                <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ a.name }}</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                    {{ a.mine }} fois de ton côté · {{ a.theirs }} du sien
+                </p>
+            </div>
+            {% if a.together > 0 %}
+                <span class="badge flex-shrink-0" style="background: var(--positive-soft); color: var(--positive)">
+                    {{ a.together }}× ensemble
+                </span>
+            {% else %}
+                <span class="badge flex-shrink-0" style="background: rgba(139,149,161,0.18); color: #8B95A1">
+                    Jamais ensemble
+                </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+</div>
+{% endblock %}

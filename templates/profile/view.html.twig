@@ -31,6 +31,12 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 Amis
             </span>
+            {% if can_view_history %}
+            <a href="{{ path('app_profile_in_common', {username: profile_user.username}) }}"
+               class="btn-secondary flex w-full items-center justify-center gap-2 py-2.5 mt-2 text-sm">
+                🤝 En commun
+            </a>
+            {% endif %}
             <a href="{{ path('app_profile_invite_events', {username: profile_user.username}) }}"
                class="btn-secondary flex w-full items-center justify-center gap-2 py-2.5 mt-2 text-sm">
                 🎟️ Inviter à mes événements
