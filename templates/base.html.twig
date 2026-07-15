@@ -12,6 +12,11 @@
            maximum-scale coupe le tap-zoom iOS (effet zoom au changement de page) sans interdire
            le zoom manuel, contrairement à user-scalable=no. #}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+        {# Fondu entre les pages : Turbo 8 enveloppe le rendu dans document.startViewTransition()
+           dès que cette meta vaut same-origin, sur les deux snapshots (l'ancien et le nouveau) —
+           d'où sa place dans le layout et pas dans une page. L'animation elle-même vit dans
+           app.css (::view-transition-*). Turbo coupe déjà l'effet sous prefers-reduced-motion. #}
+        <meta name="view-transition" content="same-origin">
         {# Rendu serveur dès que le thème est connu : iOS lit theme-color très tôt, le corriger
            en JS laisserait la barre d'état clignoter. Seul 'auto' est laissé au client. #}
         <meta name="theme-color" content="{{ theme_pref == 'light' ? '#EFEFEA' : '#0B0D10' }}">

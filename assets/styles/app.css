@@ -927,3 +927,36 @@
 :root[data-theme="light"] .iwt-flash--error   { --flash-bg: #FDECEA; --flash-border: rgba(180, 64, 42, 0.32); --flash-icon: #B4402A; }
 :root[data-theme="light"] .iwt-flash--warning { --flash-bg: #FDF4E3; --flash-border: rgba(180, 83, 9, 0.32); --flash-icon: #B45309; }
 :root[data-theme="light"] .iwt-flash--info    { --flash-bg: #E9F1FE; --flash-border: rgba(29, 78, 216, 0.30); --flash-icon: #1D4ED8; }
+
+/* ── Transitions de page ──
+   Turbo 8 rend chaque visite dans document.startViewTransition() grâce à la meta
+   view-transition de base.html.twig ; il ne reste qu'à habiller les pseudo-éléments.
+   Sans règle ici l'API ferait déjà un fondu croisé, mais sur toute la fenêtre : le
+   header et la nav clignoteraient à chaque navigation. Les nommer les sort du snapshot
+   « root » et leur donne leur propre groupe, qui se morphe sur place — la pastille
+   active de la nav passe en fondu pendant que le contenu, lui seul, glisse.
+   Turbo teste déjà prefers-reduced-motion avant de déclencher la transition ; la garde
+   ci-dessous protège le cas où l'effet viendrait d'ailleurs (transition inter-documents). */
+@media (prefers-reduced-motion: no-preference) {
+  /* Sortie plus courte que l'entrée : le contenu sortant libère l'écran vite, l'entrant
+     prend son temps — c'est ce décalage qui donne le ressenti natif plutôt qu'un
+     fondu symétrique qui traîne. */
+  ::view-transition-old(root) {
+    animation: iwt-page-out 110ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: iwt-page-in 220ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+}
+
+@keyframes iwt-page-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes iwt-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+#app-header { view-transition-name: app-header; }
+#app-nav    { view-transition-name: app-nav; }
