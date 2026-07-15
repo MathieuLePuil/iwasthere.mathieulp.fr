@@ -551,14 +551,18 @@ export default class extends Controller {
 
             // Club names run long ("Paris Saint-Germain"): wrap to two lines, then
             // shrink if a single word still overflows its column.
+            // Le plancher est testé en début de tour, pas dans un « while » de fin :
+            // sinon 18px n'est jamais essayé, et on sort avec size à 18 alors que la
+            // police et le retour à la ligne en sont restés à 20 — le nom est dessiné
+            // en 20 mais interligné et souligné du trophée comme du 18.
             let size = 30;
             let lines;
-            do {
+            for (;;) {
                 ctx.font = this.font(600, size);
                 lines = this.wrapText(ctx, side.name, colW, 2);
-                if (lines.every((line) => ctx.measureText(line).width <= colW)) break;
+                if (size <= 18 || lines.every((line) => ctx.measureText(line).width <= colW)) break;
                 size -= 2;
-            } while (size > 18);
+            }
 
             ctx.fillStyle = won || scoreline.winner === 0 ? '#F3F4F6' : 'rgba(243, 244, 246, 0.45)';
             let ty = lines.length > 1 ? rowY - 8 : rowY + 10;
@@ -584,13 +588,16 @@ export default class extends Controller {
         // A football score ("2 - 0") is short and carries the panel at full size. Tennis
         // lists every set, tie-breaks included ("7/6 (7-3) 5/7 6/2 1/6 6/4"), which no
         // legible size fits on one line — those wrap instead of spilling over the teams.
+        // Même plancher testé en début de tour que pour les noms ci-dessus : la version
+        // en « while » de fin n'essayait jamais 34px et repliait sur deux lignes en 30px
+        // des scores qui tenaient encore sur une.
         const scoreW = 250;
         let size = 68;
-        do {
+        for (;;) {
             ctx.font = this.font(700, size, true);
-            if (ctx.measureText(scoreline.score).width <= scoreW) break;
+            if (size <= 34 || ctx.measureText(scoreline.score).width <= scoreW) break;
             size -= 2;
-        } while (size > 34);
+        }
 
         let scoreLines = [scoreline.score];
         if (ctx.measureText(scoreline.score).width > scoreW) {
