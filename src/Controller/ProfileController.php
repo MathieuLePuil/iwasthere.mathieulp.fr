@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Badge\BadgeService;
 use App\Entity\Friend;
 use App\Entity\User;
 use App\Notification\NotificationDispatcher;
@@ -28,14 +29,19 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class ProfileController extends AbstractController
 {
     #[Route('', name: 'app_profile')]
-    public function index(Request $request, FriendRepository $friendRepo, EventParticipationRepository $partRepo): Response
-    {
+    public function index(
+        Request $request,
+        FriendRepository $friendRepo,
+        EventParticipationRepository $partRepo,
+        BadgeService $badges,
+    ): Response {
         $user = $this->getUser();
         $friends = $friendRepo->findConfirmedFriends($user);
         $pendingRequests = $friendRepo->findPendingReceived($user);
         $sentRequests = $friendRepo->findPendingSent($user);
         $totalEvents = $partRepo->countByUser($user);
         $avgRating = $partRepo->getAvgRating($user);
+        $tab = $request->query->get('tab', 'profil');
 
         return $this->render('profile/index.html.twig', [
             'friends' => $friends,
@@ -43,7 +49,10 @@ class ProfileController extends AbstractController
             'sent_requests' => $sentRequests,
             'total_events' => $totalEvents,
             'avg_rating' => $avgRating,
-            'tab' => $request->query->get('tab', 'profil'),
+            'tab' => $tab,
+            // Les badges relisent tout l'historique : inutile de payer ce balayage
+            // quand l'onglet Amis est affiché et qu'ils ne seront pas rendus.
+            'badges' => $tab === 'amis' ? null : $badges->forUser($user),
         ]);
     }
 

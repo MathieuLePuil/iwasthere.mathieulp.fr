@@ -715,6 +715,44 @@ class EventParticipationRepository extends ServiceEntityRepository
             $streak = $daysSinceLast <= 1 ? $currentStreak : 0;
         }
 
+        // Séries de mois consécutifs, en plus des jours ci-dessus : un festival donne
+        // quelques jours d'affilée et rien de plus, alors qu'« un événement par mois,
+        // douze mois de suite » récompense une assiduité que les jours ne voient pas.
+        // Deux événements le même mois ne comptent qu'une fois, d'où le dédoublonnage
+        // par clé Y-m.
+        $monthKeys = [];
+        foreach ($allDates as $d) {
+            $monthKeys[substr($d, 0, 7)] = true;
+        }
+        $months_ = array_keys($monthKeys);
+        sort($months_);
+        $monthStreak = 0; $maxMonthStreak = 0; $currentMonthStreak = 0;
+        if ($months_) {
+            $prevMonth = \DateTimeImmutable::createFromFormat('Y-m-d|', $months_[0] . '-01');
+            $currentMonthStreak = 1; $maxMonthStreak = 1;
+            for ($i = 1; $i < count($months_); $i++) {
+                $currMonth = \DateTimeImmutable::createFromFormat('Y-m-d|', $months_[$i] . '-01');
+                // Comparaison sur le mois suivant plutôt que sur un écart de jours :
+                // les mois n'ont pas tous la même longueur.
+                if ($prevMonth->modify('+1 month')->format('Y-m') === $months_[$i]) {
+                    $currentMonthStreak++;
+                    if ($currentMonthStreak > $maxMonthStreak) {
+                        $maxMonthStreak = $currentMonthStreak;
+                    }
+                } else {
+                    $currentMonthStreak = 1;
+                }
+                $prevMonth = $currMonth;
+            }
+            // La série court encore si le dernier mois est celui-ci ou le précédent :
+            // en cours de mois, on n'a pas encore « raté » le mois courant.
+            $now = new \DateTimeImmutable('today');
+            $lastMonth = end($months_);
+            $monthStreak = in_array($lastMonth, [$now->format('Y-m'), $now->modify('-1 month')->format('Y-m')], true)
+                ? $currentMonthStreak
+                : 0;
+        }
+
         $heatmapFormatted = [];
         $yearAgo = (new \DateTimeImmutable())->modify('-365 days');
         foreach ($heatmap as $d => $count) {
@@ -752,6 +790,8 @@ class EventParticipationRepository extends ServiceEntityRepository
             'top_friend' => $topFriend,
             'streak' => $streak,
             'max_streak' => $maxStreak,
+            'month_streak' => $monthStreak,
+            'max_month_streak' => $maxMonthStreak,
             'heatmap' => $heatmapFormatted,
             'festival_count' => count($festivalGroups),
             'festival_groups' => array_slice($festivalGroups, 0, 5),
