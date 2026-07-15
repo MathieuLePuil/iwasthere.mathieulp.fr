@@ -62,7 +62,7 @@
                     <label>
                         <input type="radio" name="type" value="{{ sport[0] }}" class="sr-only"
                                {% if event.type == sport[0] %}checked{% endif %}
-                               onchange="updateEditTypeBtns()">
+                               onchange="updateEditTypeBtns(); syncWinnerRequired()">
                         <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
                              style="border-color: {{ event.type == sport[0] ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == sport[0] ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
                             <span class="text-lg">{{ sport[2] }}</span>
@@ -86,6 +86,28 @@
             if (!el.checked) return;
             document.querySelectorAll('input[name="winner"]').forEach(function(c) {
                 if (c !== el) c.checked = false;
+            });
+        }
+
+        /* Un score de tennis est noté du point de vue du vainqueur : il ne dit pas qui a
+           gagné, la case est donc obligatoire dès qu'un score est saisi. On passe par la
+           validation native plutôt qu'un preventDefault — le navigateur bloque l'envoi,
+           affiche le message et cible la case tout seul, et Turbo n'envoie rien tant que
+           le formulaire est invalide. */
+        function syncWinnerRequired() {
+            var boxes = document.querySelectorAll('input[name="winner"]');
+            var score = document.querySelector('input[name="final_score"]');
+            if (!boxes.length || !score) return;
+
+            // Les cases ne sont rendues que pour le tennis, mais le sport reste modifiable
+            // ici : repasser sur football doit lever l'exigence sans recharger la page.
+            var type = document.querySelector('input[name="type"]:checked');
+            var missing = (!type || type.value === 'tennis')
+                && score.value.trim() !== ''
+                && ![].some.call(boxes, function(c) { return c.checked; });
+
+            [].forEach.call(boxes, function(c) {
+                c.setCustomValidity(missing ? 'Indique le vainqueur : un score de tennis ne permet pas de le déduire.' : '');
             });
         }
         </script>
@@ -165,8 +187,11 @@
             <p class="section-title">Résultats</p>
             <div>
                 <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Score final</label>
-                <input type="text" name="final_score" class="input-field"
-                       placeholder="{{ event.type == 'tennis' ? 'ex : 6-4, 7-5' : 'ex : 3-1' }}" value="{{ event.finalScore }}">
+                {# Tennis is scored from the winner's side, sets split on spaces ("6/4 7/5") —
+                   the convention every row in the database follows. The placeholder used to
+                   suggest a format no actual data uses, which is what misled the parser. #}
+                <input type="text" name="final_score" class="input-field" oninput="syncWinnerRequired()"
+                       placeholder="{{ event.type == 'tennis' ? 'ex : 6/4 7/5' : 'ex : 3-1' }}" value="{{ event.finalScore }}">
             </div>
             {# Tennis only — for the other sports the winner is derived from the score #}
             {% if event.type == 'tennis' %}
@@ -181,13 +206,17 @@
                            style="border-color: var(--border-default); background: var(--bg-2)">
                         <input type="checkbox" name="winner" value="{{ i }}"
                                style="accent-color: var(--positive)"
-                               onchange="exclusiveWinner(this)"
+                               onchange="exclusiveWinner(this); syncWinnerRequired()"
                                {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winnerParts[i-1]|lower) %}checked{% endif %}>
                         <span class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 {{ winnerParts[i-1] }}</span>
                     </label>
                     {% endfor %}
                 </div>
             </div>
+            {# État initial : une fiche déjà enregistrée avec un score mais sans vainqueur
+               doit bloquer dès l'ouverture. Placé après les cases pour qu'elles existent,
+               et hors DOMContentLoaded, qui ne se redéclenche pas sur une visite Turbo. #}
+            <script>syncWinnerRequired();</script>
             {% endif %}
         </div>
         {% endif %}

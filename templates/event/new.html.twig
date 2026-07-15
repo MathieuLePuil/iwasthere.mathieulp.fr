@@ -237,23 +237,26 @@
                         </div>
                     </div>
                 </div>
-                {# Single field for tennis — set scores don't always tell the winner, so ask #}
+                {# Single field for tennis — a set score never tells the winner (it is written
+                   from the winner's side), so it is asked for, and required once a score is
+                   entered. Sets are split on spaces: "6/4 7/5". #}
                 <div id="score-tennis" class="hidden">
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Score (sets)</label>
-                    <input type="text" name="final_score" id="input-final-score" class="input-field" placeholder="ex : 6-4, 7-5">
+                    <input type="text" name="final_score" id="input-final-score" class="input-field"
+                           placeholder="ex : 6/4 7/5" oninput="syncWinnerRequired()">
                     <div class="mt-3">
                         <p class="text-sm font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</p>
                         <div class="grid grid-cols-2 gap-2">
                             <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
                                    style="border-color: var(--border-default); background: var(--bg-2)">
                                 <input type="checkbox" name="winner" value="1"
-                                       style="accent-color: var(--positive)" onchange="exclusiveWinner(this)">
+                                       style="accent-color: var(--positive)" onchange="exclusiveWinner(this); syncWinnerRequired()">
                                 <span id="winner-label-team1" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Joueur 1</span>
                             </label>
                             <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
                                    style="border-color: var(--border-default); background: var(--bg-2)">
                                 <input type="checkbox" name="winner" value="2"
-                                       style="accent-color: var(--positive)" onchange="exclusiveWinner(this)">
+                                       style="accent-color: var(--positive)" onchange="exclusiveWinner(this); syncWinnerRequired()">
                                 <span id="winner-label-team2" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Joueur 2</span>
                             </label>
                         </div>
@@ -370,6 +373,8 @@
         const sf = document.getElementById('score-field-past');
         if (sf) sf.classList.toggle('hidden', cat !== 'sport');
         if (cat === 'sport') updateScoreFields();
+        // Repasser une date en « à venir » masque le score : l'exigence doit tomber avec lui.
+        syncWinnerRequired();
     }
 
     function updateScoreFields() {
@@ -381,12 +386,34 @@
         dual.classList.toggle('hidden', isTennis);
         tennis.classList.toggle('hidden', !isTennis);
         syncWinnerLabels();
+        syncWinnerRequired();
     }
 
     function exclusiveWinner(el) {
         if (!el.checked) return;
         document.querySelectorAll('input[name="winner"]').forEach(function (c) {
             if (c !== el) c.checked = false;
+        });
+    }
+
+    /* Un score de tennis est noté du point de vue du vainqueur : il ne dit pas qui a
+       gagné, la case est donc obligatoire dès qu'un score est saisi. On passe par la
+       validation native plutôt qu'un preventDefault — le navigateur bloque l'envoi,
+       affiche le message et cible la case tout seul, et Turbo n'envoie rien tant que
+       le formulaire est invalide. */
+    function syncWinnerRequired() {
+        const boxes = document.querySelectorAll('input[name="winner"]');
+        const score = document.getElementById('input-final-score');
+        if (!boxes.length || !score) return;
+
+        // offsetParent vaut null dès qu'un parent est masqué (autre sport, match à
+        // venir) : exiger un champ invisible bloquerait l'envoi sans rien afficher.
+        const shown = score.offsetParent !== null && boxes[0].offsetParent !== null;
+        const missing = shown && score.value.trim() !== ''
+            && ![].some.call(boxes, function (c) { return c.checked; });
+
+        [].forEach.call(boxes, function (c) {
+            c.setCustomValidity(missing ? 'Indique le vainqueur : un score de tennis ne permet pas de le déduire.' : '');
         });
     }
 
@@ -402,6 +429,10 @@
         const d = document.getElementById('input-date');
         if (d) checkPastDate(d.value);
     });
+    // Appel direct, en plus du DOMContentLoaded ci-dessus : sur une visite Turbo ce
+    // dernier ne se redéclenche pas, alors qu'un snapshot restauré peut ramener un
+    // score déjà saisi. Le script est placé après le formulaire, les champs existent.
+    syncWinnerRequired();
     </script>
     </div>{# end #new-event-area #}
 </div>

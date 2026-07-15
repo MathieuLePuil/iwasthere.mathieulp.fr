@@ -308,8 +308,12 @@ class Event
     /**
      * Score line ready for display: both sides, the score and the winning
      * side (1, 2 or null on draw/unknown). Tennis scores are set-based
-     * ("6-4, 7-5"), the other sports use a plain "2 - 0" total.
+     * ("6/2 6/2"), the other sports use a plain "2 - 0" total.
      * Returns null when there is no score or the teams can't be split.
+     *
+     * A null winner stays ambiguous on purpose: it covers a real draw ("1 - 1") as much
+     * as a score nobody could rank (any tennis match without its Vainqueur checkbox).
+     * Callers that want to announce a draw have to check the score themselves.
      */
     public function getScoreline(): ?array
     {
@@ -336,17 +340,14 @@ class Event
             }
         }
 
+        // A tennis score is written from the winner's side: "6/1 7/6" reads the same
+        // whether the winner is named first or second (checked against every row in the
+        // database — the leading number wins 17 times out of 17, while the winner itself
+        // splits 8/9). So the score cannot say who won: only the Vainqueur checkbox
+        // knows, and without it we leave the winner unknown rather than flip a coin.
+        // The other sports do record "team1 - team2", which compares fine.
         $cmp = 0;
-        if ($this->type === 'tennis') {
-            $won1 = $won2 = 0;
-            foreach (explode(',', $this->finalScore) as $set) {
-                if (preg_match('/(\d+)\s*-\s*(\d+)/', $set, $m)) {
-                    $won1 += (int) $m[1] > (int) $m[2] ? 1 : 0;
-                    $won2 += (int) $m[2] > (int) $m[1] ? 1 : 0;
-                }
-            }
-            $cmp = $won1 <=> $won2;
-        } elseif (preg_match('/^\s*(\d+)\s*-\s*(\d+)\s*$/', $this->finalScore, $m)) {
+        if ($this->type !== 'tennis' && preg_match('/^\s*(\d+)\s*-\s*(\d+)\s*$/', $this->finalScore, $m)) {
             $cmp = (int) $m[1] <=> (int) $m[2];
         }
 

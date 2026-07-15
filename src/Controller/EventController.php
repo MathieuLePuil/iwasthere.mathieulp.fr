@@ -33,6 +33,20 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/event')]
 class EventController extends AbstractController
 {
+    private const TENNIS_WINNER_REQUIRED = 'Indique le vainqueur du match : un score de tennis ne permet pas de le déduire.';
+
+    /**
+     * A tennis score is written from the winner's side ("6/1 7/6" reads the same whether
+     * the winner is named first or second), so unlike a "2 - 0" it cannot say who won —
+     * the Vainqueur checkbox is the only source (see Event::getScoreline()). A score
+     * without it would be stored as a result nobody can read, so it is refused.
+     */
+    private function tennisWinnerMissing(array $data): bool
+    {
+        return trim($data['final_score'] ?? '') !== ''
+            && !in_array($data['winner'] ?? '', ['1', '2'], true);
+    }
+
     #[Route('/new', name: 'app_event_new')]
     public function new(
         Request $request,
@@ -48,6 +62,24 @@ class EventController extends AbstractController
     ): Response {
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
+
+            // Refused before anything is created, so a rejected form writes nothing.
+            // Only past events carry a score (the souvenir block is hidden otherwise),
+            // same convention as Event::isPast().
+            $date = !empty($data['date']) ? new \DateTimeImmutable($data['date']) : null;
+            if (($data['type'] ?? '') === 'tennis'
+                && $date && $date < new \DateTimeImmutable('today')
+                && $this->tennisWinnerMissing($data)
+            ) {
+                $this->addFlash('error', self::TENNIS_WINNER_REQUIRED);
+
+                // Renvoyé sur le formulaire tennis, pas sur le formulaire musique par
+                // défaut : sans ces paramètres la page revient sur la mauvaise catégorie.
+                return $this->redirectToRoute('app_event_new', [
+                    'category' => 'sport',
+                    'type'     => 'tennis',
+                ]);
+            }
 
             // Find or create venue
             $venue = null;
@@ -386,6 +418,19 @@ if (!empty($data['duration'])) {
 
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
+
+            // Checked before the type below is applied, so getType() still holds what the
+            // form was rendered with: the Vainqueur checkbox only exists when the event was
+            // already tennis. Demanding it from someone who just switched football → tennis
+            // would reject a form they have no control to fix.
+            if ($event->getType() === 'tennis' && $event->isPast()
+                && ($data['type'] ?? 'tennis') === 'tennis'
+                && $this->tennisWinnerMissing($data)
+            ) {
+                $this->addFlash('error', self::TENNIS_WINNER_REQUIRED);
+
+                return $this->redirectToRoute('app_event_edit', ['id' => $event->getId()]);
+            }
 
             // Update event factual data (any participant can edit)
             if (!empty($data['date'])) {

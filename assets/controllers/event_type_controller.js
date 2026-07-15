@@ -97,5 +97,9 @@ export default class extends Controller {
 
         // Winner checkbox labels live in the page's inline script
         if (typeof window.syncWinnerLabels === 'function') window.syncWinnerLabels();
+        // Changer de sport masque ou révèle le bloc tennis : l'exigence de vainqueur doit
+        // suivre. Sans ça, quitter le tennis laisse une contrainte sur des cases devenues
+        // invisibles — le navigateur refuse l'envoi sans pouvoir afficher le message.
+        if (typeof window.syncWinnerRequired === 'function') window.syncWinnerRequired();
     }
 }
