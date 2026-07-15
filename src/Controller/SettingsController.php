@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
+use App\Service\AccountDeletionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -155,7 +156,7 @@ class SettingsController extends AbstractController
     }
 
     #[Route('/delete', name: 'app_settings_delete_account', methods: ['POST'])]
-    public function deleteAccount(Request $request, EntityManagerInterface $em): Response
+    public function deleteAccount(Request $request, AccountDeletionService $accountDeletion): Response
     {
         $user = $this->getUser();
         $confirmation = $request->request->get('confirmation');
@@ -164,9 +165,10 @@ class SettingsController extends AbstractController
             return $this->redirectToRoute('app_settings');
         }
 
+        // Déconnexion après la suppression : si elle échoue, le compte existe
+        // toujours et l'utilisateur doit rester connecté pour le constater.
+        $accountDeletion->delete($user);
         $this->tokenStorage->setToken(null);
-        $em->remove($user);
-        $em->flush();
 
         return $this->redirectToRoute('app_login');
     }

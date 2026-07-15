@@ -14,6 +14,7 @@ use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Service\AccountDeletionService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -118,16 +119,16 @@ class AdminController extends AbstractController
     }
 
     #[Route('/users/{id}/delete', name: 'app_admin_user_delete', methods: ['POST'])]
-    public function deleteUser(User $user): Response
+    public function deleteUser(User $user, AccountDeletionService $accountDeletion): Response
     {
         if ($user === $this->getUser()) {
             $this->addFlash('error', 'Tu ne peux pas supprimer ton propre compte depuis l\'admin.');
             return $this->redirectToRoute('app_admin_users');
         }
 
+        // Journaliser avant : l'entité n'a plus d'id lisible une fois supprimée.
         $this->logAction('delete', 'User', (string) $user->getId(), null, $user->getEmail());
-        $this->em->remove($user);
-        $this->em->flush();
+        $accountDeletion->delete($user);
         $this->addFlash('success', 'Utilisateur supprimé.');
 
         return $this->redirectToRoute('app_admin_users');
