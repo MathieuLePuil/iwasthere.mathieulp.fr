@@ -97,7 +97,6 @@ class EventController extends AbstractController
                     $venue = new Venue();
                     $venue->setName($venueName)
                         ->setAddress('')
-                        ->setCountry('France')
                         ->setLatitude(0.0)
                         ->setLongitude(0.0)
                         ->setCreatedByUserId($this->getUser()->getId());
@@ -356,7 +355,6 @@ if (!empty($data['duration'])) {
         return $this->json(array_map(fn ($v) => [
             'id' => (string) $v->getId(),
             'name' => $v->getName(),
-            'country' => $v->getCountry(),
             'address' => $v->getAddress(),
             'lat' => $v->getLatitude(),
             'lng' => $v->getLongitude(),

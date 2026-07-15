@@ -19,19 +19,6 @@ class VenueRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Venue[]
-     */
-    public function findByCountry(string $country): array
-    {
-        return $this->createQueryBuilder('v')
-            ->andWhere('v.country = :country')
-            ->setParameter('country', $country)
-            ->orderBy('v.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
      * Find a venue by name, ignoring case and surrounding whitespace,
      * so we don't create identical duplicates ("Graspop", "graspop", "Graspop ").
      */

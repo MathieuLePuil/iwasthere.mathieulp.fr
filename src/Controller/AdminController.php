@@ -257,7 +257,6 @@ class AdminController extends AbstractController
 
             $venue->setName((string) $request->request->get('name', $venue->getName()));
             $venue->setAddress((string) $request->request->get('address', $venue->getAddress()));
-            $venue->setCountry((string) $request->request->get('country', $venue->getCountry()));
             $venue->setLatitude((float) $request->request->get('latitude', $venue->getLatitude()));
             $venue->setLongitude((float) $request->request->get('longitude', $venue->getLongitude()));
             $venue->setCapacity($request->request->get('capacity') !== '' ? (int) $request->request->get('capacity') : null);
