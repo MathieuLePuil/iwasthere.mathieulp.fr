@@ -488,6 +488,29 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Les événements d'une année auxquels l'utilisateur est allé — matière du
+     * Rewind. On s'arrête à aujourd'hui : un concert de décembre pas encore
+     * passé ne fait pas partie du bilan.
+     *
+     * @return EventParticipation[]
+     */
+    public function findForYear(User $user, int $year): array
+    {
+        return $this->createQueryBuilder('p')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
+            ->where('p.user = :user')
+            ->andWhere('YEAR(e.date) = :year')
+            ->andWhere('e.date < :today')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('year', $year)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->orderBy('e.date', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function computeStats(User $user): array
     {
         $pastParts = $this->findPastParticipations($user);

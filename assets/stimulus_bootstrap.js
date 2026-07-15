@@ -13,6 +13,7 @@ import NotificationBadgeController from './controllers/notification_badge_contro
 import TicketController from './controllers/ticket_controller.js';
 import FormLoaderController from './controllers/form_loader_controller.js';
 import FeedController from './controllers/feed_controller.js';
+import RewindController from './controllers/rewind_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -29,3 +30,4 @@ app.register('notification-badge', NotificationBadgeController);
 app.register('ticket', TicketController);
 app.register('form-loader', FormLoaderController);
 app.register('feed', FeedController);
+app.register('rewind', RewindController);

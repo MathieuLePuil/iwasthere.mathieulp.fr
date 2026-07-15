@@ -26,6 +26,22 @@
         {% endif %}
     </div>
 
+    {# Rewind — en tête tant que la fenêtre d'un mois court (User::isRewindAvailable) #}
+    {% if app.user.isRewindAvailable %}
+    <a href="{{ path('app_rewind') }}" class="rewind-card no-underline">
+        <div class="rewind-card-shine"></div>
+        <div style="position: relative; z-index: 1; display: flex; align-items: center; gap: .875rem">
+            <div class="rewind-card-badge">🎁</div>
+            <div style="flex: 1; min-width: 0">
+                <p class="text-[11px] font-bold uppercase tracking-wider" style="color: rgba(255,255,255,.72); font-family: var(--font-mono)">Rewind {{ app.user.rewindYear }}</p>
+                <p class="text-base font-semibold mt-0.5" style="color: #fff">Ton année est prête</p>
+                <p class="text-xs mt-0.5" style="color: rgba(255,255,255,.66)">Dispo jusqu'au {{ app.user.rewindExpiresAt|date('d/m') }}</p>
+            </div>
+            <span class="text-sm font-semibold flex-shrink-0" style="color: #fff">Voir →</span>
+        </div>
+    </a>
+    {% endif %}
+
     {# Pending reminders #}
     {% if pending_reminders|length > 0 %}
     <div>

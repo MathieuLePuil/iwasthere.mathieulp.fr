@@ -1,0 +1,494 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Rewind {{ rewind.year }} — IWasThere{% endblock %}
+
+{% block stylesheets %}
+<style>
+    /* Le Rewind se pose en calque au-dessus de l'app-shell (header et nav sont en
+       z-30) : il est plein écran sans rien changer à la géométrie du shell, dont
+       les marges iOS sont délicates.
+
+       Le fond reste le noir de l'app quel que soit le thème : le Rewind est un
+       moment à part, mais il reste chez nous — seul l'accent violet bouge d'une
+       diapo à l'autre. */
+    .rw-stage {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        overflow: hidden;
+        background: #0B0D10;
+        /* `none` et pas `pan-y` : avec pan-y le navigateur s'attribue le geste
+           vertical et n'envoie jamais de pointermove — le swipe de fermeture
+           ne recevait rien. Ici c'est le contrôleur qui lit tous les gestes. */
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        will-change: transform;
+    }
+
+    .rw-slide {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 1.75rem calc(7.5rem + env(safe-area-inset-bottom, 0px));
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .4s ease;
+        background:
+            radial-gradient(120% 70% at 85% 8%, color-mix(in srgb, var(--rw-accent) 26%, transparent) 0%, transparent 60%),
+            radial-gradient(90% 60% at 5% 100%, color-mix(in srgb, var(--rw-accent) 14%, transparent) 0%, transparent 55%),
+            linear-gradient(180deg, #0F1116 0%, #08090C 100%);
+    }
+    .rw-slide[data-active] { opacity: 1; visibility: visible }
+
+    /* Grain léger : sans lui les aplats sombres bandent sur les écrans OLED */
+    .rw-slide::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: .035;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Halo qui respire : la diapo reste vivante même à l'arrêt */
+    .rw-glow {
+        position: absolute;
+        top: -18%;
+        right: -25%;
+        width: 85vw;
+        height: 85vw;
+        border-radius: 50%;
+        pointer-events: none;
+        background: radial-gradient(circle, color-mix(in srgb, var(--rw-accent) 38%, transparent) 0%, transparent 68%);
+        filter: blur(28px);
+        animation: rw-breathe 11s ease-in-out infinite alternate;
+    }
+    @keyframes rw-breathe {
+        from { transform: scale(1) translate3d(0, 0, 0); opacity: .75 }
+        to   { transform: scale(1.22) translate3d(-5%, 6%, 0); opacity: 1 }
+    }
+
+    .rw-body {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+    }
+
+    /* Les éléments entrent en cascade quand la diapo devient active */
+    .rw-slide[data-active] .rw-in { animation: rw-rise .6s cubic-bezier(.16, 1, .3, 1) backwards }
+    .rw-slide[data-active] .rw-in:nth-child(1) { animation-delay: .04s }
+    .rw-slide[data-active] .rw-in:nth-child(2) { animation-delay: .12s }
+    .rw-slide[data-active] .rw-in:nth-child(3) { animation-delay: .2s }
+    .rw-slide[data-active] .rw-in:nth-child(4) { animation-delay: .28s }
+    .rw-slide[data-active] .rw-in:nth-child(5) { animation-delay: .36s }
+    @keyframes rw-rise {
+        from { opacity: 0; transform: translateY(20px) }
+        to   { opacity: 1; transform: none }
+    }
+
+    /* Accroche : mono + pastille, la signature des libellés de l'app */
+    .rw-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        font-family: var(--font-mono);
+        font-size: .6875rem;
+        font-weight: 700;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: var(--rw-accent);
+        margin-bottom: .75rem;
+    }
+    .rw-eyebrow::before {
+        content: '';
+        width: .3125rem;
+        height: .3125rem;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 10px currentColor;
+        flex-shrink: 0;
+    }
+
+    .rw-title {
+        font-size: clamp(2.5rem, 12vw, 4rem);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -.035em;
+        color: #F3F4F6;
+        overflow-wrap: anywhere;
+    }
+    .rw-title--long { font-size: clamp(1.875rem, 8vw, 2.75rem) }
+
+    /* Les grands nombres sont l'objet de la diapo : dégradé vers l'accent */
+    .rw-figure {
+        font-size: clamp(5rem, 27vw, 9rem);
+        font-weight: 700;
+        line-height: .86;
+        letter-spacing: -.05em;
+        background: linear-gradient(170deg, #FFFFFF 30%, var(--rw-accent) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .rw-subtitle {
+        font-size: 1.0625rem;
+        font-weight: 500;
+        color: rgba(243, 244, 246, .72);
+    }
+    .rw-note {
+        font-size: .875rem;
+        line-height: 1.5;
+        color: rgba(243, 244, 246, .48);
+    }
+
+    /* Énumération : plus présente qu'une note, c'est un contenu à part entière */
+    .rw-prose-label {
+        font-family: var(--font-mono);
+        font-size: .625rem;
+        font-weight: 700;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: var(--rw-accent);
+        margin-bottom: .5rem;
+    }
+    .rw-prose {
+        font-size: .9375rem;
+        line-height: 1.65;
+        font-weight: 500;
+        color: rgba(243, 244, 246, .82);
+        border-left: 2px solid color-mix(in srgb, var(--rw-accent) 45%, transparent);
+        padding-left: .75rem;
+    }
+
+    /* Portrait : anneau accentué, comme les vignettes d'artiste de l'app */
+    .rw-hero {
+        position: relative;
+        width: min(52vw, 220px);
+        aspect-ratio: 1;
+        margin-bottom: 1.5rem;
+    }
+    .rw-hero img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid color-mix(in srgb, var(--rw-accent) 55%, transparent);
+        box-shadow: 0 0 0 6px color-mix(in srgb, var(--rw-accent) 10%, transparent),
+                    0 24px 70px color-mix(in srgb, var(--rw-accent) 35%, transparent);
+    }
+
+    /* Lignes de classement : même langage que les cartes de l'app */
+    .rw-row {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .7rem .875rem;
+        border-radius: .875rem;
+        background: rgba(255, 255, 255, .04);
+        border: 1px solid rgba(255, 255, 255, .06);
+        margin-bottom: .375rem;
+    }
+    .rw-row--lead {
+        background: color-mix(in srgb, var(--rw-accent) 14%, transparent);
+        border-color: color-mix(in srgb, var(--rw-accent) 34%, transparent);
+    }
+    .rw-rank {
+        font-family: var(--font-mono);
+        font-size: .75rem;
+        font-weight: 700;
+        color: rgba(243, 244, 246, .32);
+        width: 1rem;
+        flex-shrink: 0;
+    }
+    .rw-row--lead .rw-rank { color: var(--rw-accent) }
+    .rw-row-label {
+        flex: 1;
+        min-width: 0;
+        font-size: .9375rem;
+        font-weight: 600;
+        color: #F3F4F6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .rw-row-value {
+        font-family: var(--font-mono);
+        font-size: .8125rem;
+        font-weight: 700;
+        color: rgba(243, 244, 246, .56);
+        flex-shrink: 0;
+    }
+
+    /* Répartition par type : une barre par ligne, largeur proportionnelle */
+    .rw-bar-row { margin-bottom: .75rem }
+    .rw-bar-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: .3125rem;
+    }
+    .rw-bar-label { font-size: .8125rem; font-weight: 500; color: rgba(243, 244, 246, .72) }
+    .rw-bar-value { font-family: var(--font-mono); font-size: .75rem; font-weight: 700; color: var(--rw-accent) }
+    .rw-bar-track {
+        height: .375rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .06);
+        overflow: hidden;
+    }
+    .rw-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--rw-accent), color-mix(in srgb, var(--rw-accent) 45%, transparent));
+        width: 0;
+    }
+    .rw-slide[data-active] .rw-bar-fill {
+        animation: rw-grow .9s cubic-bezier(.16, 1, .3, 1) forwards;
+        animation-delay: .35s;
+    }
+    @keyframes rw-grow { to { width: var(--rw-width) } }
+
+    /* Pied : numéro de diapo en mono, comme les libellés de l'app */
+    .rw-foot {
+        position: absolute;
+        left: 1.75rem;
+        right: 1.75rem;
+        bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: .625rem;
+        font-weight: 600;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: rgba(243, 244, 246, .28);
+    }
+
+    .rw-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .rw-brand img {
+        height: 1.125rem;
+        width: auto;
+        display: block;
+        /* Le monogramme est violet foncé : sur le noir des diapos il faut le
+           remonter pour qu'il reste lisible sans virer au blanc */
+        filter: brightness(1.55) saturate(1.15);
+    }
+
+    /* Barres de progression, façon story */
+    .rw-bars {
+        position: absolute;
+        top: calc(.75rem + env(safe-area-inset-top, 0px));
+        left: .75rem;
+        right: .75rem;
+        z-index: 3;
+        display: flex;
+        gap: 3px;
+    }
+    .rw-bar {
+        flex: 1;
+        height: 2.5px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, .18);
+        overflow: hidden;
+    }
+    .rw-bar > i { display: block; height: 100%; width: 0; background: #F3F4F6; border-radius: 3px }
+    .rw-bar[data-done] > i { width: 100% }
+    .rw-bar[data-current] > i { animation: rw-fill var(--rw-duration, 6s) linear forwards }
+    .rw-stage[data-paused] .rw-bar[data-current] > i { animation-play-state: paused }
+    @keyframes rw-fill { from { width: 0 } to { width: 100% } }
+
+    /* Poignée de fermeture : signale que le geste vers le bas existe */
+    .rw-grab {
+        position: absolute;
+        top: calc(2.25rem + env(safe-area-inset-top, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        width: 2.25rem;
+        height: .25rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .22);
+        pointer-events: none;
+    }
+
+    .rw-actions {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+        z-index: 3;
+        display: flex;
+        justify-content: center;
+        padding: 0 1rem;
+    }
+    .rw-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .75rem 1.25rem;
+        border-radius: 999px;
+        font-size: .8125rem;
+        font-weight: 600;
+        color: #0B0D10;
+        background: #F3F4F6;
+        border: none;
+        cursor: pointer;
+        transition: transform .15s ease, opacity .15s ease;
+    }
+    .rw-btn:active { transform: scale(.96) }
+    .rw-btn:disabled { opacity: .6 }
+
+    .rw-close {
+        position: absolute;
+        top: calc(1.75rem + env(safe-area-inset-top, 0px));
+        right: .875rem;
+        z-index: 3;
+        width: 1.875rem;
+        height: 1.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: rgba(243, 244, 246, .72);
+        background: rgba(255, 255, 255, .08);
+        border: none;
+        cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .rw-slide, .rw-slide[data-active] .rw-in, .rw-glow, .rw-bar > i, .rw-bar-fill {
+            animation: none !important;
+            transition: none;
+        }
+        .rw-bar[data-current] > i { width: 100% }
+        .rw-bar-fill { width: var(--rw-width) }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="rw-stage"
+     data-controller="rewind"
+     data-rewind-slides-value="{{ rewind.slides|json_encode|e('html_attr') }}"
+     data-rewind-year-value="{{ rewind.year }}"
+     data-rewind-name-value="{{ app.user.displayName|e('html_attr') }}"
+     data-rewind-home-value="{{ path('app_home') }}"
+     data-rewind-logo-value="{{ asset('images/logo.png') }}">
+
+    <div class="rw-bars" data-rewind-target="bars"></div>
+    <div class="rw-grab"></div>
+
+    {# Le tap est lu par le contrôleur (le côté touché décide) ; ces boutons ne
+       servent qu'au clavier et aux lecteurs d'écran. Visuellement masqués, ils
+       ne peuvent plus déclencher un « suivant » au relâchement d'un swipe. #}
+    <button class="sr-only" data-action="rewind#prev">Diapositive précédente</button>
+    <button class="sr-only" data-action="rewind#next">Diapositive suivante</button>
+
+    <a href="{{ path('app_home') }}" class="rw-close" aria-label="Fermer le Rewind">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+    </a>
+
+    {% for slide in rewind.slides %}
+    {# Le maximum sert d'échelle aux barres : la plus haute occupe toute la largeur #}
+    {% set peak = slide.items is defined and slide.items ? max(slide.items|map(i => i.value|number_format)) : 0 %}
+    <section class="rw-slide" data-rewind-target="slide" style="--rw-accent: {{ slide.accent }}">
+        <div class="rw-glow"></div>
+
+        <div class="rw-body">
+            <p class="rw-eyebrow rw-in">{{ slide.eyebrow }}</p>
+
+            {% if slide.kind == 'hero' and slide.image %}
+            <div class="rw-in" style="display: flex; justify-content: center">
+                <div class="rw-hero"><img src="{{ slide.image }}" alt="" loading="eager"></div>
+            </div>
+            {% endif %}
+
+            {# Un nombre nu est l'objet de la diapo : il mérite le traitement en grand #}
+            {% if slide.kind in ['number', 'intro'] and slide.title matches '/^[0-9]+([,.][0-9]+)?$/' %}
+            <p class="rw-figure rw-in">{{ slide.title }}</p>
+            {% else %}
+            <h2 class="rw-title rw-in {{ slide.title|length > 16 ? 'rw-title--long' }}">{{ slide.title }}</h2>
+            {% endif %}
+
+            {% if slide.subtitle is defined and slide.subtitle %}
+            <p class="rw-subtitle rw-in">{{ slide.subtitle }}</p>
+            {% endif %}
+
+            {% if slide.items is defined and slide.items %}
+            <div class="rw-in" style="margin-top: 1.25rem">
+                {% if slide.kind == 'list' %}
+                    {% for item in slide.items %}
+                    <div class="rw-row {{ loop.first ? 'rw-row--lead' }}">
+                        {% if item.rank is defined %}<span class="rw-rank">{{ item.rank }}</span>{% endif %}
+                        <span class="rw-row-label">{{ item.label }}</span>
+                        <span class="rw-row-value">×{{ item.value }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    {% for item in slide.items %}
+                    <div class="rw-bar-row">
+                        <div class="rw-bar-head">
+                            <span class="rw-bar-label">{{ item.label }}</span>
+                            <span class="rw-bar-value">{{ item.value }}</span>
+                        </div>
+                        <div class="rw-bar-track">
+                            <div class="rw-bar-fill" style="--rw-width: {{ peak > 0 ? (item.value / peak * 100)|round : 0 }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {# Texte courant : une énumération se lit mieux à la volée qu'en lignes,
+               et c'est le seul moyen d'en citer une vingtaine sur une diapo #}
+            {% if slide.prose is defined and slide.prose %}
+            <div class="rw-in" style="margin-top: 1.25rem">
+                {% if slide.prose_label is defined %}
+                <p class="rw-prose-label">{{ slide.prose_label }}</p>
+                {% endif %}
+                <p class="rw-prose">{{ slide.prose }}</p>
+            </div>
+            {% endif %}
+
+            {% if slide.note is defined and slide.note %}
+            <p class="rw-note rw-in" style="margin-top: .75rem">{{ slide.note }}</p>
+            {% endif %}
+        </div>
+
+        <div class="rw-foot">
+            <span class="rw-brand">
+                <img src="{{ asset('images/logo.png') }}" alt="IWasThere">
+                Rewind {{ rewind.year }}
+            </span>
+            <span>{{ '%02d'|format(slide.index) }} / {{ '%02d'|format(slide.count) }}</span>
+        </div>
+    </section>
+    {% endfor %}
+
+    <div class="rw-actions">
+        <button class="rw-btn" data-action="rewind#share" data-rewind-target="shareButton">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 15V3m0 0L8 7m4-4l4 4M4 13v6a2 2 0 002 2h12a2 2 0 002-2v-6"/>
+            </svg>
+            <span data-rewind-target="shareLabel">Partager cette slide</span>
+        </button>
+    </div>
+
+    <canvas data-rewind-target="canvas" width="1080" height="1920" style="display: none"></canvas>
+</div>
+{% endblock %}

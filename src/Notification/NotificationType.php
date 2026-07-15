@@ -23,6 +23,7 @@ enum NotificationType: string
     case FriendSameEvent = 'friend_same_event';
     case EventDay = 'event_day';
     case EventCompletion = 'event_completion';
+    case RewindAvailable = 'rewind_available';
 
     /** Intitulé de la ligne dans les préférences */
     public function label(): string
@@ -35,6 +36,7 @@ enum NotificationType: string
             self::FriendSameEvent => 'Un ami au même événement',
             self::EventDay => 'Rappel le jour J',
             self::EventCompletion => 'Rappel de complétion',
+            self::RewindAvailable => 'Ton Rewind est prêt',
         };
     }
 
@@ -49,6 +51,7 @@ enum NotificationType: string
             self::FriendSameEvent => 'On te demande si vous y allez ensemble',
             self::EventDay => 'Le matin de ton événement',
             self::EventCompletion => 'Le lendemain, pour noter et raconter',
+            self::RewindAvailable => 'Ton bilan de l\'année vient d\'être publié',
         };
     }
 
@@ -62,6 +65,7 @@ enum NotificationType: string
             self::FriendSameEvent => '🎟️',
             self::EventDay => '📅',
             self::EventCompletion => '⭐',
+            self::RewindAvailable => '🎁',
         };
     }
 
@@ -76,6 +80,7 @@ enum NotificationType: string
             self::FriendSameEvent => 'rgba(176,96,255,0.15)',
             self::EventDay => 'rgba(251,191,36,0.15)',
             self::EventCompletion => 'rgba(251,191,36,0.15)',
+            self::RewindAvailable => 'rgba(176,96,255,0.15)',
         };
     }
 
@@ -99,6 +104,7 @@ enum NotificationType: string
             'Amis' => [self::FriendRequest, self::FriendAccepted, self::FriendTaggedInEvent],
             'Activité' => [self::FriendActivity, self::FriendSameEvent],
             'Rappels' => [self::EventDay, self::EventCompletion],
+            'Rewind' => [self::RewindAvailable],
         ];
     }
 

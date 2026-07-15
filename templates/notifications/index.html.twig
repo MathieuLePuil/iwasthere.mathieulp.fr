@@ -54,7 +54,15 @@
             {% for notif in notifications %}
             {# Icône et couleur viennent du catalogue (NotificationType), pas d'une liste redéclarée ici #}
             {% set type = notification_type(notif.type) %}
+            {# `data.url` est posé par le dispatcher sur toute notification : la carte
+               entière y mène. Les anciennes, écrites avant, n'ont que leur eventId. #}
+            {% set target = notif.data.url is defined ? notif.data.url
+                : (notif.data.eventId is defined ? path('app_event_show', {id: notif.data.eventId}) : null) %}
             <div class="card {% if not notif.isRead %}notif-unread{% endif %}" style="position: relative; {% if notif.isRead %}opacity: 0.7{% endif %}">
+                {% if target %}
+                {# Lien étiré sous le contenu : les boutons d'action gardent leurs clics #}
+                <a href="{{ target }}" class="notif-stretch" aria-label="{{ notif.title }}"></a>
+                {% endif %}
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg"
                          style="background: {{ type ? type.accent : 'var(--bg-3)' }}">
@@ -71,7 +79,7 @@
                         <p class="text-xs mt-1" style="color: var(--fg-4)">{{ notif.createdAt|date('d/m/Y à H:i') }}</p>
 
                         {% if notif.type == 'friend_request' and notif.data and notif.data.friendId is defined %}
-                        <div class="flex gap-2 mt-2">
+                        <div class="flex gap-2 mt-2 notif-actions">
                             <form method="post" action="{{ path('app_friend_request_accept', {id: notif.data.friendId}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('friend_request') }}">
                                 <button class="btn-primary text-xs py-1.5 px-3">Accepter</button>
@@ -89,7 +97,7 @@
                             {% if notif.data.answer is defined %}
                             <p class="text-xs mt-2 font-medium" style="color: var(--fg-4)">⏳ Tu as répondu oui — en attente de sa réponse</p>
                             {% else %}
-                            <div class="flex gap-2 mt-2">
+                            <div class="flex gap-2 mt-2 notif-actions">
                                 <form method="post" action="{{ path('app_event_together_yes', {id: notif.id}) }}">
                                     <button class="btn-primary text-xs py-1.5 px-3">Oui, ensemble</button>
                                 </form>
@@ -101,7 +109,7 @@
                         {% endif %}
 
                         {% if notif.type == 'friend_tagged_in_event' and notif.data %}
-                        <div class="flex gap-2 mt-2">
+                        <div class="flex gap-2 mt-2 notif-actions">
                             <form method="post" action="{{ path('app_event_tag_accept', {id: notif.id}) }}">
                                 <button class="btn-primary text-xs py-1.5 px-3">Ajouter à mon compte</button>
                             </form>
@@ -109,20 +117,9 @@
                                 <button class="btn-secondary text-xs py-1.5 px-3">Ignorer</button>
                             </form>
                         </div>
-                        {% if notif.data.eventId is defined %}
-                        <a href="{{ path('app_event_show', {id: notif.data.eventId}) }}"
-                           class="inline-block mt-1.5 text-xs font-medium" style="color: var(--positive)">
-                            Voir l'événement →
-                        </a>
-                        {% endif %}
-                        {% elseif notif.data and notif.data.eventId is defined %}
-                        <a href="{{ path('app_event_show', {id: notif.data.eventId}) }}"
-                           class="inline-block mt-2 text-xs font-medium" style="color: var(--positive)">
-                            Voir l'événement →
-                        </a>
                         {% endif %}
                     </div>
-                    <form method="post" action="{{ path('app_notification_delete', {id: notif.id}) }}">
+                    <form method="post" action="{{ path('app_notification_delete', {id: notif.id}) }}" class="notif-actions">
                         <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="color: var(--fg-4); background: var(--bg-3)">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 6L6 18M6 6l12 12"/>

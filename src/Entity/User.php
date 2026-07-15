@@ -73,6 +73,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $feedLastSeenAt = null;
 
+    /** Année du Rewind débloqué, null si aucun */
+    #[ORM\Column(nullable: true)]
+    private ?int $rewindYear = null;
+
+    /** Date de déblocage : le Rewind reste visible un mois à partir de là */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $rewindUnlockedAt = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -281,6 +289,50 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->feedLastSeenAt = $feedLastSeenAt;
         return $this;
+    }
+
+    public function getRewindYear(): ?int
+    {
+        return $this->rewindYear;
+    }
+
+    public function getRewindUnlockedAt(): ?\DateTimeImmutable
+    {
+        return $this->rewindUnlockedAt;
+    }
+
+    /** Débloque le Rewind d'une année ; la fenêtre d'un mois repart de maintenant. */
+    public function unlockRewind(int $year, ?\DateTimeImmutable $at = null): static
+    {
+        $this->rewindYear = $year;
+        $this->rewindUnlockedAt = $at ?? new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function lockRewind(): static
+    {
+        $this->rewindYear = null;
+        $this->rewindUnlockedAt = null;
+
+        return $this;
+    }
+
+    /** Fin de la fenêtre de visibilité, un mois après le déblocage. */
+    public function getRewindExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->rewindUnlockedAt?->modify('+1 month');
+    }
+
+    /**
+     * Le Rewind est-il visible ? Il s'efface de lui-même au bout d'un mois :
+     * rien ne le verrouille en base, c'est la date de déblocage qui fait foi.
+     */
+    public function isRewindAvailable(): bool
+    {
+        $expires = $this->getRewindExpiresAt();
+
+        return $this->rewindYear !== null && $expires !== null && $expires > new \DateTimeImmutable();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
