@@ -178,7 +178,19 @@
         {% endif %}
 
         {# Souvenir ticket — only once the event is past #}
-        {% if participation and event.category == 'music' and not event.isPast %}
+        {# Le tableau de score n'a de sens que si les deux camps et le score sont connus ;
+           getScoreline() renvoie null sinon, et le ticket retombe sur la mise en page
+           « concert » sans panneau. #}
+        {% set sl = event.category == 'sport' ? event.scoreline : null %}
+        {% set ticket_title = event.category == 'sport'
+            ? (event.tournamentName ?: event.teams ?: 'Match')
+            : (event.artistName ?: 'Événement') %}
+        {# Un match n'a pas de tournée : la ligne sous le titre rappelle les équipes, sauf
+           quand le tableau de score les affiche déjà ou qu'elles servent déjà de titre. #}
+        {% set ticket_subtitle = event.category == 'sport'
+            ? ((sl or not event.tournamentName) ? '' : (event.teams ?: ''))
+            : (event.tourName ?: '') %}
+        {% if participation and not event.isPast %}
         <div class="card w-full flex items-center gap-3 opacity-60">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--bg-3)">
                 <span class="text-xl">🎟️</span>
@@ -188,16 +200,20 @@
                 <p class="text-xs mt-0.5" style="color: var(--fg-4)">Disponible une fois l'événement passé</p>
             </div>
         </div>
-        {% elseif participation and event.category == 'music' %}
+        {% elseif participation %}
         <div data-controller="ticket"
-             data-ticket-artist-value="{{ event.artistName ?? 'Événement' }}"
-             data-ticket-tour-value="{{ event.tourName ?? '' }}"
+             data-ticket-artist-value="{{ ticket_title }}"
+             data-ticket-tour-value="{{ ticket_subtitle }}"
              data-ticket-venue-value="{{ event.venue ? event.venue.name : '' }}"
              data-ticket-date-value="{{ event.date|date('Y-m-d') }}"
              data-ticket-time-value="{{ event.startTime ? event.startTime|date('H:i') : '' }}"
              data-ticket-type-value="{{ event.type }}"
              data-ticket-image-value="{{ participation.imageUrl ?? '' }}"
-             data-ticket-artist-image-value="{{ event.artistImageUrl ?? '' }}">
+             data-ticket-artist-image-value="{{ event.artistImageUrl ?? '' }}"
+             data-ticket-team1-value="{{ sl ? sl.team1 : '' }}"
+             data-ticket-team2-value="{{ sl ? sl.team2 : '' }}"
+             data-ticket-score-value="{{ sl ? sl.score : '' }}"
+             data-ticket-winner-value="{{ sl and sl.winner ? sl.winner : 0 }}">
 
             <button type="button" data-action="ticket#open" class="card w-full flex items-center gap-3 text-left cursor-pointer">
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--positive-soft)">

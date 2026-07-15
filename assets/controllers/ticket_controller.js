@@ -1,8 +1,9 @@
 import { Controller } from '@hotwired/stimulus';
 
 /*
- * Souvenir ticket generator — draws a collector-style concert ticket
- * on a canvas and lets the user save it to their photo gallery.
+ * Souvenir ticket generator — draws a collector-style ticket on a canvas and
+ * lets the user save it to their photo gallery. Concerts get the setlist-era
+ * stub, sport events get a scoreboard panel above the perforation.
  */
 export default class extends Controller {
     static targets = ['modal', 'preview', 'dots'];
@@ -15,6 +16,10 @@ export default class extends Controller {
         type: String,
         image: String,
         artistImage: String,
+        team1: String,
+        team2: String,
+        score: String,
+        winner: Number,
     };
 
     W = 1000;
@@ -23,6 +28,45 @@ export default class extends Controller {
     TICKET_Y = 70;
     TICKET_W = 860;
     TICKET_H = 1610;
+    SCOREBOARD_H = 250;
+
+    /* Accent + header art per event type. The accents are the same ones the badges
+       use in app.css — they are already tuned to stay readable on the dark card. */
+    static PALETTE = {
+        concert:  { accent: '#B060FF', base: '#061119', tint: 'rgba(7, 51, 74, 0.9)',   emoji: '🎤', label: 'CONCERT' },
+        festival: { accent: '#B060FF', base: '#1A0E09', tint: 'rgba(92, 49, 32, 0.9)',  emoji: '🎪', label: 'FESTIVAL' },
+        football: { accent: '#7EE8A2', base: '#050912', tint: 'rgba(14, 46, 26, 0.95)', emoji: '⚽', label: 'FOOTBALL' },
+        rugby:    { accent: '#B0BC9A', base: '#0A0F03', tint: 'rgba(42, 48, 16, 0.95)', emoji: '🏉', label: 'RUGBY' },
+        tennis:   { accent: '#F4D04A', base: '#160808', tint: 'rgba(50, 20, 20, 0.95)', emoji: '🎾', label: 'TENNIS' },
+    };
+
+    get palette() {
+        return this.constructor.PALETTE[this.typeValue] ?? {
+            accent: '#B060FF', base: '#061119', tint: 'rgba(7, 51, 74, 0.9)', emoji: '🎫', label: 'ÉVÉNEMENT',
+        };
+    }
+
+    /* The scoreboard needs both sides and a score; the winner (1, 2, or 0 when none
+       could be crowned) is resolved server-side by Event::getScoreline() so the manual
+       override and the score parsing stay decided in one place. */
+    get scoreline() {
+        if (!this.team1Value || !this.team2Value || !this.scoreValue) return null;
+        return {
+            team1: this.team1Value,
+            team2: this.team2Value,
+            score: this.scoreValue,
+            winner: this.winnerValue,
+        };
+    }
+
+    /* "Pas de vainqueur" covers two different things: a real draw (2 - 2) and a score
+       nobody could rank — a tennis score reads "6/2 6/2", which getScoreline() can't
+       compare, so it falls back to no winner. Only a plain equal score is announced as
+       a draw; anything else stays silent rather than calling a tennis match a tie. */
+    get isDraw() {
+        const parts = /^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(this.scoreValue);
+        return !!parts && Number(parts[1]) === Number(parts[2]);
+    }
 
     disconnect() {
         document.body.style.overflow = '';
@@ -138,7 +182,7 @@ export default class extends Controller {
         const dots = this.variants.map((v, i) =>
             '<button type="button" data-action="ticket#goTo" data-index="' + i + '" aria-label="' + v.label + '"'
             + ' style="width:' + (i === this.index ? 22 : 8) + 'px;height:8px;border-radius:4px;border:0;padding:0;cursor:pointer;transition:all .2s;'
-            + 'background:' + (i === this.index ? '#B060FF' : 'rgba(243,244,246,0.35)') + '"></button>'
+            + 'background:' + (i === this.index ? this.palette.accent : 'rgba(243,244,246,0.35)') + '"></button>'
         ).join('');
         this.dotsTarget.innerHTML =
             '<div class="flex items-center justify-center gap-2">' + dots + '</div>'
@@ -195,12 +239,19 @@ export default class extends Controller {
         this.drawBackdrop(ctx);
         this.drawTicketBase(ctx);
         const perforationY = this.TICKET_Y + this.TICKET_H - 420;
+        // The scoreboard eats into the body, so the header and title stop above it
+        // rather than running under the panel.
+        const scoreline = this.scoreline;
+        const bodyBottom = perforationY - (scoreline ? this.SCOREBOARD_H : 0);
         if (image) {
-            this.drawPhotoHeader(ctx, image, perforationY, variant.kind);
-            this.drawTitleBlock(ctx, { bottom: perforationY - 56 });
+            this.drawPhotoHeader(ctx, image, bodyBottom, variant.kind);
+            this.drawTitleBlock(ctx, { bottom: bodyBottom - 56 });
         } else {
             const headerBottom = this.drawHeader(ctx);
             this.drawTitleBlock(ctx, { top: headerBottom - 10 });
+        }
+        if (scoreline) {
+            this.drawScoreboard(ctx, scoreline, bodyBottom, perforationY);
         }
         this.drawPerforation(ctx, perforationY);
         this.drawStub(ctx, perforationY);
@@ -216,6 +267,13 @@ export default class extends Controller {
             ? '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace'
             : '"Geist", ui-sans-serif, system-ui, -apple-system, sans-serif';
         return weight + ' ' + size + 'px ' + family;
+    }
+
+    /* '#B060FF' + 0.16 → 'rgba(176, 96, 255, 0.16)' — canvas gradients need the alpha
+       inline, and the palette accents are plain hex. */
+    rgba(hex, alpha) {
+        const n = parseInt(hex.slice(1), 16);
+        return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + alpha + ')';
     }
 
     roundRectPath(ctx, x, y, w, h, r) {
@@ -262,9 +320,10 @@ export default class extends Controller {
         ctx.fillStyle = '#0B0D10';
         ctx.fillRect(0, 0, this.W, this.H);
 
+        const accent = this.palette.accent;
         const glow = ctx.createRadialGradient(this.W / 2, 0, 0, this.W / 2, 0, 900);
-        glow.addColorStop(0, 'rgba(176, 96, 255, 0.16)');
-        glow.addColorStop(1, 'rgba(176, 96, 255, 0)');
+        glow.addColorStop(0, this.rgba(accent, 0.16));
+        glow.addColorStop(1, this.rgba(accent, 0));
         ctx.fillStyle = glow;
         ctx.fillRect(0, 0, this.W, 900);
     }
@@ -365,15 +424,15 @@ export default class extends Controller {
         ctx.clip();
 
         {
-            const isFestival = this.typeValue === 'festival';
+            const palette = this.palette;
             const base = ctx.createLinearGradient(x, y, x, y + headerH);
-            base.addColorStop(0, isFestival ? '#1A0E09' : '#061119');
+            base.addColorStop(0, palette.base);
             base.addColorStop(1, '#13161B');
             ctx.fillStyle = base;
             ctx.fillRect(x, y, w, headerH);
 
             const tint = ctx.createRadialGradient(x + w / 2, y + 120, 0, x + w / 2, y + 120, 620);
-            tint.addColorStop(0, isFestival ? 'rgba(92, 49, 32, 0.9)' : 'rgba(7, 51, 74, 0.9)');
+            tint.addColorStop(0, palette.tint);
             tint.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = tint;
             ctx.fillRect(x, y, w, headerH);
@@ -396,7 +455,7 @@ export default class extends Controller {
             ctx.font = this.font(400, 150);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(isFestival ? '🎪' : '🎤', x + w / 2, y + headerH / 2 - 30);
+            ctx.fillText(palette.emoji, x + w / 2, y + headerH / 2 - 30);
         }
 
         // Fade into the card body
@@ -429,11 +488,11 @@ export default class extends Controller {
         const blockH = 30 + lines.length * (size + 10) + (this.tourValue ? 52 : 0);
         let y = anchor.bottom !== undefined ? anchor.bottom - blockH : anchor.top;
 
-        const label = (this.typeValue === 'festival' ? 'FESTIVAL' : 'CONCERT');
+        const palette = this.palette;
         ctx.font = this.font(600, 26, true);
         try { ctx.letterSpacing = '8px'; } catch (e) { /* older engines */ }
-        ctx.fillStyle = '#B060FF';
-        ctx.fillText('★ ' + label, x, y);
+        ctx.fillStyle = palette.accent;
+        ctx.fillText('★ ' + palette.label, x, y);
         try { ctx.letterSpacing = '0px'; } catch (e) { /* older engines */ }
 
         y += 30;
@@ -451,6 +510,107 @@ export default class extends Controller {
             const tourLines = this.wrapText(ctx, this.tourValue, maxWidth, 1);
             ctx.fillText(tourLines[0], x, y);
         }
+    }
+
+    /* Stadium scoreboard: the two sides framing the final score, the winner kept at
+       full strength while the beaten side recedes. Sits between the body and the
+       perforation, where a concert ticket has nothing. */
+    drawScoreboard(ctx, scoreline, top, perforationY) {
+        const palette = this.palette;
+        const px = this.TICKET_X + 50;
+        const pw = this.TICKET_W - 100;
+        const pt = top + 10;
+        const ph = perforationY - 40 - pt;
+
+        this.roundRectPath(ctx, px, pt, pw, ph, 26);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+
+        ctx.font = this.font(600, 22, true);
+        try { ctx.letterSpacing = '5px'; } catch (e) { /* older engines */ }
+        ctx.fillStyle = this.rgba(palette.accent, 0.85);
+        ctx.fillText('RÉSULTAT', this.W / 2, pt + 44);
+        try { ctx.letterSpacing = '0px'; } catch (e) { /* older engines */ }
+
+        // Columns are symmetric around the ticket centre: team, score, team.
+        const rowY = pt + 118;
+        const colW = 222;
+        const sides = [
+            { name: scoreline.team1, cx: 259, side: 1 },
+            { name: scoreline.team2, cx: 741, side: 2 },
+        ];
+
+        for (const side of sides) {
+            const won = scoreline.winner === side.side;
+
+            // Club names run long ("Paris Saint-Germain"): wrap to two lines, then
+            // shrink if a single word still overflows its column.
+            let size = 30;
+            let lines;
+            do {
+                ctx.font = this.font(600, size);
+                lines = this.wrapText(ctx, side.name, colW, 2);
+                if (lines.every((line) => ctx.measureText(line).width <= colW)) break;
+                size -= 2;
+            } while (size > 18);
+
+            ctx.fillStyle = won || scoreline.winner === 0 ? '#F3F4F6' : 'rgba(243, 244, 246, 0.45)';
+            let ty = lines.length > 1 ? rowY - 8 : rowY + 10;
+            for (const line of lines) {
+                ctx.fillText(line, side.cx, ty);
+                ty += size + 8;
+            }
+
+            if (won) {
+                ctx.font = this.font(600, 18, true);
+                try { ctx.letterSpacing = '3px'; } catch (e) { /* older engines */ }
+                ctx.fillStyle = palette.accent;
+                ctx.fillText('★ VAINQUEUR', side.cx, pt + 172);
+                try { ctx.letterSpacing = '0px'; } catch (e) { /* older engines */ }
+            }
+        }
+
+        // A football score ("2 - 0") is short and carries the panel at full size. Tennis
+        // lists every set, tie-breaks included ("7/6 (7-3) 5/7 6/2 1/6 6/4"), which no
+        // legible size fits on one line — those wrap instead of spilling over the teams.
+        const scoreW = 250;
+        let size = 68;
+        do {
+            ctx.font = this.font(700, size, true);
+            if (ctx.measureText(scoreline.score).width <= scoreW) break;
+            size -= 2;
+        } while (size > 34);
+
+        let scoreLines = [scoreline.score];
+        if (ctx.measureText(scoreline.score).width > scoreW) {
+            size = 30;
+            ctx.font = this.font(700, size, true);
+            scoreLines = this.wrapText(ctx, scoreline.score, scoreW, 2);
+        }
+
+        ctx.fillStyle = '#F3F4F6';
+        const step = size + 6;
+        let sy = rowY + 22 - ((scoreLines.length - 1) * step) / 2;
+        for (const line of scoreLines) {
+            ctx.fillText(line, this.W / 2, sy);
+            sy += step;
+        }
+
+        if (scoreline.winner === 0 && this.isDraw) {
+            ctx.font = this.font(600, 18, true);
+            try { ctx.letterSpacing = '3px'; } catch (e) { /* older engines */ }
+            ctx.fillStyle = 'rgba(243, 244, 246, 0.48)';
+            ctx.fillText('MATCH NUL', this.W / 2, pt + 172);
+            try { ctx.letterSpacing = '0px'; } catch (e) { /* older engines */ }
+        }
+
+        ctx.textAlign = 'left';
     }
 
     drawPerforation(ctx, py) {
