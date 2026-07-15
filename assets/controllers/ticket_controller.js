@@ -567,12 +567,17 @@ export default class extends Controller {
                 ty += size + 8;
             }
 
+            // Un trophée plutôt qu'un libellé, comme dans la liste des événements sportifs.
+            // Posé sous le bas réel du nom (mesuré, jambages compris) plutôt qu'à une
+            // hauteur fixe ou sur la ligne suivante : l'interligne suit la taille du nom,
+            // et un nom rétréci en laisse moins que la hauteur du trophée. L'emoji est en
+            // couleur, fillStyle ne l'affecte pas — inutile de le teinter à l'accent.
             if (won) {
-                ctx.font = this.font(600, 18, true);
-                try { ctx.letterSpacing = '3px'; } catch (e) { /* older engines */ }
-                ctx.fillStyle = palette.accent;
-                ctx.fillText('★ VAINQUEUR', side.cx, pt + 172);
-                try { ctx.letterSpacing = '0px'; } catch (e) { /* older engines */ }
+                const trophy = 24;
+                const lastBaseline = ty - size - 8;
+                const nameBottom = lastBaseline + ctx.measureText(lines[lines.length - 1]).actualBoundingBoxDescent;
+                ctx.font = this.font(400, trophy);
+                ctx.fillText('🏆', side.cx, nameBottom + 8 + trophy);
             }
         }
 
