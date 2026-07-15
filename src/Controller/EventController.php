@@ -20,13 +20,16 @@ use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
 use App\Service\DeezerArtistService;
 use App\Service\EventImageService;
+use App\Service\IcsExporter;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
@@ -358,6 +361,28 @@ if (!empty($data['duration'])) {
             'lat' => $v->getLatitude(),
             'lng' => $v->getLongitude(),
         ], $venues));
+    }
+
+    /**
+     * Le fichier .ics du bouton « Ajouter au calendrier ».
+     *
+     * Déclarée avant app_event_show : cette route est plus spécifique, et l'ordre de
+     * déclaration départage chez Symfony.
+     */
+    #[Route('/{id}/calendar.ics', name: 'app_event_calendar')]
+    public function calendar(Event $event, IcsExporter $ics): Response
+    {
+        $url = $this->generateUrl('app_event_show', ['id' => $event->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new Response($ics->export($event, $url), Response::HTTP_OK, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            // Sans disposition explicite, le navigateur affiche le .ics en texte brut
+            // au lieu de le passer à l'agenda.
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $ics->filename($event),
+            ),
+        ]);
     }
 
     #[Route('/{id}', name: 'app_event_show')]
