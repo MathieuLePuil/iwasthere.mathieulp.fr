@@ -34,9 +34,9 @@ enum Badge: string
     case Venues30 = 'venues_30';
 
     // Chansons vues en live
-    case Songs10 = 'songs_10';
-    case Songs50 = 'songs_50';
-    case Songs250 = 'songs_250';
+    case Songs100 = 'songs_100';
+    case Songs500 = 'songs_500';
+    case Songs1000 = 'songs_1000';
 
     // Jours consécutifs avec un événement
     case DayStreak2 = 'day_streak_2';
@@ -52,10 +52,13 @@ enum Badge: string
     public function metric(): string
     {
         return match ($this) {
-            self::Concerts1, self::Concerts10, self::Concerts50, self::Concerts100 => 'concerts',
-            self::Festivals1, self::Festivals5, self::Festivals15 => 'festivals',
+            // concerts_total, pas concerts : les concerts vus en festival en sont aussi.
+            self::Concerts1, self::Concerts10, self::Concerts50, self::Concerts100 => 'concerts_total',
+            // festival_count, pas festivals : ce dernier compte les concerts vus en
+            // festival, ce qui décrocherait « 15 festivals » en une seule édition.
+            self::Festivals1, self::Festivals5, self::Festivals15 => 'festival_count',
             self::Venues5, self::Venues15, self::Venues30 => 'venues_count',
-            self::Songs10, self::Songs50, self::Songs250 => 'songs_count',
+            self::Songs100, self::Songs500, self::Songs1000 => 'songs_count',
             self::DayStreak2, self::DayStreak3, self::DayStreak5 => 'max_streak',
             self::MonthStreak3, self::MonthStreak6, self::MonthStreak12 => 'max_month_streak',
         };
@@ -75,9 +78,9 @@ enum Badge: string
             self::Venues5 => 5,
             self::Venues15 => 15,
             self::Venues30 => 30,
-            self::Songs10 => 10,
-            self::Songs50 => 50,
-            self::Songs250 => 250,
+            self::Songs100 => 100,
+            self::Songs500 => 500,
+            self::Songs1000 => 1000,
             self::DayStreak2 => 2,
             self::DayStreak3 => 3,
             self::DayStreak5 => 5,
@@ -100,9 +103,9 @@ enum Badge: string
             self::Venues5 => 'Vagabond',
             self::Venues15 => 'Bourlingueur',
             self::Venues30 => 'Partout chez soi',
-            self::Songs10 => 'Premiers refrains',
-            self::Songs50 => 'Beau répertoire',
-            self::Songs250 => 'Discothèque vivante',
+            self::Songs100 => 'Premiers refrains',
+            self::Songs500 => 'Beau répertoire',
+            self::Songs1000 => 'Discothèque vivante',
             self::DayStreak2 => 'Doublé',
             self::DayStreak3 => 'Trois jours durant',
             self::DayStreak5 => 'Marathon',
@@ -126,9 +129,9 @@ enum Badge: string
             self::Venues5 => '5 lieux différents',
             self::Venues15 => '15 lieux différents',
             self::Venues30 => '30 lieux différents',
-            self::Songs10 => '10 chansons vues en live',
-            self::Songs50 => '50 chansons vues en live',
-            self::Songs250 => '250 chansons vues en live',
+            self::Songs100 => '100 chansons vues en live',
+            self::Songs500 => '500 chansons vues en live',
+            self::Songs1000 => '1000 chansons vues en live',
             self::DayStreak2 => '2 jours d\'événements d\'affilée',
             self::DayStreak3 => '3 jours d\'événements d\'affilée',
             self::DayStreak5 => '5 jours d\'événements d\'affilée',
@@ -144,7 +147,7 @@ enum Badge: string
             self::Concerts1, self::Concerts10, self::Concerts50, self::Concerts100 => '🎤',
             self::Festivals1, self::Festivals5, self::Festivals15 => '🎪',
             self::Venues5, self::Venues15, self::Venues30 => '📍',
-            self::Songs10, self::Songs50, self::Songs250 => '🎶',
+            self::Songs100, self::Songs500, self::Songs1000 => '🎶',
             self::DayStreak2, self::DayStreak3, self::DayStreak5 => '🔥',
             self::MonthStreak3, self::MonthStreak6, self::MonthStreak12 => '📆',
         };
@@ -163,7 +166,7 @@ enum Badge: string
             'Concerts'   => [self::Concerts1, self::Concerts10, self::Concerts50, self::Concerts100],
             'Festivals'  => [self::Festivals1, self::Festivals5, self::Festivals15],
             'Lieux'      => [self::Venues5, self::Venues15, self::Venues30],
-            'Chansons'   => [self::Songs10, self::Songs50, self::Songs250],
+            'Chansons'   => [self::Songs100, self::Songs500, self::Songs1000],
             'Assiduité'  => [self::DayStreak2, self::DayStreak3, self::DayStreak5],
             'Régularité' => [self::MonthStreak3, self::MonthStreak6, self::MonthStreak12],
         ];

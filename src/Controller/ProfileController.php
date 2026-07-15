@@ -56,6 +56,17 @@ class ProfileController extends AbstractController
         ]);
     }
 
+    /**
+     * Déclarée avant /{username}, sinon « succes » serait pris pour un pseudo.
+     */
+    #[Route('/succes', name: 'app_profile_badges')]
+    public function badges(BadgeService $badges): Response
+    {
+        return $this->render('profile/badges.html.twig', [
+            'badges' => $badges->forUser($this->getUser()),
+        ]);
+    }
+
     #[Route('/avatar', name: 'app_profile_avatar', methods: ['POST'])]
     public function avatar(Request $request, AvatarService $avatarService, EntityManagerInterface $em): Response
     {

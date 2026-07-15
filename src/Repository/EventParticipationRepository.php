@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Event;
 use App\Entity\EventParticipation;
 use App\Entity\User;
+use App\Stats\FestivalEditions;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
@@ -585,23 +586,9 @@ class EventParticipationRepository extends ServiceEntityRepository
 
             if ($e->getCategory() === 'music') {
                 if ($e->getType() === 'festival') {
+                    // Un concert vu en festival : les éditions se regroupent après la
+                    // boucle, une fois toutes les dates connues (FestivalEditions).
                     $festivals++;
-                    $festivalVenue = $e->getVenue()?->getName() ?? 'Inconnu';
-                    $festKey = $festivalVenue . '|' . $year;
-                    if (!isset($festivalGroups[$festKey])) {
-                        $festivalGroups[$festKey] = [
-                            'name'         => $festivalVenue,
-                            'year'         => (int) $year,
-                            'count'        => 0,
-                            'total_rating' => 0,
-                            'rating_count' => 0,
-                        ];
-                    }
-                    $festivalGroups[$festKey]['count']++;
-                    if ($p->getRating()) {
-                        $festivalGroups[$festKey]['total_rating'] += $p->getRating();
-                        $festivalGroups[$festKey]['rating_count']++;
-                    }
                 } else {
                     $concerts++;
                 }
@@ -650,13 +637,15 @@ class EventParticipationRepository extends ServiceEntityRepository
             }
         }
 
-        foreach ($festivalGroups as &$fg) {
-            $fg['avg_rating'] = $fg['rating_count'] > 0
-                ? round($fg['total_rating'] / $fg['rating_count'], 1)
-                : null;
-            unset($fg['total_rating'], $fg['rating_count']);
+        foreach (FestivalEditions::group($pastParts) as $edition) {
+            $notes = array_filter(array_map(fn($p) => $p->getRating(), $edition));
+            $festivalGroups[] = [
+                'name'       => FestivalEditions::name($edition),
+                'year'       => FestivalEditions::year($edition),
+                'count'      => count($edition),
+                'avg_rating' => $notes !== [] ? round(array_sum($notes) / count($notes), 1) : null,
+            ];
         }
-        unset($fg);
         usort($festivalGroups, fn($a, $b) => $b['count'] <=> $a['count']);
 
         // Regroupe les graphies d'un même artiste (casse, espaces) sous la variante la plus fréquente
@@ -764,8 +753,13 @@ class EventParticipationRepository extends ServiceEntityRepository
         return [
             'has_data' => true,
             'total' => $total,
+            // 'concerts' et 'festivals' partitionnent les événements musicaux : ils se
+            // somment à 'total' avec 'sports', d'où la Répartition. 'concerts_total' est
+            // l'autre lecture, celle du spectateur — un concert reste un concert, qu'il
+            // ait été donné en tête d'affiche ou sur la scène d'un festival.
             'concerts' => $concerts,
             'festivals' => $festivals,
+            'concerts_total' => $concerts + $festivals,
             'sports' => $sports,
             'sport_types' => $sportTypes,
             'total_duration_h' => round($totalDuration / 60, 1),

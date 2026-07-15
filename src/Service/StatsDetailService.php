@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Repository\EventParticipationRepository;
+use App\Stats\FestivalEditions;
 
 class StatsDetailService
 {
@@ -279,37 +280,31 @@ class StatsDetailService
     private function festivals(array $parts): array
     {
         $groups = [];
-        foreach ($parts as $p) {
-            $e = $p->getEvent();
-            if ($e->getCategory() !== 'music' || $e->getType() !== 'festival') {
-                continue;
-            }
-            $name = $e->getVenue()?->getName() ?? 'Inconnu';
-            $year = $e->getDate()->format('Y');
-            $key = $name . '|' . $year;
-            $groups[$key] ??= [
-                'name' => $name, 'year' => (int) $year, 'count' => 0,
-                'total_rating' => 0, 'rating_count' => 0, 'artists' => [],
-            ];
-            $groups[$key]['count']++;
-            if ($p->getRating()) {
-                $groups[$key]['total_rating'] += $p->getRating();
-                $groups[$key]['rating_count']++;
-            }
-            if ($e->getArtistName()) {
-                $groups[$key]['artists'][] = trim($e->getArtistName());
-            }
-        }
-
         $names = [];
         $totalConcerts = 0;
-        foreach ($groups as &$g) {
-            $g['avg_rating'] = $g['rating_count'] > 0 ? round($g['total_rating'] / $g['rating_count'], 1) : null;
-            unset($g['total_rating'], $g['rating_count']);
-            $names[$g['name']] = true;
-            $totalConcerts += $g['count'];
+
+        foreach (FestivalEditions::group($parts) as $edition) {
+            $notes = array_filter(array_map(fn ($p) => $p->getRating(), $edition));
+            $artists = [];
+            foreach ($edition as $p) {
+                if ($p->getEvent()->getArtistName()) {
+                    $artists[] = trim($p->getEvent()->getArtistName());
+                }
+            }
+
+            $name = FestivalEditions::name($edition);
+            $names[$name] = true;
+            $totalConcerts += count($edition);
+
+            $groups[] = [
+                'name' => $name,
+                'year' => FestivalEditions::year($edition),
+                'count' => count($edition),
+                'avg_rating' => $notes !== [] ? round(array_sum($notes) / count($notes), 1) : null,
+                'artists' => $artists,
+            ];
         }
-        unset($g);
+
         usort($groups, fn ($a, $b) => [$b['count'], $b['year']] <=> [$a['count'], $a['year']]);
 
         return [

@@ -68,54 +68,62 @@
         </div>
     </div>
 
-    {# ── Badges ──
-       Rien n'est stocké : un badge se recalcule depuis l'historique à chaque affichage
-       (voir App\Badge\BadgeService). Les décrochés d'abord, puis les prochains à viser,
-       du plus proche du but au plus lointain. #}
+    {# ── Succès ──
+       Un aperçu, pas le catalogue : les plus hauts paliers décrochés et le prochain
+       à viser. Le reste vit sur app_profile_badges. Rien n'est stocké, tout se
+       recalcule depuis l'historique à l'affichage (voir App\Badge\BadgeService). #}
     {% if badges %}
+    {% set prochain = badges.next|first %}
     <div class="mb-5">
         <div class="flex items-center justify-between mb-3">
             <h2 class="font-medium" style="color: var(--fg-1)">Succès</h2>
             <span class="text-xs font-medium" style="color: var(--fg-4)">{{ badges.earned_count }}/{{ badges.total_count }}</span>
         </div>
 
-        {% if badges.earned|length > 0 %}
-        <div class="grid grid-cols-2 gap-2 mb-2">
-            {% for b in badges.earned %}
-            <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
-                 style="background: var(--positive-soft); border: 1px solid rgba(61,220,151,0.25)">
-                <span class="text-xl flex-shrink-0">{{ b.badge.icon }}</span>
-                <div class="min-w-0">
-                    <p class="text-xs font-semibold truncate" style="color: var(--fg-1)">{{ b.badge.label }}</p>
-                    <p class="text-[11px] truncate" style="color: var(--fg-3)">{{ b.badge.description }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+        <a href="{{ path('app_profile_badges') }}" class="card block no-underline"
+           style="padding: 0; overflow: hidden"
+           aria-label="Voir tous les succès — {{ badges.earned_count }} sur {{ badges.total_count }} décrochés">
 
-        {% if badges.next|length > 0 %}
-        <div class="card" style="padding: 0; overflow: hidden">
-            {% for b in badges.next %}
-            <div class="px-4 py-3" style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}">
+            {% if badges.highlights|length > 0 %}
+            <div class="grid grid-cols-4 gap-2 px-4 pt-4 pb-3">
+                {% for b in badges.highlights %}
+                <div class="flex flex-col items-center gap-1.5 min-w-0">
+                    <div class="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+                         style="background: var(--positive-soft); border: 1px solid rgba(61,220,151,0.25)">{{ b.badge.icon }}</div>
+                    <p class="text-[10px] font-medium text-center leading-tight w-full truncate" style="color: var(--fg-2)">{{ b.badge.label }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="px-4 pt-4 pb-3 text-center">
+                <p class="text-sm font-medium" style="color: var(--fg-2)">Aucun succès pour l'instant</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Archive un événement pour décrocher le premier.</p>
+            </div>
+            {% endif %}
+
+            {% if prochain %}
+            <div class="px-4 py-3" style="border-top: 1px solid var(--border-subtle)">
                 <div class="flex items-center gap-2.5">
-                    <span class="text-lg flex-shrink-0 opacity-40">{{ b.badge.icon }}</span>
+                    <span class="text-base flex-shrink-0 opacity-40">{{ prochain.badge.icon }}</span>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium truncate" style="color: var(--fg-2)">{{ b.badge.label }}</p>
-                        <p class="text-[11px] truncate" style="color: var(--fg-4)">{{ b.badge.description }}</p>
+                        <p class="text-[10px] font-medium uppercase tracking-wider" style="color: var(--fg-4)">Prochain succès</p>
+                        <p class="text-xs font-medium truncate" style="color: var(--fg-2)">{{ prochain.badge.label }} · {{ prochain.badge.description }}</p>
                     </div>
-                    <span class="text-[11px] font-medium flex-shrink-0" style="color: var(--fg-3)">{{ b.value }}/{{ b.target }}</span>
+                    <span class="text-[11px] font-medium flex-shrink-0" style="color: var(--fg-3)">{{ prochain.value }}/{{ prochain.target }}</span>
+                    <svg class="w-4 h-4 flex-shrink-0" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </div>
                 {# aria-hidden : la progression est déjà lue juste au-dessus en « 48/50 » #}
                 <div class="mt-2 h-1 rounded-full overflow-hidden" style="background: var(--bg-3)" aria-hidden="true">
-                    <div class="h-full rounded-full" style="width: {{ b.percent }}%; background: var(--positive); opacity: 0.55"></div>
+                    <div class="h-full rounded-full" style="width: {{ prochain.percent }}%; background: var(--positive); opacity: 0.55"></div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-        {% elseif badges.earned|length > 0 %}
-        <p class="text-xs text-center py-2" style="color: var(--fg-4)">Tous les succès sont décrochés. Chapeau.</p>
-        {% endif %}
+            {% else %}
+            <div class="flex items-center justify-center gap-1.5 px-4 py-3" style="border-top: 1px solid var(--border-subtle)">
+                <span class="text-xs font-medium" style="color: var(--fg-3)">Tous les succès sont décrochés. Chapeau.</span>
+                <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            {% endif %}
+        </a>
     </div>
     {% endif %}
 
