@@ -1,0 +1,99 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Amis — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Activité des amis</h1>
+        <a href="{{ path('app_profile', {tab: 'amis'}) }}" class="text-xs font-medium" style="color: var(--fg-2)">Gérer →</a>
+    </div>
+
+    {# Pending friend requests #}
+    {% if pending_requests > 0 %}
+    <a href="{{ path('app_profile', {tab: 'amis'}) }}" class="card flex items-center gap-3 no-underline"
+       style="background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.25)">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: rgba(96,165,250,0.15)">👥</div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium" style="color: var(--fg-1)">{{ pending_requests }} demande{{ pending_requests > 1 ? 's' : '' }} d'ami en attente</p>
+            <p class="text-xs" style="color: var(--fg-3)">Accepte-les pour voir leur activité ici</p>
+        </div>
+        <span class="text-xs font-medium flex-shrink-0" style="color: var(--positive)">Voir →</span>
+    </a>
+    {% endif %}
+
+    {% if friend_count == 0 %}
+        {{ m.empty_state('👋', 'Ton feed est vide', "Ajoute des amis pour voir leurs concerts, festivals et matchs apparaître ici.", path('app_profile_search'), 'Trouver des amis') }}
+    {% else %}
+
+        {# ── Upcoming strip ── #}
+        {% if upcoming|length > 0 %}
+        <div>
+            <p class="section-title mb-2">Bientôt</p>
+            <div class="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4" style="scrollbar-width: none; -webkit-overflow-scrolling: touch">
+                {% for g in upcoming %}
+                <a href="{{ path('app_event_show', {id: g.event.id}) }}"
+                   class="flex-shrink-0 w-36 rounded-2xl overflow-hidden no-underline"
+                   style="border: 1px solid var(--border-subtle); background: var(--bg-1)">
+                    <div class="h-20 relative flex items-end{% if not g.event.artistImageUrl %} poster-{{ g.event.type ?? 'default' }}{% endif %}"
+                         {% if g.event.artistImageUrl %}style="background: linear-gradient(180deg, rgba(11,13,16,0.1) 0%, rgba(11,13,16,0.6) 100%), url('{{ g.event.artistImageUrl }}') center 25%/cover"{% endif %}>
+                        <span class="absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                              style="background: rgba(11,13,16,0.65); color: #fff; font-family: var(--font-mono)">
+                            {{ g.days_until == 0 ? "Auj." : (g.days_until <= 60 ? 'J-' ~ g.days_until : g.event.date|date('d/m/y')) }}
+                        </span>
+                    </div>
+                    <div class="p-2.5">
+                        <p class="text-xs font-semibold truncate" style="color: var(--fg-1)">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
+                        <p class="text-[10px] mt-0.5 truncate" style="color: var(--fg-3)">{{ g.event.date|date('d/m') }}{% if g.event.venue %} · {{ g.event.venue.name }}{% endif %}</p>
+                        <div class="flex items-center mt-1.5 -space-x-1.5">
+                            {% for p in g.participations|slice(0, 3) %}
+                                <span class="inline-flex rounded-full" style="box-shadow: 0 0 0 2px var(--bg-1)">
+                                    {% if p.user.avatarUrl %}
+                                        <img src="{{ p.user.avatarUrl }}" class="w-5 h-5 rounded-full object-cover" alt="{{ p.user.displayName }}">
+                                    {% else %}
+                                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style="background: var(--positive-soft); color: var(--positive)">{{ p.user.displayName|first|upper }}</span>
+                                    {% endif %}
+                                </span>
+                            {% endfor %}
+                            {% if g.participations|length > 3 %}
+                                <span class="text-[10px] font-medium pl-2.5" style="color: var(--fg-3)">+{{ g.participations|length - 3 }}</span>
+                            {% endif %}
+                            {% if g.my_participation %}
+                                <span class="text-[10px] font-medium pl-2.5" style="color: var(--positive)">Toi aussi ✓</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Feed: one card per day, infinite scroll ── #}
+        {% if days|length == 0 %}
+            {% if upcoming|length == 0 %}
+                {{ m.empty_state('📭', 'Aucune activité récente', "Tes amis n'ont rien ajouté ces derniers temps. Reviens plus tard !", null, null) }}
+            {% endif %}
+        {% else %}
+        <div {% if has_more %}data-controller="feed"
+             data-feed-url-value="{{ path('app_feed_items') }}"
+             data-feed-page-value="2"
+             data-feed-seen-value="{{ seen_epoch }}"{% endif %}>
+            <p class="section-title mb-2">Événements récents</p>
+            <div class="space-y-3" {% if has_more %}data-feed-target="list"{% endif %}>
+                {% include 'feed/_page.html.twig' with {days: days, sep_at: sep_at} %}
+            </div>
+            {% if has_more %}
+            <div data-feed-target="sentinel" class="flex justify-center py-6">
+                <div class="w-5 h-5 rounded-full animate-spin" style="border: 2px solid var(--border-subtle); border-top-color: var(--fg-3)"></div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    {% endif %}
+
+</div>
+{% endblock %}

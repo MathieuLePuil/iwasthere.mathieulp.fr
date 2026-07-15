@@ -71,6 +71,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $passwordResetTokenExpiresAt = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $feedLastSeenAt = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -292,6 +295,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->passwordResetToken !== null
             && $this->passwordResetTokenExpiresAt !== null
             && $this->passwordResetTokenExpiresAt > new \DateTimeImmutable();
+    }
+
+    public function getFeedLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->feedLastSeenAt;
+    }
+
+    public function setFeedLastSeenAt(?\DateTimeImmutable $feedLastSeenAt): static
+    {
+        $this->feedLastSeenAt = $feedLastSeenAt;
+        return $this;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

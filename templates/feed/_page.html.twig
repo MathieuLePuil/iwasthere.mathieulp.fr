@@ -1,0 +1,118 @@
+{# Une tranche de cartes du feed : une carte = un jour. Dans la carte, un
+   groupe = mêmes amis + même type + même lieu : la phrase et le lieu sont
+   annoncés une fois, puis les événements sont listés en dessous.
+   Rendu en page 1 par index.html.twig, puis servi en fragment par
+   app_feed_items pour le scroll infini.
+   Variables : days, sep_at (position locale de la limite « déjà vu », ou null) #}
+{% import 'components/_macros.html.twig' as m %}
+
+{% for day in days %}
+
+    {% if sep_at is not null and loop.index0 == sep_at %}
+    <div class="flex items-center gap-3 pt-2 pb-1">
+        <div class="flex-1 h-px" style="background: var(--border-subtle)"></div>
+        <span class="text-[11px] font-medium flex-shrink-0" style="color: var(--fg-4)">✓ Tu as déjà vu la suite</span>
+        <div class="flex-1 h-px" style="background: var(--border-subtle)"></div>
+    </div>
+    {% endif %}
+
+    <div class="card" style="padding: 0; overflow: hidden">
+
+        {# Day header #}
+        <div class="flex items-center justify-between px-4 pt-3">
+            <p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--fg-4); font-family: var(--font-mono)">{{ day.date_label }}</p>
+            {% if day.badge_new %}
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style="background: var(--positive-soft); color: var(--positive)">Nouveau</span>
+            {% endif %}
+        </div>
+
+        {% for grp in day.groups %}
+        {% set count = grp.events|length %}
+        {% set n = grp.users|length %}
+        {# Un festival reste « un festival » même avec plusieurs groupes vus : même lieu, même jour #}
+        {% set nouns = {
+            'concert':  ['à un concert',         'à ' ~ count ~ ' concerts'],
+            'festival': ['à un festival',        'à un festival'],
+            'football': ['à un match de foot',   'à ' ~ count ~ ' matchs de foot'],
+            'rugby':    ['à un match de rugby',  'à ' ~ count ~ ' matchs de rugby'],
+            'tennis':   ['à un match de tennis', 'à ' ~ count ~ ' matchs de tennis'],
+        } %}
+        {% set pair = nouns[grp.type] ?? ['à un événement', 'à ' ~ count ~ ' événements'] %}
+        {% set noun = count > 1 ? pair[1] : pair[0] %}
+
+        <div{% if not loop.first %} class="mt-3" style="border-top: 1px solid var(--border-subtle)"{% endif %}>
+
+            {# Annoncé une seule fois pour tout le groupe : qui, quoi, où #}
+            <div class="flex items-start gap-3 px-4 pt-3 pb-2.5">
+                <div class="flex -space-x-2 flex-shrink-0">
+                    {% for u in grp.users|slice(0, 3) %}
+                        <a href="{{ path('app_profile_view', {username: u.username}) }}" class="inline-flex rounded-full" style="box-shadow: 0 0 0 2px var(--bg-1)">
+                            {{ m.avatar(u, 'sm') }}
+                        </a>
+                    {% endfor %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm leading-snug" style="color: var(--fg-2)">
+                        {%- set shown = grp.users|slice(0, 2) -%}
+                        {%- set extra = n - shown|length -%}
+                        {%- for u in shown -%}
+                            {%- if not loop.first %}{{ loop.last and extra == 0 ? ' et ' : ', ' }}{% endif -%}
+                            <a href="{{ path('app_profile_view', {username: u.username}) }}" class="font-semibold no-underline" style="color: var(--fg-1)">{{ u.displayName }}</a>
+                        {%- endfor -%}
+                        {%- if extra > 0 %} et {{ extra }} autre{{ extra > 1 ? 's' }}{% endif %}
+                        {{ n > 1 ? 'étaient' : 'était' }} {{ noun }}
+                    </p>
+                    {% if grp.venue %}
+                    <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">📍 {{ grp.venue.name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# La liste des événements du groupe #}
+            {% for g in grp.events %}
+            <a href="{{ path('app_event_show', {id: g.event.id}) }}"
+               class="flex items-center gap-3 mx-3 mb-2 px-3 py-2 rounded-xl no-underline"
+               style="background: var(--bg-2)">
+                {{ m.event_thumb(g.event) }}
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
+                </div>
+                {% if g.my_participation %}
+                <span class="text-[10px] font-medium flex-shrink-0" style="color: var(--positive)">✓ Toi aussi</span>
+                {% endif %}
+            </a>
+
+            {# Souvenirs des amis sur cet événement : note / commentaire / photo #}
+            {% for p in g.participations %}
+                {% if p.rating or p.comment or p.imageUrl %}
+                <div class="px-4 pb-3">
+                    <div class="flex items-center gap-2">
+                        {% if n > 1 %}
+                            <span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>
+                        {% endif %}
+                        {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
+                    </div>
+                    {% if p.comment %}
+                    <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--fg-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">« {{ p.comment }} »</p>
+                    {% endif %}
+                    {% if p.imageUrl %}
+                    <img src="{{ p.imageUrl }}" alt="" loading="lazy"
+                         class="w-full object-cover rounded-xl mt-2.5 block"
+                         style="max-height: 240px; border: 1px solid var(--border-subtle)">
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+
+            {# Accompagnants tagués (« avec qui »), hors ceux déjà nommés plus haut #}
+            {% if g.companions %}
+            <p class="text-xs px-4 pb-2.5 -mt-1" style="color: var(--fg-3)">avec {{ g.companions|join(', ') }}</p>
+            {% endif %}
+            {% endfor %}
+
+        </div>
+        {% endfor %}
+
+        <div class="pb-1"></div>
+    </div>
+{% endfor %}

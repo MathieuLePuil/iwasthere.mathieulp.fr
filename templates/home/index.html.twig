@@ -92,6 +92,55 @@
         {% endif %}
     </div>
 
+    {# Friends activity (preview of /feed) #}
+    <div>
+        <div class="flex items-center justify-between mb-2">
+            <p class="section-title">Activité des amis</p>
+            <a href="{{ path('app_feed') }}" class="text-xs font-medium" style="color: var(--fg-2)">Tout voir →</a>
+        </div>
+        {% if feed_preview|length > 0 %}
+        <div class="card" style="padding: 0; overflow: hidden">
+            {% for g in feed_preview %}
+            {% set n = g.participations|length %}
+            {% set firstUser = (g.participations|first).user %}
+            <a href="{{ path('app_event_show', {id: g.event.id}) }}"
+               class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
+               style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}">
+                <div class="flex -space-x-2 flex-shrink-0">
+                    {% for p in g.participations|slice(0, 2) %}
+                        <span class="inline-flex rounded-full" style="box-shadow: 0 0 0 2px var(--bg-1)">{{ m.avatar(p.user, 'sm') }}</span>
+                    {% endfor %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm leading-snug truncate" style="color: var(--fg-2)">
+                        <span class="font-semibold" style="color: var(--fg-1)">{{ firstUser.displayName }}</span>
+                        {%- if n > 1 %} et {{ n - 1 }} autre{{ n > 2 ? 's' }}{% endif %}
+                        {{ n > 1 ? 'étaient à' : 'était à' }}
+                    </p>
+                    <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">
+                        {{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}
+                    </p>
+                </div>
+                <span class="text-[11px] flex-shrink-0" style="color: var(--fg-4)">{{ g.date_label }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% elseif feed_friend_count == 0 %}
+        <a href="{{ path('app_profile_search') }}" class="card flex items-center gap-3 no-underline">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: var(--positive-soft)">👋</div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium" style="color: var(--fg-1)">Ajoute des amis</p>
+                <p class="text-xs" style="color: var(--fg-3)">Retrouve leurs concerts et matchs ici</p>
+            </div>
+            <span class="text-xs font-medium flex-shrink-0" style="color: var(--positive)">Chercher →</span>
+        </a>
+        {% else %}
+        <a href="{{ path('app_feed') }}" class="card block no-underline text-center py-5">
+            <p class="text-sm" style="color: var(--fg-3)">Aucune activité récente de tes amis</p>
+        </a>
+        {% endif %}
+    </div>
+
     {# Recent events #}
     {% if recent_past|length > 0 %}
     <div>

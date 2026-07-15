@@ -8,6 +8,7 @@ use App\Entity\Event;
 use App\Entity\EventParticipation;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -157,6 +158,68 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->setParameter('event', $event->getId()->toBinary(), ParameterType::BINARY)
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Participations visibles des amis pour le feed, tout l'historique par
+     * défaut : le feed remonte à l'infini, la pagination se fait par jours.
+     *
+     * @param User[] $users
+     * @param \DateTimeImmutable|null $since borne basse optionnelle
+     * @return EventParticipation[]
+     */
+    public function findForFeed(array $users, ?\DateTimeImmutable $since = null): array
+    {
+        if ($users === []) {
+            return [];
+        }
+
+        $ids = array_map(fn (User $u) => $u->getId()->toBinary(), $users);
+
+        $qb = $this->createQueryBuilder('p')
+            ->join('p.user', 'u')->addSelect('u')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
+            ->where('p.user IN (:users)')
+            ->andWhere('p.visibility != :private')
+            ->setParameter('users', $ids, ArrayParameterType::BINARY)
+            ->setParameter('private', 'private');
+
+        if ($since !== null) {
+            $qb->andWhere('e.date >= :since')->setParameter('since', $since);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Participations de l'utilisateur pour un lot d'événements, indexées par id d'événement.
+     *
+     * @param Event[] $events
+     * @return array<string, EventParticipation>
+     */
+    public function findByUserForEvents(User $user, array $events): array
+    {
+        if ($events === []) {
+            return [];
+        }
+
+        $ids = array_map(fn (Event $e) => $e->getId()->toBinary(), $events);
+
+        $parts = $this->createQueryBuilder('p')
+            ->where('p.user = :user')
+            ->andWhere('p.event IN (:events)')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('events', $ids, ArrayParameterType::BINARY)
+            ->getQuery()
+            ->getResult();
+
+        $byEvent = [];
+        foreach ($parts as $p) {
+            $byEvent[(string) $p->getEvent()->getId()] = $p;
+        }
+
+        return $byEvent;
     }
 
     public function updateStaleUpcoming(User $user): void
