@@ -23,7 +23,24 @@ class AppExtension extends AbstractExtension
         return [
             new TwigFunction('unread_notifications_count', $this->getUnreadCount(...)),
             new TwigFunction('notification_type', $this->notificationType(...)),
+            new TwigFunction('greeting', $this->greeting(...)),
         ];
+    }
+
+    /**
+     * Salutation selon l'heure de Paris — le serveur tourne en UTC, on ne peut
+     * pas se reposer sur le fuseau ambiant de PHP (cf. SendEventRemindersCommand).
+     */
+    public function greeting(): string
+    {
+        $hour = (int) (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('G');
+
+        return match (true) {
+            $hour < 6  => 'Bonsoir',
+            $hour < 12 => 'Bonjour',
+            $hour < 18 => 'Bon après-midi',
+            default    => 'Bonsoir',
+        };
     }
 
     /**

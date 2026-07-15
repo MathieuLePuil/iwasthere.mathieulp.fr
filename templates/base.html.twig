@@ -1,13 +1,40 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="dark">
+{# data-theme-pref porte le choix de l'utilisateur ('dark'/'light'/'auto'), data-theme le thème
+   effectivement appliqué — seul ce dernier est lu par le CSS. Le rendu serveur pose déjà la valeur
+   finale sauf en 'auto', que seul le client sait résoudre (voir le script plus bas). #}
+{% set theme_pref = app.user ? app.user.theme : 'dark' %}
+<html lang="fr" data-theme-pref="{{ theme_pref }}" data-theme="{{ theme_pref == 'light' ? 'light' : 'dark' }}">
     <head>
         <meta charset="UTF-8">
         {# Comme myrenault : PAS de metas legacy apple-mobile-web-app-* — avec elles, iOS 26
            lance la PWA dans l'ancien mode "web clip" à la géométrie cassée (bande réservée en
            bas, env() faux). Le manifest display:standalone suffit pour le mode plein écran.
-           maximum-scale/user-scalable coupent le tap-zoom iOS (effet zoom au changement de page). #}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-        <meta name="theme-color" content="#0B0D10">
+           maximum-scale coupe le tap-zoom iOS (effet zoom au changement de page) sans interdire
+           le zoom manuel, contrairement à user-scalable=no. #}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+        {# Rendu serveur dès que le thème est connu : iOS lit theme-color très tôt, le corriger
+           en JS laisserait la barre d'état clignoter. Seul 'auto' est laissé au client. #}
+        <meta name="theme-color" content="{{ theme_pref == 'light' ? '#EFEFEA' : '#0B0D10' }}">
+        {# Avant tout rendu, sinon 'auto' sur un téléphone en clair afficherait un flash sombre.
+           Les couleurs sont celles de --bg-0 : theme-color est lu par iOS avant le CSS, on ne peut
+           pas le déduire des tokens.
+           data-cfasync="false" : sans lui, le Rocket Loader de Cloudflare réécrit le type du script
+           et le rejoue après le premier rendu — ce qui rendrait ce bloc inutile (flash garanti). #}
+        <script data-cfasync="false">
+        (function () {
+            var root = document.documentElement;
+            var mq = window.matchMedia('(prefers-color-scheme: light)');
+            window.iwtApplyTheme = function () {
+                var pref = root.dataset.themePref || 'dark';
+                var theme = pref === 'auto' ? (mq.matches ? 'light' : 'dark') : pref;
+                root.dataset.theme = theme;
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', theme === 'light' ? '#EFEFEA' : '#0B0D10');
+            };
+            mq.addEventListener('change', window.iwtApplyTheme);
+            window.iwtApplyTheme();
+        })();
+        </script>
         <link rel="manifest" href="/manifest.json">
         <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/icons/icon-32.png') }}">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/icons/icon-16.png') }}">
@@ -57,41 +84,24 @@
         {# ── Main content ── #}
         {# Flux normal, le document scrolle nativement (architecture myrenault) #}
         <main style="min-height: 100vh; {% if app.user %}padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: 6rem;{% endif %}">
-            {# Flash messages #}
+            {# Flash messages — l'habillage vit dans .iwt-flash (app.css), pour que le thème
+               clair puisse réécrire les couleurs ; un style inline ne se surcharge pas. #}
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
-                <div data-controller="flash-message"
-                     class="fixed inset-x-4 z-40 flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-2xl"
-                     style="top: calc(4rem + env(safe-area-inset-top, 0px)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-                        {% if type == 'success' %}
-                            background: color-mix(in srgb, #0d1f12 90%, transparent);
-                            border: 1px solid rgba(74, 222, 128, 0.35);
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(74,222,128,0.1);
-                        {% elseif type == 'error' %}
-                            background: color-mix(in srgb, #1f0d0d 90%, transparent);
-                            border: 1px solid rgba(232, 155, 142, 0.35);
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,155,142,0.1);
-                        {% elseif type == 'warning' %}
-                            background: color-mix(in srgb, #1c1600 90%, transparent);
-                            border: 1px solid rgba(251, 191, 36, 0.35);
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                        {% else %}
-                            background: color-mix(in srgb, #0d1220 90%, transparent);
-                            border: 1px solid rgba(96, 165, 250, 0.35);
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                        {% endif %}
-                     ">
-                    {# Icon #}
-                    {% if type == 'success' %}
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-                    {% elseif type == 'error' %}
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="#E89B8E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    {% elseif type == 'warning' %}
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="#FBBF24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                {# Un type hors catalogue (addFlash libre) retombe sur 'info' plutôt que de
+                   sortir sans couleurs. #}
+                {% set variant = type in ['success', 'error', 'warning'] ? type : 'info' %}
+                <div data-controller="flash-message" class="iwt-flash iwt-flash--{{ variant }}">
+                    {% if variant == 'success' %}
+                    <svg class="iwt-flash-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                    {% elseif variant == 'error' %}
+                    <svg class="iwt-flash-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    {% elseif variant == 'warning' %}
+                    <svg class="iwt-flash-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
                     {% else %}
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                    <svg class="iwt-flash-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                     {% endif %}
-                    <span class="text-sm font-medium" style="color: var(--fg-1)">{{ message }}</span>
+                    <span class="iwt-flash-text">{{ message }}</span>
                 </div>
                 {% endfor %}
             {% endfor %}

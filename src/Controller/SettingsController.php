@@ -66,6 +66,21 @@ class SettingsController extends AbstractController
         return $this->redirectToRoute('app_settings');
     }
 
+    /** Appelé en fetch par le contrôleur Stimulus : le thème est déjà appliqué côté client. */
+    #[Route('/theme', name: 'app_settings_theme', methods: ['POST'])]
+    public function saveTheme(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $theme = $request->request->get('theme');
+        if (!in_array($theme, ['dark', 'light', 'auto'], true)) {
+            return $this->json(['ok' => false], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->getUser()->setTheme($theme);
+        $em->flush();
+
+        return $this->json(['ok' => true]);
+    }
+
     #[Route('/privacy', name: 'app_settings_privacy', methods: ['POST'])]
     public function savePrivacy(Request $request, EntityManagerInterface $em): Response
     {

@@ -40,6 +40,10 @@ class HomeController extends AbstractController
         // Unread notifications count (for header)
         $unreadCount = $notifRepo->countUnread($user);
 
+        // Micro-stat sous le prénom : événements déjà vécus dans l'année en cours
+        $currentYear = (int) (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('Y');
+        $yearCount = $participationRepo->countHistory($user, 'past', '', (string) $currentYear);
+
         // Friends activity preview (full feed lives at /feed)
         $feed = $feedService->buildFeed($user);
 
@@ -65,6 +69,8 @@ class HomeController extends AbstractController
             'unread_notifications_count' => $unreadCount,
             'feed_preview' => $feedPreview,
             'feed_friend_count' => $feed['friend_count'],
+            'year_count' => $yearCount,
+            'current_year' => $currentYear,
         ]);
     }
 }

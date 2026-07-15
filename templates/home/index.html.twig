@@ -9,8 +9,13 @@
     {# Greeting #}
     <div class="flex items-center justify-between">
         <div>
-            <p class="section-title">Bonsoir</p>
+            <p class="section-title">{{ greeting() }}</p>
             <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">{{ app.user.displayName }}</h1>
+            {% if year_count > 0 %}
+            <p class="text-xs mt-1" style="color: var(--fg-3)">
+                {{ year_count }} événement{{ year_count > 1 ? 's' : '' }} en {{ current_year }}
+            </p>
+            {% endif %}
         </div>
         {% if app.user.avatarUrl %}
             <img src="{{ app.user.avatarUrl }}" class="w-11 h-11 rounded-2xl object-cover" alt=""

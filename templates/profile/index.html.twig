@@ -156,7 +156,10 @@
                     </div>
                 </a>
                 <form method="post" action="{{ path('app_friend_remove', {id: friend.id}) }}"
-                      onsubmit="return confirm('Supprimer {{ friend_user.displayName }} de tes amis ?')">
+                      data-controller="confirm" data-action="submit->confirm#check"
+                      data-confirm-title-value="Retirer {{ friend_user.displayName }} ?"
+                      data-confirm-body-value="Vous ne verrez plus vos événements respectifs dans le fil d'activité."
+                      data-confirm-label-value="Retirer">
                     <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--bg-3); color: var(--fg-4)">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 6L6 18M6 6l12 12"/>

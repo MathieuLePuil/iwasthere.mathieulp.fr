@@ -48,6 +48,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 20, options: ['default' => 'friends'])]
     private string $defaultEventVisibility = 'friends';
 
+    /** Thème de l'interface : 'dark', 'light' ou 'auto' (suit le réglage système) */
+    #[ORM\Column(length: 10, options: ['default' => 'dark'])]
+    private string $theme = 'dark';
+
     /**
      * Push autorisés, par type de notification. Une clé absente vaut « activé » :
      * un type ajouté plus tard est reçu sans avoir à retoucher les lignes existantes.
@@ -199,6 +203,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setDefaultEventVisibility(string $defaultEventVisibility): static
     {
         $this->defaultEventVisibility = $defaultEventVisibility;
+
+        return $this;
+    }
+
+    public function getTheme(): string
+    {
+        return $this->theme;
+    }
+
+    public function setTheme(string $theme): static
+    {
+        $this->theme = $theme;
 
         return $this;
     }

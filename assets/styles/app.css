@@ -33,21 +33,27 @@
   --negative-soft: rgba(232, 155, 142, 0.14);
 }
 
-/* ── Semantic tokens — light ── */
+/* ── Semantic tokens — light ──
+   Le canvas doit rester nettement sous le blanc des cartes : à #FAFAF7 le rapport
+   n'était que de 1.046, les cartes ne se détachaient pas. Toute l'échelle descend
+   ensemble, sinon --bg-2 (champs, surfaces en retrait) repasserait au-dessus du
+   canvas et la profondeur s'inverserait. */
 :root[data-theme="light"] {
-  --bg-0: #FAFAF7;
+  --bg-0: #EFEFEA;
   --bg-1: #FFFFFF;
-  --bg-2: #F2F2EE;
-  --bg-3: #E6E6E0;
+  --bg-2: #E7E7E1;
+  --bg-3: #DBDBD4;
 
   --fg-1: #0B0D10;
-  --fg-2: rgba(11, 13, 16, 0.68);
-  --fg-3: rgba(11, 13, 16, 0.44);
-  --fg-4: rgba(11, 13, 16, 0.24);
+  --fg-2: rgba(11, 13, 16, 0.72);
+  /* .44 tombait à 3.0:1 sur blanc — sous le seuil AA (4.5) alors que --fg-3 porte
+     tout le petit texte (sous-titres, méta). .58 le remonte à 4.8:1. */
+  --fg-3: rgba(11, 13, 16, 0.58);
+  --fg-4: rgba(11, 13, 16, 0.40);
 
-  --border-subtle:  rgba(11, 13, 16, 0.06);
-  --border-default: rgba(11, 13, 16, 0.10);
-  --border-strong:  rgba(11, 13, 16, 0.18);
+  --border-subtle:  rgba(11, 13, 16, 0.10);
+  --border-default: rgba(11, 13, 16, 0.16);
+  --border-strong:  rgba(11, 13, 16, 0.26);
 
   --positive:      #7B2FBE;
   --positive-soft: rgba(123, 47, 190, 0.10);
@@ -748,3 +754,176 @@
   position: relative;
   z-index: 1;
 }
+
+/* ── Segmented control (choix du thème) ──
+   Radios masqués mais bien présents : le clavier et les lecteurs d'écran gardent
+   le groupe natif, seul l'habillage change. */
+.iwt-segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+
+.iwt-segmented-option {
+  flex: 1;
+  cursor: pointer;
+}
+
+.iwt-segmented-option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.iwt-segmented-option span {
+  display: block;
+  padding: 0.5rem 0.25rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-3);
+  white-space: nowrap;
+  transition: background 140ms, color 140ms;
+}
+
+.iwt-segmented-option input:checked + span {
+  background: var(--bg-0);
+  color: var(--fg-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* En sombre la pastille recule vers le fond de page ; en clair il faut l'inverse —
+   elle monte vers le blanc, sinon --bg-0 sur --bg-2 ne ferait que 1.08 de rapport. */
+:root[data-theme="light"] .iwt-segmented-option input:checked + span {
+  background: var(--bg-1);
+  box-shadow: 0 1px 3px rgba(11, 13, 16, 0.12);
+}
+
+.iwt-segmented-option input:focus-visible + span {
+  outline: 2px solid rgba(176, 96, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* ── Bottom sheet de confirmation ──
+   Remplace confirm() natif, qui affiche l'URL du site et casse l'illusion d'app.
+   Ouverte par le contrôleur Stimulus « confirm » ; .is-open déclenche l'entrée. */
+.iwt-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.iwt-sheet-backdrop.is-open { opacity: 1; }
+
+.iwt-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 51;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border-default);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.iwt-sheet.is-open { transform: translateY(0); }
+
+.iwt-sheet-grabber {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 0.875rem;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.iwt-sheet-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg-1);
+  text-align: center;
+}
+
+.iwt-sheet-body {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--fg-3);
+  text-align: center;
+}
+
+.iwt-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.iwt-sheet-actions .btn-primary,
+.iwt-sheet-actions .btn-secondary,
+.iwt-sheet-actions .btn-danger {
+  padding-block: 0.875rem;
+  font-size: 0.9375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iwt-sheet, .iwt-sheet-backdrop { transition: none; }
+}
+
+/* ── Flash messages ──
+   Les couleurs vivaient en style inline dans le template : impossible à surcharger
+   par thème, donc le mode clair affichait du texte noir sur fond vert foncé (1.1:1).
+   Chaque variante expose ses couleurs en variables, le thème clair les réécrit. */
+.iwt-flash {
+  position: fixed;
+  inset-inline: 1rem;
+  top: calc(4rem + env(safe-area-inset-top, 0px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--flash-bg) 90%, transparent);
+  border: 1px solid var(--flash-border);
+  box-shadow: var(--flash-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.iwt-flash-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--flash-icon);
+}
+
+.iwt-flash-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+/* Variantes — sombre (défaut) */
+.iwt-flash--success { --flash-bg: #0d1f12; --flash-border: rgba(74, 222, 128, 0.35); --flash-icon: #4ADE80; }
+.iwt-flash--error   { --flash-bg: #1f0d0d; --flash-border: rgba(232, 155, 142, 0.35); --flash-icon: #E89B8E; }
+.iwt-flash--warning { --flash-bg: #1c1600; --flash-border: rgba(251, 191, 36, 0.35); --flash-icon: #FBBF24; }
+.iwt-flash--info    { --flash-bg: #0d1220; --flash-border: rgba(96, 165, 250, 0.35); --flash-icon: #60A5FA; }
+
+/* Variantes — clair : fonds teintés pâles, icônes assombries pour rester lisibles */
+:root[data-theme="light"] .iwt-flash { --flash-shadow: 0 8px 24px rgba(11, 13, 16, 0.12); }
+:root[data-theme="light"] .iwt-flash--success { --flash-bg: #E7F7ED; --flash-border: rgba(21, 128, 61, 0.32); --flash-icon: #15803D; }
+:root[data-theme="light"] .iwt-flash--error   { --flash-bg: #FDECEA; --flash-border: rgba(180, 64, 42, 0.32); --flash-icon: #B4402A; }
+:root[data-theme="light"] .iwt-flash--warning { --flash-bg: #FDF4E3; --flash-border: rgba(180, 83, 9, 0.32); --flash-icon: #B45309; }
+:root[data-theme="light"] .iwt-flash--info    { --flash-bg: #E9F1FE; --flash-border: rgba(29, 78, 216, 0.30); --flash-icon: #1D4ED8; }
