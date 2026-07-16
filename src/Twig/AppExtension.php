@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Twig;
 
 use App\Notification\NotificationType;
+use App\Reaction\ReactionEmoji;
 use App\Repository\NotificationRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 use Twig\Extension\AbstractExtension;
@@ -24,7 +25,19 @@ class AppExtension extends AbstractExtension
             new TwigFunction('unread_notifications_count', $this->getUnreadCount(...)),
             new TwigFunction('notification_type', $this->notificationType(...)),
             new TwigFunction('greeting', $this->greeting(...)),
+            new TwigFunction('reaction_emojis', $this->reactionEmojis(...)),
         ];
+    }
+
+    /**
+     * Les emojis proposés dans le sélecteur de réaction. Ce ne sont que des
+     * raccourcis : n'importe quel emoji est accepté, la liste n'a rien de fermé.
+     *
+     * @return list<string>
+     */
+    public function reactionEmojis(): array
+    {
+        return ReactionEmoji::SUGGESTIONS;
     }
 
     /**

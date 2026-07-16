@@ -47,10 +47,6 @@ class EventParticipation
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $imageUrl = null;
 
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $visibility = 'friends';
-
-
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -173,18 +169,6 @@ public function getFriends(): array
     public function setImageUrl(?string $imageUrl): static
     {
         $this->imageUrl = $imageUrl;
-
-        return $this;
-    }
-
-    public function getVisibility(): string
-    {
-        return $this->visibility;
-    }
-
-    public function setVisibility(string $visibility): static
-    {
-        $this->visibility = $visibility;
 
         return $this;
     }

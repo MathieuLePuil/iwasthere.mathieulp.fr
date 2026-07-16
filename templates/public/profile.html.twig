@@ -1,0 +1,146 @@
+{# La page publique d'un compte, servie avec ou sans session : base.html.twig masque
+   de lui-même l'en-tête et la barre de navigation quand app.user est nul, il n'y a
+   donc rien à retirer ici. Ni note ni commentaire : la page dit où quelqu'un était,
+   pas ce qu'il en a pensé. #}
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}{{ profile_user.displayName }} sur IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-6" style="max-width: 560px; margin: 0 auto">
+
+    <div class="flex flex-col items-center text-center mb-6">
+        {% if not app.user %}
+            <img src="{{ asset('images/logo.png') }}" alt="IWasThere" style="height: 40px; width: auto" class="mb-6">
+        {% endif %}
+
+        {% if profile_user.avatarUrl %}
+            <img src="{{ profile_user.avatarUrl }}" class="w-20 h-20 rounded-full object-cover" alt="">
+        {% else %}
+            <div class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold"
+                 style="background: var(--positive-soft); color: var(--positive)">{{ profile_user.displayName|first|upper }}</div>
+        {% endif %}
+
+        <h1 class="text-2xl font-semibold mt-3" style="color: var(--fg-1); letter-spacing: -0.01em">{{ profile_user.displayName }}</h1>
+        <div class="flex items-center gap-1.5">
+            <p class="text-sm" style="color: var(--fg-3)">@{{ profile_user.username }}</p>
+            {% if not profile_user.isPublicProfile %}
+                <span class="text-xs" title="Compte privé" aria-label="Compte privé">🔒</span>
+            {% endif %}
+        </div>
+        {% if profile_user.bio %}
+            <p class="text-sm mt-2" style="color: var(--fg-2)">{{ profile_user.bio }}</p>
+        {% endif %}
+    </div>
+
+    <div class="card text-center py-5 mb-5">
+        <p class="text-4xl font-black" style="color: var(--positive)">{{ total_events }}</p>
+        <p class="text-sm mt-1" style="color: var(--fg-4)">événement{{ total_events > 1 ? 's' : '' }} vécu{{ total_events > 1 ? 's' : '' }}</p>
+    </div>
+
+    {% if can_see %}
+
+        {% if badges.highlights|length > 0 %}
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Succès</h2>
+        <div class="card mb-5">
+            <div class="flex flex-wrap gap-3 justify-center">
+                {% for b in badges.highlights %}
+                <div class="flex flex-col items-center" style="width: 68px">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
+                         style="background: {{ b.earned ? 'var(--positive-soft)' : 'var(--bg-2)' }}; {{ b.earned ? '' : 'filter: grayscale(1); opacity: 0.45' }}">
+                        {{ b.badge.icon }}
+                    </div>
+                    <p class="text-[10px] text-center mt-1 leading-tight" style="color: var(--fg-4)">{{ b.badge.label }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if events|length > 0 %}
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Derniers événements</h2>
+        <div class="space-y-3 mb-6">
+            {% for p in events %}
+            <div class="card flex items-center gap-3">
+                {{ m.event_thumb(p.event) }}
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                        {{ p.event.artistName ?? p.event.tournamentName ?? p.event.teams ?? 'Événement' }}
+                    </p>
+                    <p class="text-xs" style="color: var(--fg-4)">
+                        {{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.name }}{% endif %}
+                    </p>
+                </div>
+                {{ m.event_badge(p.event.type) }}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card text-center py-10 mb-6">
+            <p class="text-4xl mb-2">🎫</p>
+            <p class="font-medium" style="color: var(--fg-2)">Aucun événement pour l'instant</p>
+        </div>
+        {% endif %}
+
+    {% else %}
+
+        {# Compte privé, et on n'en est pas l'ami : le cadenas, et par où entrer. #}
+        <div class="card text-center py-10 mb-6">
+            <p class="text-4xl mb-3">🔒</p>
+            <p class="font-medium" style="color: var(--fg-1)">Ce compte est privé</p>
+            <p class="text-sm mt-1 mb-5" style="color: var(--fg-3)">
+                Deviens ami avec {{ profile_user.displayName }} pour voir ses événements.
+            </p>
+
+            {% if not app.user %}
+                {# Le visiteur n'a pas de compte : on ne peut pas demander une amitié
+                   sans en avoir un, la connexion passe d'abord. #}
+                <a href="{{ path('app_register') }}" class="btn-primary inline-flex items-center justify-center py-3 px-6 no-underline">
+                    Créer un compte pour l'ajouter
+                </a>
+                <p class="text-xs mt-3" style="color: var(--fg-4)">
+                    Déjà inscrit ? <a href="{{ path('app_login') }}" style="color: var(--positive)">Connecte-toi</a>
+                </p>
+            {% else %}
+                {% set relStatus = relationship ? relationship.status : null %}
+                {% if relStatus == 'pending' and relationship.owner == app.user %}
+                    <span class="inline-flex items-center gap-2 py-2.5 px-5 rounded-2xl text-sm font-medium"
+                          style="background: rgba(251,191,36,0.12); color: #FBBF24">
+                        Demande envoyée
+                    </span>
+                {% elseif relStatus == 'pending' %}
+                    {# C'est l'autre qui nous a demandé : accepter ouvre les deux profils #}
+                    <form method="post" action="{{ path('app_friend_accept', {id: relationship.id}) }}">
+                        <button type="submit" class="btn-primary py-3 px-6">Accepter sa demande</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{{ path('app_friend_add', {id: profile_user.id}) }}">
+                        <button type="submit" class="btn-primary py-3 px-6">+ Ajouter en ami</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </div>
+
+    {% endif %}
+
+    {# La raison d'être de l'adresse publique : convertir le visiteur de passage #}
+    {% if not app.user %}
+    <div class="card text-center py-6">
+        <p class="font-semibold" style="color: var(--fg-1)">Garde la trace de tes événements</p>
+        <p class="text-sm mt-1 mb-4" style="color: var(--fg-3)">
+            Concerts, festivals, matchs : ton historique, tes souvenirs, tes stats.
+        </p>
+        <a href="{{ url('app_register') }}" class="btn-primary inline-flex items-center justify-center py-3 px-6 no-underline">
+            Créer mon compte
+        </a>
+    </div>
+    {% elseif not is_self %}
+    <a href="{{ path('app_profile_view', {username: profile_user.username}) }}"
+       class="btn-secondary flex w-full items-center justify-center py-2.5 text-sm no-underline">
+        Voir dans l'app
+    </a>
+    {% endif %}
+
+</div>
+{% endblock %}

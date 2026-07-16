@@ -14,6 +14,7 @@ use App\Repository\FriendRepository;
 use App\Repository\UserRepository;
 use App\Service\AvatarService;
 use App\Service\InCommonService;
+use App\Service\LeaderboardService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -35,6 +36,7 @@ class ProfileController extends AbstractController
         FriendRepository $friendRepo,
         EventParticipationRepository $partRepo,
         BadgeService $badges,
+        LeaderboardService $leaderboard,
     ): Response {
         $user = $this->getUser();
         $friends = $friendRepo->findConfirmedFriends($user);
@@ -42,7 +44,14 @@ class ProfileController extends AbstractController
         $sentRequests = $friendRepo->findPendingSent($user);
         $totalEvents = $partRepo->countByUser($user);
         $avgRating = $partRepo->getAvgRating($user);
+        // Normalisé ici plutôt que laissé brut : le template n'affiche un onglet
+        // qu'à l'identique, un `tab` fantaisiste doit retomber sur le profil et non
+        // sur une page vide.
         $tab = $request->query->get('tab', 'profil');
+        if (!in_array($tab, ['profil', 'amis', 'classement'], true)) {
+            $tab = 'profil';
+        }
+        $year = (int) (new \DateTimeImmutable())->format('Y');
 
         return $this->render('profile/index.html.twig', [
             'friends' => $friends,
@@ -53,7 +62,9 @@ class ProfileController extends AbstractController
             'tab' => $tab,
             // Les badges relisent tout l'historique : inutile de payer ce balayage
             // quand l'onglet Amis est affiché et qu'ils ne seront pas rendus.
-            'badges' => $tab === 'amis' ? null : $badges->forUser($user),
+            'badges' => $tab === 'profil' ? $badges->forUser($user) : null,
+            'leaderboard' => $tab === 'classement' ? $leaderboard->forUser($user, $year) : null,
+            'leaderboard_year' => $year,
         ]);
     }
 
@@ -377,11 +388,9 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException();
         }
 
+        // L'amitié suffit : un compte privé ne l'est pas vis-à-vis de ses amis.
         $user = $this->getUser();
         if ($profileUser === $user || !$friendRepo->areFriends($user, $profileUser)) {
-            throw $this->createAccessDeniedException();
-        }
-        if ($profileUser->getProfileVisibility() === 'private') {
             throw $this->createAccessDeniedException();
         }
 
@@ -408,9 +417,8 @@ class ProfileController extends AbstractController
         $isSelf = $profileUser === $currentUser;
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
 
-        $canViewHistory = $isSelf
-            || $profileUser->getProfileVisibility() === 'public'
-            || ($profileUser->getProfileVisibility() === 'friends' && $areFriends);
+        // Public, ou ami : il n'y a pas de troisième cas.
+        $canViewHistory = $isSelf || $profileUser->isPublicProfile() || $areFriends;
 
         if (!$canViewHistory) {
             return $this->redirectToRoute('app_profile_view', ['username' => $username]);
@@ -459,9 +467,8 @@ class ProfileController extends AbstractController
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
         $relationship = $friendRepo->findRelationship($currentUser, $profileUser);
 
-        $canViewHistory = $isSelf
-            || $profileUser->getProfileVisibility() === 'public'
-            || ($profileUser->getProfileVisibility() === 'friends' && $areFriends);
+        // Public, ou ami : il n'y a pas de troisième cas.
+        $canViewHistory = $isSelf || $profileUser->isPublicProfile() || $areFriends;
 
         $events = $canViewHistory ? $partRepo->findByUser($profileUser, 10) : [];
         $totalEvents = $canViewHistory ? $partRepo->countByUser($profileUser) : null;

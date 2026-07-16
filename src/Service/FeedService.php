@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\Venue;
 use App\Repository\EventParticipationRepository;
 use App\Repository\FriendRepository;
+use App\Repository\ReactionRepository;
 
 /**
  * Construit le feed d'activité des amis, ordonné par date d'événement
@@ -15,17 +16,20 @@ use App\Repository\FriendRepository;
  * partageant les mêmes amis, le même type et le même lieu forment un groupe,
  * annoncé une fois (« X était à 3 concerts », le lieu) puis listé.
  *
- *  - days     : tout l'historique passé, du plus récent au plus ancien, avec
- *               les souvenirs des amis (note, commentaire, photo)
- *  - upcoming : bandeau « Bientôt » — événements à venir des amis, du plus
- *               proche au plus lointain
+ *  - days      : tout l'historique passé, du plus récent au plus ancien, avec
+ *                les souvenirs des amis (note, commentaire, photo)
+ *  - upcoming  : bandeau « Bientôt » — événements à venir des amis, du plus
+ *                proche au plus lointain
+ *  - reactions : l'état des réactions, indexé par id de participation ; le
+ *                template y lit ses compteurs sans requête supplémentaire
  *
  * Chaque jour porte `is_new` : contient-il au moins une participation ajoutée
  * depuis la dernière visite du feed ($seenBefore) ? Sert à placer la limite
  * « déjà vu / pas encore vu ».
  *
- * Respecte la confidentialité : amis in-app confirmés uniquement, profils
- * privés exclus, participations privées exclues.
+ * Respecte la confidentialité par le seul fait de s'en tenir aux amis in-app
+ * confirmés : entre amis, il n'y a rien de caché — « privé » ne vaut que face
+ * aux inconnus.
  */
 final class FeedService
 {
@@ -40,6 +44,7 @@ final class FeedService
     public function __construct(
         private readonly FriendRepository $friendRepo,
         private readonly EventParticipationRepository $participationRepo,
+        private readonly ReactionRepository $reactionRepo,
     ) {}
 
     /**
@@ -55,13 +60,14 @@ final class FeedService
      *         is_new: bool,
      *         groups: list<array{users: User[], type: string, venue: ?Venue, events: list<array>}>,
      *     }>,
+     *     reactions: array<string, array<string, array{count: int, mine: bool}>>,
      * }
      */
     public function buildFeed(User $user, ?\DateTimeImmutable $seenBefore = null): array
     {
         $friends = $this->resolveVisibleFriends($user);
         if ($friends === []) {
-            return ['friend_count' => 0, 'upcoming' => [], 'days' => []];
+            return ['friend_count' => 0, 'upcoming' => [], 'days' => [], 'reactions' => []];
         }
 
         // Tout l'historique : le feed remonte à l'infini, page par page de jours
@@ -174,6 +180,9 @@ final class FeedService
             'friend_count' => count($friends),
             'upcoming' => $upcoming,
             'days' => $days,
+            // En une requête pour tout le feed : la pagination découpe les jours
+            // après coup, une passe par page rouvrirait le même travail.
+            'reactions' => $this->reactionRepo->stateFor($participations, $user),
         ];
     }
 
@@ -225,7 +234,10 @@ final class FeedService
     }
 
     /**
-     * Amis in-app confirmés dont le profil n'est pas privé.
+     * Les amis in-app confirmés.
+     *
+     * Aucun tri sur la confidentialité : un compte privé l'est vis-à-vis des
+     * inconnus, jamais de ses amis. L'amitié confirmée est le seul droit d'entrée.
      *
      * @return User[]
      */
@@ -236,7 +248,7 @@ final class FeedService
             $other = $rel->getOwner()->getId()->equals($user->getId())
                 ? $rel->getFriendUser()
                 : $rel->getOwner();
-            if ($other !== null && $other->getProfileVisibility() !== 'private') {
+            if ($other !== null) {
                 $friends[(string) $other->getId()] = $other;
             }
         }

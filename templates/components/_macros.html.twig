@@ -87,6 +87,30 @@
     </a>
 {% endmacro %}
 
+{# La barre de réactions d'une participation d'ami : les emojis déjà posés, puis un
+   « + » qui ouvre le sélecteur. Les suggestions ne sont qu'un raccourci — le
+   sélecteur laisse aussi taper l'emoji qu'on veut.
+   `state` est l'entrée de la carte `reactions` du feed pour cette participation. #}
+{% macro reaction_bar(p, state) %}
+    <div class="flex items-center gap-1.5 flex-wrap" data-controller="reaction"
+         data-reaction-url-value="{{ path('app_reaction_toggle', {id: p.id}) }}"
+         data-reaction-csrf-value="{{ csrf_token('reaction') }}"
+         data-reaction-suggestions-value="{{ reaction_emojis()|json_encode }}">
+        {# Conteneur à part : le serveur en réécrit le contenu à chaque bascule,
+           le « + » ne doit pas être emporté avec. `display: contents` pour que les
+           pastilles restent alignées par le flex du parent. #}
+        <span data-reaction-target="pills" style="display: contents">
+            {{ include('components/_reaction_pills.html.twig', {p: p, state: state}) }}
+        </span>
+        <button type="button" class="iwt-reaction iwt-reaction-add"
+                data-action="reaction#open" aria-label="Ajouter une réaction">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+        </button>
+    </div>
+{% endmacro %}
+
 {% macro back_button(url, label) %}
     <a href="{{ url }}" class="flex items-center gap-1.5 text-sm font-medium" style="color: var(--positive)">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

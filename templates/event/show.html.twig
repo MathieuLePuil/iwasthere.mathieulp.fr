@@ -347,7 +347,10 @@
                         <p class="text-sm font-medium" style="color: var(--fg-1)">{{ p.user.displayName }}</p>
                         <p class="text-xs" style="color: var(--fg-4)">@{{ p.user.username }}</p>
                     </div>
-                    {% if p.visibility == 'public' and p.rating %}
+                    {# La page liste tous les participants, amis ou non : la note d'un
+                       compte privé ne s'affiche donc pas ici. Équivaut à l'ancien
+                       `p.visibility == 'public'`, qui recopiait ce même réglage. #}
+                    {% if p.user.isPublicProfile and p.rating %}
                         {{ m.star_rating(p.rating) }}
                     {% endif %}
                 </div>

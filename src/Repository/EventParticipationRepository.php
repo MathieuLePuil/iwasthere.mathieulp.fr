@@ -238,10 +238,10 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->join('p.user', 'u')->addSelect('u')
             ->join('p.event', 'e')->addSelect('e')
             ->leftJoin('e.venue', 'v')->addSelect('v')
+            // Aucun filtre de visibilité : un ami voit tout. C'est l'amitié qui fait
+            // l'accès, et l'appelant ne passe ici que des amis confirmés.
             ->where('p.user IN (:users)')
-            ->andWhere('p.visibility != :private')
-            ->setParameter('users', $ids, ArrayParameterType::BINARY)
-            ->setParameter('private', 'private');
+            ->setParameter('users', $ids, ArrayParameterType::BINARY);
 
         if ($since !== null) {
             $qb->andWhere('e.date >= :since')->setParameter('since', $since);
@@ -523,6 +523,51 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les événements déjà vécus, pour la page /p/{pseudo}.
+     *
+     * La date fait foi plutôt que `p.status`, qui n'est recalé que par
+     * updateStaleUpcoming() — une page servie à un visiteur anonyme ne déclenche
+     * aucun recalage, elle ne peut pas s'y fier.
+     *
+     * Rien n'est filtré ici : c'est au contrôleur de décider s'il a le droit
+     * d'afficher cette page, selon que le compte est public ou qu'on en est l'ami.
+     *
+     * @return EventParticipation[] les plus récents d'abord
+     */
+    public function findRecentPastForProfile(User $user, int $limit = 0): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->join('p.event', 'e')
+            ->leftJoin('e.venue', 'v')
+            ->addSelect('e', 'v')
+            ->where('p.user = :user')
+            ->andWhere('e.date < :today')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->orderBy('e.date', 'DESC');
+
+        if ($limit > 0) {
+            $qb->setMaxResults($limit);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /** Le compteur de la page /p/{pseudo} ; même règle de date que ci-dessus. */
+    public function countPastForProfile(User $user): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->join('p.event', 'e')
+            ->where('p.user = :user')
+            ->andWhere('e.date < :today')
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
      * Les événements d'une année auxquels l'utilisateur est allé — matière du
      * Rewind. On s'arrête à aujourd'hui : un concert de décembre pas encore
      * passé ne fait pas partie du bilan.
@@ -543,6 +588,50 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->orderBy('e.date', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Le nombre d'événements déjà vécus dans l'année, pour un lot d'utilisateurs.
+     *
+     * Tous les événements comptent : entre amis, il n'y a rien de caché, et le
+     * classement ne mélange que des amis.
+     *
+     * On s'arrête à aujourd'hui — un concert de décembre déjà noté n'est pas encore
+     * vécu, et le compter ferait mentir « qui a fait le plus » (même règle que le Rewind).
+     *
+     * @param User[] $users
+     *
+     * @return array<string, int> id d'utilisateur => compte ; un utilisateur sans
+     *     événement cette année est absent, à l'appelant de retomber sur zéro
+     */
+    public function countForYearByUsers(array $users, int $year): array
+    {
+        if ($users === []) {
+            return [];
+        }
+
+        $ids = array_map(fn (User $u) => $u->getId()->toBinary(), $users);
+
+        $rows = $this->createQueryBuilder('p')
+            ->select('u.id AS uid', 'COUNT(p.id) AS total')
+            ->join('p.user', 'u')
+            ->join('p.event', 'e')
+            ->where('p.user IN (:users)')
+            ->andWhere('YEAR(e.date) = :year')
+            ->andWhere('e.date < :today')
+            ->setParameter('users', $ids, ArrayParameterType::BINARY)
+            ->setParameter('year', $year)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->groupBy('u.id')
+            ->getQuery()
+            ->getArrayResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(string) $row['uid']] = (int) $row['total'];
+        }
+
+        return $counts;
     }
 
     public function computeStats(User $user): array

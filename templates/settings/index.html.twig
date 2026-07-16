@@ -224,28 +224,51 @@
 
     {# ── Privacy section ── #}
     <div class="card">
-        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Confidentialité</h2>
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Confidentialité</h2>
+        <p class="text-sm mb-4" style="color: var(--fg-3)">
+            Tes amis voient toujours tous tes événements. Ce réglage ne décide que de ce
+            que voient les autres.
+        </p>
         <form method="post" action="{{ path('app_settings_privacy') }}" data-controller="form-loader">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Visibilité du profil</label>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Mon compte</label>
                     <select name="profile_visibility" class="input-field">
-                        <option value="public" {{ app.user.profileVisibility == 'public' ? 'selected' : '' }}>Public — tout le monde</option>
-                        <option value="friends" {{ app.user.profileVisibility == 'friends' ? 'selected' : '' }}>Amis uniquement</option>
-                        <option value="private" {{ app.user.profileVisibility == 'private' ? 'selected' : '' }}>Privé — moi uniquement</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Visibilité par défaut des événements</label>
-                    <select name="default_event_visibility" class="input-field">
-                        <option value="public" {{ app.user.defaultEventVisibility == 'public' ? 'selected' : '' }}>Public</option>
-                        <option value="friends" {{ app.user.defaultEventVisibility == 'friends' ? 'selected' : '' }}>Amis</option>
-                        <option value="private" {{ app.user.defaultEventVisibility == 'private' ? 'selected' : '' }}>Privé</option>
+                        <option value="private" {{ app.user.profileVisibility == 'private' ? 'selected' : '' }}>🔒 Privé — seuls mes amis voient mes événements</option>
+                        <option value="public" {{ app.user.profileVisibility == 'public' ? 'selected' : '' }}>🌍 Public — tout le monde voit mes événements</option>
                     </select>
                 </div>
                 <button type="submit" class="btn-primary w-full py-3">Sauvegarder</button>
             </div>
         </form>
+    </div>
+
+    {# ── Public link section ── #}
+    {% set share_url = url('app_public_profile', {username: app.user.username}) %}
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Mon lien</h2>
+        <p class="text-sm mb-3" style="color: var(--fg-3)">
+            {% if app.user.isPublicProfile %}
+                L'adresse de ton profil, à partager où tu veux. Tout le monde peut l'ouvrir,
+                même sans compte. Tes notes et tes commentaires n'y figurent jamais.
+            {% else %}
+                L'adresse de ton profil. Ton compte étant privé, ceux qui ne sont pas tes amis
+                y verront un cadenas et pourront te demander en ami.
+            {% endif %}
+        </p>
+
+        <div data-controller="copy">
+            <div class="flex gap-2">
+                <input type="text" class="input-field" readonly value="{{ share_url }}"
+                       data-copy-target="source" onfocus="this.select()">
+                <button type="button" class="btn-secondary px-4 flex-shrink-0"
+                        data-action="copy#copy" data-copy-target="button">Copier</button>
+            </div>
+            <a href="{{ share_url }}" target="_blank" rel="noopener"
+               class="inline-block text-sm font-medium mt-3" style="color: var(--positive)">
+                Voir la page →
+            </a>
+        </div>
     </div>
 
     {# ── Change password section ── #}

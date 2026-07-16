@@ -47,10 +47,15 @@
                 <span class="text-xs" style="color: var(--fg-4)">({{ friends|length }})</span>
             {% endif %}
         </a>
+        <a href="{{ path('app_profile', {tab: 'classement'}) }}"
+           class="flex-1 text-center text-sm font-medium py-2 rounded-lg transition-all"
+           style="{{ tab == 'classement' ? 'background: var(--bg-1); color: var(--fg-1); box-shadow: 0 1px 3px rgba(0,0,0,0.3)' : 'color: var(--fg-3)' }}">
+            Classement
+        </a>
     </div>
 
     {# ── TAB: PROFIL ── #}
-    {% if tab != 'amis' %}
+    {% if tab == 'profil' %}
 
     {# Stats row #}
     <div class="iwt-stat-strip mb-5">
@@ -141,7 +146,7 @@
         </div>
     </div>
 
-    {% else %}
+    {% elseif tab == 'amis' %}
 
     {# ── TAB: AMIS ── #}
 
@@ -257,6 +262,75 @@
         </div>
     </div>
     {% endif %}
+
+    {% else %}
+
+    {# ── TAB: CLASSEMENT ── #}
+    <div class="flex items-baseline justify-between mb-3">
+        <h2 class="font-medium" style="color: var(--fg-1)">Événements en {{ leaderboard_year }}</h2>
+        <span class="text-xs" style="color: var(--fg-4)">Toi et tes amis</span>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden">
+        {% for row in leaderboard %}
+        <div class="flex items-center gap-3 px-4 py-3"
+             style="{% if not loop.last %}border-bottom: 1px solid var(--border-subtle);{% endif %}{% if row.is_me %} background: var(--positive-soft);{% endif %}">
+
+            {# Podium en médaille, le reste en numéro : le rang se lit d'un coup d'œil #}
+            <span class="flex-shrink-0 w-7 text-center font-bold"
+                  style="font-family: var(--font-mono); color: {{ row.rank <= 3 and row.count > 0 ? 'var(--fg-1)' : 'var(--fg-4)' }}">
+                {%- if row.count == 0 -%}
+                    <span class="text-sm">—</span>
+                {%- elseif row.rank == 1 -%}
+                    🥇
+                {%- elseif row.rank == 2 -%}
+                    🥈
+                {%- elseif row.rank == 3 -%}
+                    🥉
+                {%- else -%}
+                    <span class="text-sm">{{ row.rank }}</span>
+                {%- endif -%}
+            </span>
+
+            {% if row.is_me %}
+                {{ m.avatar(app.user, 'md') }}
+            {% else %}
+                <a href="{{ path('app_profile_view', {username: row.user.username}) }}" class="flex-shrink-0">
+                    {{ m.avatar(row.user, 'md') }}
+                </a>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+                {% if row.is_me %}
+                    <p class="font-semibold text-sm truncate" style="color: var(--fg-1)">Toi</p>
+                {% else %}
+                    <a href="{{ path('app_profile_view', {username: row.user.username}) }}" class="no-underline">
+                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ row.user.displayName }}</p>
+                    </a>
+                    <p class="text-xs truncate" style="color: var(--fg-3)">@{{ row.user.username }}</p>
+                {% endif %}
+            </div>
+
+            <span class="flex-shrink-0 font-black text-lg" style="color: {{ row.count > 0 ? 'var(--positive)' : 'var(--fg-4)' }}">{{ row.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if friends|length == 0 %}
+    <div class="card text-center py-8 mt-4">
+        <p class="text-3xl mb-2">🏆</p>
+        <p class="font-medium" style="color: var(--fg-2)">Un classement se joue à plusieurs</p>
+        <p class="text-sm mt-1 mb-4" style="color: var(--fg-3)">Ajoute des amis pour te comparer à eux.</p>
+        <a href="{{ path('app_profile_search') }}" class="btn-primary inline-flex py-2.5 px-5 no-underline text-sm">Trouver des amis</a>
+    </div>
+    {% endif %}
+
+    {# La mention des événements privés est tombée avec eux : il n'y a plus rien à
+       exclure. Reste la seule règle qui surprend encore — un événement à venir ne
+       compte pas, on ne l'a pas encore vécu. #}
+    <p class="text-xs mt-3 px-1" style="color: var(--fg-4)">
+        Seuls les événements déjà passés sont comptés.
+    </p>
 
     {% endif %}
     {# end tab content #}

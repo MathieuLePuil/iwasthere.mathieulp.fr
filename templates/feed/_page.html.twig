@@ -82,16 +82,21 @@
                 {% endif %}
             </a>
 
-            {# Souvenirs des amis sur cet événement : note / commentaire / photo #}
+            {# Souvenirs des amis sur cet événement (note / commentaire / photo), puis
+               les réactions. Le bloc est rendu même sans souvenir, contrairement à
+               avant : réagir au seul fait qu'un ami y était a du sens, et c'est le
+               seul geste possible sur un événement qu'il n'a pas raconté. #}
             {% for p in g.participations %}
-                {% if p.rating or p.comment or p.imageUrl %}
+                {% set has_memory = p.rating or p.comment or p.imageUrl %}
                 <div class="px-4 pb-3">
+                    {% if n > 1 or p.rating %}
                     <div class="flex items-center gap-2">
                         {% if n > 1 %}
                             <span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>
                         {% endif %}
                         {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
                     </div>
+                    {% endif %}
                     {% if p.comment %}
                     <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--fg-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">« {{ p.comment }} »</p>
                     {% endif %}
@@ -100,8 +105,10 @@
                          class="w-full object-cover rounded-xl mt-2.5 block"
                          style="max-height: 240px; border: 1px solid var(--border-subtle)">
                     {% endif %}
+                    <div class="{{ has_memory or n > 1 ? 'mt-2' : '' }}">
+                        {{ m.reaction_bar(p, reactions[p.id.toRfc4122]|default({})) }}
+                    </div>
                 </div>
-                {% endif %}
             {% endfor %}
 
             {# Accompagnants tagués (« avec qui »), hors ceux déjà nommés plus haut #}

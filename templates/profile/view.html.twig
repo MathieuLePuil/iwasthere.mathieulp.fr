@@ -115,13 +115,11 @@
     {% else %}
         <div class="card text-center py-10">
             <p class="text-4xl mb-3">🔒</p>
-            <p class="font-medium" style="color: var(--fg-1)">Profil privé</p>
+            <p class="font-medium" style="color: var(--fg-1)">Compte privé</p>
+            {# Un compte privé n'a plus qu'une porte : l'amitié. Le message n'a donc
+               plus de cas où renvoyer à autre chose. #}
             <p class="text-sm mt-1" style="color: var(--fg-3)">
-                {% if profile_user.profileVisibility == 'friends' %}
-                    Ajoute {{ profile_user.displayName }} en ami pour voir son historique
-                {% else %}
-                    Cet historique est privé
-                {% endif %}
+                Ajoute {{ profile_user.displayName }} en ami pour voir ses événements
             </p>
         </div>
     {% endif %}

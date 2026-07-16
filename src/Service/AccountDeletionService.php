@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\EventParticipationRepository;
+use App\Repository\ReactionRepository;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -27,6 +28,7 @@ class AccountDeletionService
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly EventParticipationRepository $participationRepo,
+        private readonly ReactionRepository $reactionRepo,
     ) {}
 
     public function delete(User $user): void
@@ -44,6 +46,9 @@ class AccountDeletionService
 
             // DQL et non remove() ligne à ligne : l'UnitOfWork ne garantit pas que les
             // enfants partent avant le parent, et c'est précisément l'ordre qui compte ici.
+            // Les réactions d'abord : elles pointent sur les participations, dans les deux
+            // sens (celles que le compte a posées, celles qu'il a reçues).
+            $this->reactionRepo->deleteAllForUser($user);
             $this->deleteAll('App\Entity\EventParticipation p', 'p.user = :id', $id);
             $this->deleteAll('App\Entity\Notification n', 'n.recipient = :id', $id);
             // Les deux sens : la liste d'amis du compte, et les entrées des autres qui pointent vers lui.

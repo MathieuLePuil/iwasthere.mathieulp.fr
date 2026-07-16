@@ -46,6 +46,7 @@ class FeedController extends AbstractController
             'has_more' => $hasMore,
             'seen_epoch' => $seenBefore?->getTimestamp() ?? 0,
             'pending_requests' => count($friendRepo->findPendingReceived($user)),
+            'reactions' => $feed['reactions'],
         ]);
     }
 
@@ -64,6 +65,7 @@ class FeedController extends AbstractController
         $response = $this->render('feed/_page.html.twig', [
             'days' => $days,
             'sep_at' => $sepAt,
+            'reactions' => $feed['reactions'],
         ]);
         $response->headers->set('X-Feed-Has-More', $hasMore ? '1' : '0');
 

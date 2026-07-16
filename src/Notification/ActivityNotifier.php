@@ -19,8 +19,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * reçoit le message spécifique (« sera aussi à ») plutôt que l'annonce générique,
  * qui est plus intéressant et évite le doublon.
  *
- * Mêmes règles de confidentialité que le feed : amis in-app confirmés,
- * participations privées exclues. Les amis tagués sont exclus aussi — ils ont
+ * Mêmes règles de confidentialité que le feed : seuls les amis in-app confirmés
+ * sont prévenus, et ils le sont de tout. Les amis tagués sont exclus — ils ont
  * déjà leur notification de tag.
  */
 final class ActivityNotifier
@@ -35,10 +35,6 @@ final class ActivityNotifier
     /** Un ami vient d'ajouter un événement à son journal. */
     public function announceParticipation(EventParticipation $participation): void
     {
-        if ($participation->getVisibility() === 'private') {
-            return;
-        }
-
         $author = $participation->getUser();
         $event = $participation->getEvent();
         $name = $this->eventName($event);
@@ -127,10 +123,6 @@ final class ActivityNotifier
     /** Un ami vient de raconter un événement : note, commentaire ou photo. */
     public function announceMemory(EventParticipation $participation): void
     {
-        if ($participation->getVisibility() === 'private') {
-            return;
-        }
-
         $author = $participation->getUser();
         $name = $this->eventName($participation->getEvent());
 

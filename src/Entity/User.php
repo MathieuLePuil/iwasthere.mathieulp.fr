@@ -42,11 +42,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $bio = null;
 
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $profileVisibility = 'friends';
+    /**
+     * Le compte est-il ouvert au monde ? 'public' ou 'private', et rien d'autre.
+     *
+     * C'est le seul réglage de confidentialité qui existe, et il régit tout :
+     *
+     *  - public  : n'importe qui voit les événements, connecté ou non, sur /p/{pseudo} ;
+     *  - private : seuls les amis les voient ; les autres tombent sur un cadenas.
+     *
+     * Un ami voit donc toujours tout : il n'y a ni visibilité par événement, ni moyen
+     * de se cacher de ses propres amis. C'est ce qui permet au feed et au classement
+     * de ne filtrer sur rien d'autre que l'amitié.
+     */
+    #[ORM\Column(length: 20, options: ['default' => 'private'])]
+    private string $profileVisibility = 'private';
 
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $defaultEventVisibility = 'friends';
 
     /** Thème de l'interface : 'dark', 'light' ou 'auto' (suit le réglage système) */
     #[ORM\Column(length: 10, options: ['default' => 'dark'])]
@@ -195,16 +205,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getDefaultEventVisibility(): string
+    /** Raccourci de lecture : « ce compte est-il ouvert à tout le monde ? » */
+    public function isPublicProfile(): bool
     {
-        return $this->defaultEventVisibility;
-    }
-
-    public function setDefaultEventVisibility(string $defaultEventVisibility): static
-    {
-        $this->defaultEventVisibility = $defaultEventVisibility;
-
-        return $this;
+        return $this->profileVisibility === 'public';
     }
 
     public function getTheme(): string

@@ -372,6 +372,67 @@
   }
   .iwt-icon-btn:hover { background: var(--bg-3); }
 
+  /* Reaction pills (feed) */
+  .iwt-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-2);
+    color: var(--fg-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
+  }
+  .iwt-reaction:active { transform: scale(0.92); }
+  .iwt-reaction.is-mine {
+    background: var(--positive-soft);
+    border-color: var(--positive);
+    color: var(--positive);
+  }
+  .iwt-reaction-emoji { font-size: 0.875rem; }
+  /* Le compteur à zéro n'est pas rendu : la pastille reste une pastille, sans « 0 » */
+  .iwt-reaction-count:empty { display: none; }
+  /* Le « + » : même gabarit que les pastilles, mais discret tant qu'on n'y touche pas */
+  .iwt-reaction-add {
+    color: var(--fg-4);
+    padding: 0.25rem 0.5rem;
+  }
+  .iwt-reaction-add:hover { color: var(--fg-2); background: var(--bg-3); }
+
+  /* Sélecteur d'emoji (bottom sheet) */
+  .iwt-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    margin: 0.25rem 0 1rem;
+  }
+  .iwt-emoji-choice {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: 0.875rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-2);
+    cursor: pointer;
+    transition: background 120ms, transform 80ms;
+  }
+  .iwt-emoji-choice:hover { background: var(--bg-3); }
+  .iwt-emoji-choice:active { transform: scale(0.9); }
+  .iwt-emoji-custom {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .iwt-emoji-custom .input-field { flex: 1; }
+
   /* Segmented control */
   .iwt-segmented {
     display: flex;
@@ -840,6 +901,11 @@
 }
 
 .iwt-sheet.is-open { transform: translateY(0); }
+
+/* Feuille qu'on peut faire glisser vers le bas pour la fermer : le geste nous
+   revient au lieu de défiler la page. Le champ de saisie reste focusable —
+   touch-action ne gouverne que le défilement et le zoom, pas les taps. */
+.iwt-sheet--draggable { touch-action: none; }
 
 .iwt-sheet-grabber {
   width: 36px;

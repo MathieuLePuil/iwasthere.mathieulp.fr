@@ -33,8 +33,8 @@
                 <dd style="color: var(--fg-2)">{{ profile_user.bio ?? '—' }}</dd>
             </div>
             <div class="flex gap-3">
-                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Visibilité profil</dt>
-                <dd style="color: var(--fg-2)">{{ profile_user.profileVisibility }}</dd>
+                <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Compte</dt>
+                <dd style="color: var(--fg-2)">{{ profile_user.isPublicProfile ? '🌍 Public' : '🔒 Privé' }}</dd>
             </div>
             <div class="flex gap-3">
                 <dt class="w-32 flex-shrink-0" style="color: var(--fg-4)">Google SSO</dt>

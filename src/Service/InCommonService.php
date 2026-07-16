@@ -27,11 +27,8 @@ class InCommonService
     public function forUsers(User $me, User $other): array
     {
         $mine = $this->repo->findAllByUser($me);
-        // Comme le feed : ce que l'autre a marqué privé ne ressort pas ici.
-        $theirs = array_filter(
-            $this->repo->findAllByUser($other),
-            fn (EventParticipation $p) => $p->getVisibility() !== 'private',
-        );
+        // Rien à filtrer : la page n'est ouverte qu'entre amis, et un ami voit tout.
+        $theirs = $this->repo->findAllByUser($other);
 
         $myId = (string) $me->getId();
         $otherId = (string) $other->getId();

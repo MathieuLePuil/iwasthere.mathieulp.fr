@@ -21,6 +21,9 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 #[Route('/settings')]
 class SettingsController extends AbstractController
 {
+    /** Les deux seuls états d'un compte ; tout le reste est une saisie forgée. */
+    private const VISIBILITIES = ['public', 'private'];
+
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,
     ) {}
@@ -82,14 +85,28 @@ class SettingsController extends AbstractController
         return $this->json(['ok' => true]);
     }
 
+    /**
+     * Le compte bascule entre public et privé, et c'est tout : il n'y a plus de
+     * visibilité par événement à réaligner, ni de réglage de départ. Un ami voit
+     * toujours tout ; ce réglage ne décide que du sort des inconnus.
+     */
     #[Route('/privacy', name: 'app_settings_privacy', methods: ['POST'])]
     public function savePrivacy(Request $request, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
-        $user->setProfileVisibility($request->request->get('profile_visibility', 'friends'))
-            ->setDefaultEventVisibility($request->request->get('default_event_visibility', 'friends'));
+        $visibility = $request->request->get('profile_visibility');
+
+        if (!in_array($visibility, self::VISIBILITIES, true)) {
+            $this->addFlash('error', 'Visibilité inconnue.');
+            return $this->redirectToRoute('app_settings');
+        }
+
+        $this->getUser()->setProfileVisibility($visibility);
         $em->flush();
-        $this->addFlash('success', 'Paramètres de confidentialité sauvegardés.');
+
+        $this->addFlash('success', $visibility === 'public'
+            ? 'Ton compte est public : tout le monde peut voir tes événements.'
+            : 'Ton compte est privé : seuls tes amis voient tes événements.');
+
         return $this->redirectToRoute('app_settings');
     }
 

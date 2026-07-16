@@ -187,8 +187,7 @@ class EventController extends AbstractController
                 $participation = new EventParticipation();
                 $participation->setEvent($event)
                     ->setUser($this->getUser())
-                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past')
-                    ->setVisibility($this->getUser()->getDefaultEventVisibility());
+                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
 
 if (!empty($data['duration'])) {
                     $participation->setDuration((int) $data['duration']);
@@ -433,8 +432,7 @@ if (!empty($data['duration'])) {
             // Auto-create participation
             $participation = new EventParticipation();
             $participation->setEvent($event)->setUser($user)
-                ->setStatus($event->getDate() < new \DateTimeImmutable('today') ? 'past' : 'upcoming')
-                ->setVisibility($user->getDefaultEventVisibility());
+                ->setStatus($event->getDate() < new \DateTimeImmutable('today') ? 'past' : 'upcoming');
             $em->persist($participation);
             $event->setParticipantCount($event->getParticipantCount() + 1);
         }
@@ -527,7 +525,7 @@ if (!empty($data['duration'])) {
             if (isset($data['duration']) && $data['duration'] !== '') {
                 $participation->setDuration((int) $data['duration']);
             }
-            // Status derived from event date; visibility from user default
+            // Le statut se déduit de la date de l'événement
             $participation->setStatus(
                 $event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past'
             );
@@ -689,8 +687,7 @@ if (!empty($data['duration'])) {
                 $newParticipation = new EventParticipation();
                 $newParticipation->setEvent($event)
                     ->setUser($user)
-                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past')
-                    ->setVisibility($user->getDefaultEventVisibility());
+                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
                 $em->persist($newParticipation);
                 $event->setParticipantCount($event->getParticipantCount() + 1);
             }

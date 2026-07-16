@@ -38,7 +38,9 @@
             <p class="text-xs mb-2" style="color: var(--fg-4)">Source : {{ event.setlistSource ?? '?' }} — {{ event.setlist|length }} titres</p>
             <ol class="text-sm space-y-1 max-h-48 overflow-y-auto" style="color: var(--fg-2)">
                 {% for song in event.setlist %}
-                <li class="flex gap-2"><span style="color: var(--fg-4)">{{ loop.index }}.</span> {{ song }}</li>
+                {# Un titre est un objet {name, tape, info, with} et non une chaîne :
+                   l'afficher tel quel rendait « Array » pour chaque ligne. #}
+                <li class="flex gap-2"><span style="color: var(--fg-4)">{{ loop.index }}.</span> {{ song.name ?? song }}</li>
                 {% endfor %}
             </ol>
         {% else %}
@@ -63,7 +65,6 @@
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Statut</th>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Note</th>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Commentaire</th>
-                <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Visibilité</th>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Date</th>
                 <th class="px-5 py-3"></th>
             </tr>
@@ -89,7 +90,6 @@
                 <td class="px-5 py-3 text-xs max-w-xs truncate" style="color: var(--fg-3)">
                     {{ p.comment ?? '—' }}
                 </td>
-                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ p.visibility }}</td>
                 <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ p.createdAt|date('d/m/Y') }}</td>
                 <td class="px-5 py-3 text-right">
                     <form method="post"
