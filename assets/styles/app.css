@@ -269,6 +269,35 @@
     padding: 1rem;
   }
 
+  /* Pages légales : prose sobre, lisible en clair comme en sombre */
+  .iwt-legal h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-1);
+    margin-bottom: 0.4rem;
+  }
+  .iwt-legal p {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .iwt-legal p + p { margin-top: 0.6rem; }
+  .iwt-legal ul {
+    list-style: disc;
+    padding-left: 1.1rem;
+    margin-top: 0.4rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .iwt-legal li + li { margin-top: 0.35rem; }
+  .iwt-legal a {
+    color: var(--positive);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .iwt-legal strong { color: var(--fg-1); font-weight: 600; }
+
   /* Input */
   .input-field {
     width: 100%;

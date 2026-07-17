@@ -42,6 +42,9 @@ security:
         - { path: ^/oauth, roles: PUBLIC_ACCESS }
         - { path: ^/subscribe, roles: PUBLIC_ACCESS }
         - { path: ^/manifest\.json, roles: PUBLIC_ACCESS }
+        # Pages légales : consultables sans compte (obligation d'accessibilité).
+        - { path: ^/mentions-legales, roles: PUBLIC_ACCESS }
+        - { path: ^/confidentialite, roles: PUBLIC_ACCESS }
         # Profil partageable : le jeton de l'URL tient lieu d'autorisation, il n'y a
         # pas de session à exiger — c'est tout l'intérêt du lien.
         - { path: ^/p/, roles: PUBLIC_ACCESS }

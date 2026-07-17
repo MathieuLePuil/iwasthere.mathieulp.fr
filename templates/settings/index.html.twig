@@ -349,8 +349,11 @@
         Se déconnecter
     </a>
 
-    <div class="pb-4 text-center text-xs" style="color: var(--fg-4)">
-        IWasThere · v1.0
+    {# ── Liens légaux ── #}
+    <div class="pb-4 text-center text-xs space-x-3" style="color: var(--fg-4)">
+        <a href="{{ path('app_legal_notice') }}" style="color: var(--fg-3)">Mentions légales</a>
+        <span>·</span>
+        <a href="{{ path('app_privacy') }}" style="color: var(--fg-3)">Confidentialité</a>
     </div>
 
 </div>

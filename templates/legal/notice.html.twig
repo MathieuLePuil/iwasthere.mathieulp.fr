@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mentions légales — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5 iwt-legal">
+
+    {% if not app.user %}
+    <a href="{{ path('app_home') }}" class="text-sm font-medium" style="color: var(--positive)">← Retour à IWasThere</a>
+    {% endif %}
+
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Mentions légales</h1>
+    <p class="text-xs" style="color: var(--fg-4)">Dernière mise à jour : 17 juillet 2026</p>
+
+    <div class="card space-y-4">
+        <section>
+            <h2>Éditeur</h2>
+            <p>
+                Le présent service, accessible à l'adresse <strong>iwasthere.mathieulp.fr</strong>, est édité
+                par&nbsp;:
+            </p>
+            <ul>
+                <li><strong>Mathieu Le Puil</strong></li>
+                <li>161 Ter Rue de Preize, 10000 Troyes</li>
+                <li>Contact : <a href="mailto:contact@mathieulp.fr">contact@mathieulp.fr</a></li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Directeur de la publication</h2>
+            <p>Mathieu Le Puil.</p>
+        </section>
+
+        <section>
+            <h2>Hébergement</h2>
+            <p>Le site est hébergé par&nbsp;:</p>
+            <ul>
+                <li><strong>PulseHeberg</strong></li>
+                <li>9 Boulevard de Strasbourg, 83000 Toulon</li>
+                <li>Téléphone : 04 22 14 13 60</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Propriété intellectuelle</h2>
+            <p>
+                La structure, les textes et les éléments graphiques propres au service sont la propriété de
+                l'éditeur. Les contenus ajoutés par les utilisateurs (événements, notes, avatars…) restent la
+                propriété de leurs auteurs. Certaines informations liées aux artistes, aux concerts ou aux
+                rencontres sportives proviennent de services tiers et demeurent la propriété de leurs
+                détenteurs respectifs.
+            </p>
+        </section>
+
+        <section>
+            <h2>Données personnelles</h2>
+            <p>
+                Le traitement des données personnelles est décrit dans la
+                <a href="{{ path('app_privacy') }}">politique de confidentialité</a>.
+            </p>
+        </section>
+    </div>
+
+</div>
+{% endblock %}
