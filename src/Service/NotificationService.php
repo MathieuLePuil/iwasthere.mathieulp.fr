@@ -46,7 +46,7 @@ class NotificationService
             'title' => $title,
             'body' => $body,
             'icon' => '/icons/icon-192.png',
-            'url' => $url ?? '/',
+            'url' => $url ?? '/home',
         ]);
 
         $sent = 0;

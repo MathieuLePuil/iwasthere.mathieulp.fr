@@ -38,7 +38,7 @@ class PwaController extends AbstractController
             'name' => 'IWasThere',
             'short_name' => 'IWasThere',
             'description' => 'Ton journal d\'expériences live',
-            'start_url' => '/',
+            'start_url' => '/home',
             'scope' => '/',
             'display' => 'standalone',
             'background_color' => '#0B0D10',

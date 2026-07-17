@@ -18,7 +18,7 @@ export default class extends Controller {
         slides: Array,
         year: Number,
         name: String,
-        home: { type: String, default: '/' },
+        home: { type: String, default: '/home' },
         logo: String,
         duration: { type: Number, default: 6000 },
     };

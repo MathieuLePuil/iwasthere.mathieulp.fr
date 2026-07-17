@@ -152,7 +152,7 @@ self.addEventListener('push', function(event) {
         tag: 'iwt-notification',
         renotify: true,
         requireInteraction: true,
-        data: { url: data.url || '/' },
+        data: { url: data.url || '/home' },
         actions: [
             { action: 'view', title: 'Voir l\'app' },
             { action: 'close', title: 'Fermer' }
@@ -170,7 +170,7 @@ self.addEventListener('notificationclick', function(event) {
     }
 
     const targetUrl = new URL(
-        (event.notification.data && event.notification.data.url) || '/',
+        (event.notification.data && event.notification.data.url) || '/home',
         self.location.origin
     ).href;
 

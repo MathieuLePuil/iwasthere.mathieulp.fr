@@ -18,7 +18,7 @@ class HomeController extends AbstractController
     /** Événements d'amis affichés en aperçu sur l'accueil */
     private const FEED_PREVIEW_MAX = 3;
 
-    #[Route('/', name: 'app_home')]
+    #[Route('/home', name: 'app_home')]
     public function index(
         EventParticipationRepository $participationRepo,
         NotificationRepository $notifRepo,
