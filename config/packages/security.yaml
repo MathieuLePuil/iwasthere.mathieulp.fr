@@ -42,6 +42,9 @@ security:
         - { path: ^/oauth, roles: PUBLIC_ACCESS }
         - { path: ^/subscribe, roles: PUBLIC_ACCESS }
         - { path: ^/manifest\.json, roles: PUBLIC_ACCESS }
+        # Repli hors-ligne précaché par le service worker : doit rester servable
+        # sans session (le SW peut le récupérer avant toute connexion).
+        - { path: ^/offline$, roles: PUBLIC_ACCESS }
         # Pages légales : consultables sans compte (obligation d'accessibilité).
         - { path: ^/mentions-legales, roles: PUBLIC_ACCESS }
         - { path: ^/confidentialite, roles: PUBLIC_ACCESS }

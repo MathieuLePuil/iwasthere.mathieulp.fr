@@ -1,0 +1,36 @@
+{# Bannière d'installation PWA. Rendue masquée (hidden) ; le contrôleur Stimulus
+   décide de l'afficher, choisit le parcours (iOS/Android) et gère le rejet.
+   Placée hors du flux (position fixe, au-dessus de la barre de navigation) via
+   .iwt-install dans app.css. #}
+<div class="iwt-install" data-controller="install-prompt" hidden>
+    <div class="iwt-install-inner">
+        <img src="{{ asset('images/icons/icon-192.png') }}" alt="" class="iwt-install-icon">
+
+        {# Parcours Android / Chromium — invite native via le bouton. #}
+        <div class="iwt-install-body" data-install-prompt-target="android" hidden>
+            <p class="iwt-install-title">Installe IWasThere</p>
+            <p class="iwt-install-sub">Accès plein écran, depuis ton écran d'accueil.</p>
+        </div>
+        <div class="iwt-install-actions" data-install-prompt-target="android" hidden>
+            <button type="button" class="btn-primary iwt-install-cta" data-action="install-prompt#install">Installer</button>
+            <button type="button" class="iwt-install-close" data-action="install-prompt#dismiss" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        {# Parcours iOS / Safari — tuto, pas d'API d'installation. #}
+        <div class="iwt-install-body" data-install-prompt-target="ios" hidden>
+            <p class="iwt-install-title">Ajoute IWasThere à ton écran d'accueil</p>
+            <p class="iwt-install-sub">
+                Appuie sur
+                <svg class="iwt-install-share" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                puis « Sur l'écran d'accueil ».
+            </p>
+        </div>
+        <div class="iwt-install-actions" data-install-prompt-target="ios" hidden>
+            <button type="button" class="iwt-install-close" data-action="install-prompt#dismiss" aria-label="Fermer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    </div>
+</div>

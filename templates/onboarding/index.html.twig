@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Bienvenue — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-6 space-y-6">
+
+    {# Accueil personnalisé #}
+    <div class="text-center pt-2">
+        <div class="text-4xl mb-3">🎉</div>
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">
+            Bienvenue, {{ app.user.displayName }}
+        </h1>
+        <p class="text-sm mt-2 mx-auto" style="color: var(--fg-3); max-width: 20rem; line-height: 1.6">
+            IWasThere, c'est ton journal d'expériences live — concerts, festivals et matchs. On commence ?
+        </p>
+    </div>
+
+    {# Étape 1 — le geste central : ajouter son premier souvenir. #}
+    <a href="{{ path('app_event_new') }}" class="onb-card onb-card--primary no-underline">
+        <span class="onb-step">1</span>
+        <div class="onb-card-body">
+            <p class="onb-card-title">Ajoute ton premier souvenir</p>
+            <p class="onb-card-sub">Un concert vu, un match vécu — même un vieux souvenir compte.</p>
+        </div>
+        <span class="onb-card-arrow">→</span>
+    </a>
+
+    {# Étape 2 — les amis, pour peupler le feed. #}
+    <a href="{{ path('app_profile_search') }}" class="onb-card no-underline">
+        <span class="onb-step">2</span>
+        <div class="onb-card-body">
+            <p class="onb-card-title">Retrouve tes amis</p>
+            <p class="onb-card-sub">Vois où ils étaient, et partagez vos souvenirs en commun.</p>
+        </div>
+        <span class="onb-card-arrow">→</span>
+    </a>
+
+    {# Sortie discrète : l'onboarding n'est pas une étape verrouillée. #}
+    <div class="text-center pt-1">
+        <a href="{{ path('app_home') }}" class="text-sm font-medium" style="color: var(--fg-3)">
+            Plus tard — voir mon accueil
+        </a>
+    </div>
+
+</div>
+{% endblock %}

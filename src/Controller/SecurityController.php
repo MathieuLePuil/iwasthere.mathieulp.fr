@@ -8,6 +8,7 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,6 +49,7 @@ class SecurityController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $em,
+        Security $security,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
@@ -63,8 +65,15 @@ class SecurityController extends AbstractController
             $em->persist($user);
             $em->flush();
 
-            $this->addFlash('success', 'Compte créé avec succès ! Bienvenue sur IWasThere.');
-            return $this->redirectToRoute('app_home');
+            // Connexion immédiate : le mini-parcours d'accueil est derrière ROLE_USER,
+            // sans ça la redirection rebondirait sur /login. Le nom de l'authenticator
+            // est obligatoire : le firewall « main » en a plusieurs (form_login +
+            // GoogleAuthenticator), sinon Security::login lève « Too many authenticators ».
+            $security->login($user, 'form_login');
+
+            // Nouveau compte, donc journal vide : on l'envoie sur le mini-parcours
+            // d'accueil plutôt que sur un accueil sans contenu.
+            return $this->redirectToRoute('app_onboarding');
         }
 
         return $this->render('security/register.html.twig', [

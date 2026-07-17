@@ -7,10 +7,23 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Asset\Packages;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 class PwaController extends AbstractController
 {
+    /**
+     * Page de repli servie par le service worker quand une page demandée n'est ni
+     * accessible (hors-ligne) ni déjà en cache. Volontairement publique et autonome
+     * (styles en ligne) : le SW la précache à l'installation, et elle doit s'afficher
+     * même si app.css n'a pas encore été mis en cache.
+     */
+    #[Route('/offline', name: 'app_offline')]
+    public function offline(): Response
+    {
+        return $this->render('pwa/offline.html.twig');
+    }
+
     #[Route('/manifest.json', name: 'app_manifest')]
     public function manifest(Packages $assets): JsonResponse
     {

@@ -40,6 +40,16 @@
             window.iwtApplyTheme();
         })();
         </script>
+        {# Capté ici, très tôt : `beforeinstallprompt` (Chromium) peut se déclencher avant
+           que Stimulus ne connecte le contrôleur install-prompt. On garde l'événement de
+           côté et on signale sa disponibilité ; le contrôleur le relira. #}
+        <script data-cfasync="false">
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__iwtInstallPrompt = e;
+            window.dispatchEvent(new Event('iwt:installable'));
+        });
+        </script>
         <link rel="manifest" href="/manifest.json">
         <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/icons/icon-32.png') }}">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/icons/icon-16.png') }}">
@@ -177,6 +187,10 @@
 
             </div>
         </nav>
+
+        {# Bannière d'installation — pour les utilisateurs non installés (le contrôleur
+           se masque de lui-même en mode standalone). #}
+        {% include 'components/_install_prompt.html.twig' %}
         {% endif %}
 
     <script>

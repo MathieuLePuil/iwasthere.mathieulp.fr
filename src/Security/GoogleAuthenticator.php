@@ -23,6 +23,10 @@ use Symfony\Component\Security\Http\Util\TargetPathTrait;
 class GoogleAuthenticator extends OAuth2Authenticator
 {
     use TargetPathTrait;
+
+    /** Passe à true quand ce login vient de créer le compte, pour router vers l'onboarding. */
+    private bool $isNewUser = false;
+
     public function __construct(
         private ClientRegistry $clientRegistry,
         private EntityManagerInterface $em,
@@ -64,6 +68,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 }
 
                 // Create new user
+                $this->isNewUser = true;
                 $user = new User();
                 $user->setGoogleId($googleUser->getId());
                 $user->setEmail($googleUser->getEmail());
@@ -118,6 +123,12 @@ class GoogleAuthenticator extends OAuth2Authenticator
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             $this->removeTargetPath($request->getSession(), $firewallName);
             return new RedirectResponse($targetPath);
+        }
+
+        // Compte tout juste créé via Google : même mini-parcours que l'inscription
+        // classique, plutôt qu'un accueil vide.
+        if ($this->isNewUser) {
+            return new RedirectResponse($this->router->generate('app_onboarding'));
         }
 
         return new RedirectResponse($this->router->generate('app_home'));
