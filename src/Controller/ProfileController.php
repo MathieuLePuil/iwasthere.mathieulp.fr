@@ -254,7 +254,7 @@ class ProfileController extends AbstractController
         ]);
 
         $email = (new Email())
-            ->from(new Address('noreply@mathieulp.fr', 'IWasThere'))
+            ->from(new Address('noreply@iwasthereapp.app', 'IWasThere'))
             ->to($emailAddress)
             ->subject($inviter->getDisplayName() . ' t\'invite sur IWasThere !')
             ->html($html);

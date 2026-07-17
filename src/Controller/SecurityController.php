@@ -125,7 +125,7 @@ class SecurityController extends AbstractController
                 ]);
 
                 $email = (new Email())
-                    ->from(new Address('noreply@mathieulp.fr', 'IWasThere'))
+                    ->from(new Address('noreply@iwasthereapp.app', 'IWasThere'))
                     ->to($emailAddress)
                     ->subject('Réinitialisation de ton mot de passe — IWasThere')
                     ->html($html);

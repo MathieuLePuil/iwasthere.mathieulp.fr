@@ -152,7 +152,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    Vérifie qu'ils existent en prod (`public/icons/`).
 
 7. **Test final en prod.** Une fois déployé :
-   - Sur iPhone : ouvrir Safari → `https://iwasthere.mathieulp.fr` → bouton Partager → « Sur l'écran d'accueil ». Ouvrir l'icône installée. Accepter la popup. Puis :
+   - Sur iPhone : ouvrir Safari → `https://iwasthereapp.app` → bouton Partager → « Sur l'écran d'accueil ». Ouvrir l'icône installée. Accepter la popup. Puis :
 
      ```bash
      php bin/console app:push:test <ton-username> "Push prod OK"

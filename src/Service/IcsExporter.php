@@ -34,7 +34,7 @@ final class IcsExporter
             'BEGIN:VEVENT',
             // Doit être stable dans le temps : réimporter le même événement met à jour
             // l'entrée au lieu d'en créer une seconde.
-            'UID:' . $event->getId() . '@iwasthere.mathieulp.fr',
+            'UID:' . $event->getId() . '@iwasthereapp.app',
             'DTSTAMP:' . (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Ymd\THis\Z'),
             ...$this->when($event),
             'SUMMARY:' . $this->escape($this->title($event)),
