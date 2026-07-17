@@ -37,6 +37,42 @@
         </a>
     </div>
 
+    {# Lucky charm — bilan des équipes favorites quand l'utilisateur est au stade #}
+    {% if stats.lucky_teams and stats.lucky_teams.teams|length > 0 %}
+    {% set sport_emoji = {'football': '⚽', 'rugby': '🏉'} %}
+    <a href="{{ path('app_stats_detail', {topic: 'portebonheur'}) }}" class="card block mb-4 no-underline">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-xl">🍀</span>
+            <h2 class="font-medium" style="color: var(--fg-1)">Porte-bonheur</h2>
+        </div>
+        <div class="space-y-3">
+            {% for t in stats.lucky_teams.teams %}
+            <div>
+                <div class="flex justify-between items-baseline mb-1">
+                    <div class="flex items-baseline gap-1.5 min-w-0">
+                        <span>{{ sport_emoji[t.sport] ?? '🏟️' }}</span>
+                        <span class="font-medium truncate" style="color: var(--fg-1)">{{ t.team }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                        {% if t.win_rate is not null %}
+                        <span class="font-bold" style="color: var(--positive)">{{ t.win_rate }}%</span>
+                        {% else %}
+                        <span style="color: var(--fg-4)">—</span>
+                        {% endif %}
+                        <span class="text-xs" style="color: var(--fg-4)">{{ t.wins }}V·{{ t.draws }}N·{{ t.losses }}D</span>
+                    </div>
+                </div>
+                {% if t.win_rate is not null %}
+                <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-full rounded-full" style="width: {{ t.win_rate }}%; background: var(--positive)"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </a>
+    {% endif %}
+
     {# Music vs Sport breakdown #}
     {% if stats.concerts > 0 or stats.festivals > 0 or stats.sports > 0 %}
     <a href="{{ path('app_stats_detail', {topic: 'repartition'}) }}" class="card block mb-4 no-underline">

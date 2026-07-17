@@ -11,6 +11,59 @@
         <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Par année</h1>
     </div>
 
+    {# ── Comparaison de deux années ── #}
+    {% if data.compare %}
+    {% set cmp = data.compare %}
+    <div class="card mb-5">
+        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Comparer deux années</h2>
+
+        <form method="get" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4">
+            <select name="a" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
+                    onchange="this.form.submit()">
+                {% for y in cmp.available %}
+                <option value="{{ y }}" {{ y == cmp.a.year ? 'selected' : '' }}>{{ y }}</option>
+                {% endfor %}
+            </select>
+            <span class="text-xs font-medium" style="color: var(--fg-4)">vs</span>
+            <select name="b" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
+                    onchange="this.form.submit()">
+                {% for y in cmp.available %}
+                <option value="{{ y }}" {{ y == cmp.b.year ? 'selected' : '' }}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% set rows = [
+            {'label': 'Événements', 'key': 'total'},
+            {'label': 'Concerts', 'key': 'concerts'},
+            {'label': 'En festival', 'key': 'festivals'},
+            {'label': 'Sport', 'key': 'sports'}
+        ] %}
+        <div class="space-y-1">
+            {% for row in rows %}
+            {% set va = cmp.a[row.key] %}
+            {% set vb = cmp.b[row.key] %}
+            {% set delta = va - vb %}
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5" style="border-bottom: 1px solid var(--border-subtle)">
+                <span class="text-lg font-bold text-center" style="color: var(--fg-1)">{{ va }}</span>
+                <span class="text-xs text-center px-1" style="color: var(--fg-4)">{{ row.label }}</span>
+                <span class="text-lg font-bold text-center" style="color: var(--fg-1)">{{ vb }}
+                    {%- if delta != 0 %}<span class="text-xs font-medium ml-0.5" style="color: {{ delta > 0 ? 'var(--positive)' : 'var(--negative)' }}">{{ delta > 0 ? '+' : '' }}{{ delta }}</span>{% endif -%}
+                </span>
+            </div>
+            {% endfor %}
+
+            {# Note moyenne : peut manquer une année sans notes #}
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5">
+                <span class="text-lg font-bold text-center" style="color: #FBBF24">{{ cmp.a.avg_rating ? '★ ' ~ cmp.a.avg_rating : '—' }}</span>
+                <span class="text-xs text-center px-1" style="color: var(--fg-4)">Note moy.</span>
+                <span class="text-lg font-bold text-center" style="color: #FBBF24">{{ cmp.b.avg_rating ? '★ ' ~ cmp.b.avg_rating : '—' }}</span>
+            </div>
+        </div>
+        <p class="text-[11px] mt-2 text-center" style="color: var(--fg-4)">L'écart affiché est celui de {{ cmp.a.year }} par rapport à {{ cmp.b.year }}.</p>
+    </div>
+    {% endif %}
+
     <div class="space-y-3">
         {% for y in data.years %}
         <div class="card">

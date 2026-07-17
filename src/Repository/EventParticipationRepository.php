@@ -8,6 +8,7 @@ use App\Entity\Event;
 use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Stats\FestivalEditions;
+use App\Stats\LuckyTeam;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
@@ -839,7 +840,24 @@ class EventParticipationRepository extends ServiceEntityRepository
             }
         }
 
+        // Bilan porte-bonheur : seulement pour les équipes choisies qui figurent dans
+        // au moins un match vu. La liste des matchs vit sur la page détail, on ne
+        // garde ici que le résumé chiffré de chaque équipe.
+        $favoriteTeams = $user->getFavoriteTeams();
+        $luckyTeams = null;
+        if ($favoriteTeams !== []) {
+            $lucky = LuckyTeam::compute($pastParts, $favoriteTeams);
+            if ($lucky['teams'] !== []) {
+                foreach ($lucky['teams'] as &$t) {
+                    unset($t['matches']);
+                }
+                unset($t);
+                $luckyTeams = $lucky;
+            }
+        }
+
         return [
+            'lucky_teams' => $luckyTeams,
             'has_data' => true,
             'total' => $total,
             // 'concerts' et 'festivals' partitionnent les événements musicaux : ils se

@@ -8,19 +8,25 @@ use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Repository\EventParticipationRepository;
 use App\Stats\FestivalEditions;
+use App\Stats\LuckyTeam;
 
 class StatsDetailService
 {
     public const TOPICS = [
         'evenements', 'lieux', 'notes', 'repartition', 'artistes', 'morceaux',
         'festivals', 'annees', 'mois', 'series', 'periode', 'compagnons',
+        'portebonheur',
     ];
 
     public function __construct(private readonly EventParticipationRepository $repo)
     {
     }
 
-    public function compute(User $user, string $topic): ?array
+    /**
+     * @param array<string, mixed> $params paramètres de requête (ex. les années à
+     *     comparer pour « annees ») ; ignorés par les autres sujets.
+     */
+    public function compute(User $user, string $topic, array $params = []): ?array
     {
         $parts = $this->repo->findPastParticipations($user);
         if ($parts === []) {
@@ -35,13 +41,26 @@ class StatsDetailService
             'artistes' => $this->artists($parts),
             'morceaux' => $this->songs($parts),
             'festivals' => $this->festivals($parts),
-            'annees' => $this->years($parts),
+            'annees' => $this->years($parts, $params),
             'mois' => $this->months($parts),
             'series' => $this->streaks($parts),
             'periode' => $this->period($parts),
             'compagnons' => $this->friends($parts),
+            'portebonheur' => $this->luckyTeam($parts, $user),
             default => null,
         };
+    }
+
+    /** @param EventParticipation[] $parts */
+    private function luckyTeam(array $parts, User $user): ?array
+    {
+        $teams = $user->getFavoriteTeams();
+        if ($teams === []) {
+            return null;
+        }
+        $lucky = LuckyTeam::compute($parts, $teams);
+
+        return $lucky['teams'] !== [] ? $lucky : null;
     }
 
     /** @param EventParticipation[] $parts */
@@ -315,8 +334,11 @@ class StatsDetailService
         ];
     }
 
-    /** @param EventParticipation[] $parts */
-    private function years(array $parts): array
+    /**
+     * @param EventParticipation[] $parts
+     * @param array<string, mixed> $params 'a' et 'b' : les deux années à comparer
+     */
+    private function years(array $parts, array $params = []): array
     {
         $years = [];
         foreach ($parts as $p) {
@@ -345,7 +367,45 @@ class StatsDetailService
         unset($y);
         krsort($years);
 
-        return ['years' => array_values($years), 'max' => max(array_column($years, 'total'))];
+        return [
+            'years' => array_values($years),
+            'max' => max(array_column($years, 'total')),
+            'compare' => $this->yearComparison($years, $params),
+        ];
+    }
+
+    /**
+     * Le face-à-face de deux années. Null s'il n'y a qu'une seule année vécue :
+     * il n'y a alors rien à comparer.
+     *
+     * Les années demandées ('a', 'b') l'emportent si elles existent ; sinon on
+     * retombe sur les deux plus récentes, dans l'ordre où on les lit — la plus
+     * récente à gauche.
+     *
+     * @param array<string, array<string, mixed>> $years indexé par année, déjà trié décroissant
+     * @param array<string, mixed> $params
+     */
+    private function yearComparison(array $years, array $params): ?array
+    {
+        $available = array_map('intval', array_keys($years));
+        if (count($available) < 2) {
+            return null;
+        }
+
+        $pick = static function (mixed $wanted, int $fallback) use ($available): int {
+            $wanted = is_numeric($wanted) ? (int) $wanted : null;
+
+            return ($wanted !== null && in_array($wanted, $available, true)) ? $wanted : $fallback;
+        };
+
+        $a = $pick($params['a'] ?? null, $available[0]);
+        $b = $pick($params['b'] ?? null, $available[1]);
+
+        return [
+            'available' => $available,
+            'a' => $years[(string) $a],
+            'b' => $years[(string) $b],
+        ];
     }
 
     /** @param EventParticipation[] $parts */

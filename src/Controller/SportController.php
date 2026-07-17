@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Repository\EventParticipationRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,5 +39,17 @@ class SportController extends AbstractController
             'past_count' => count($pastParticipations),
             'upcoming_count' => count($upcomingParticipations),
         ]);
+    }
+
+    /** Équipes porte-bonheur : une par sport collectif. Le setter filtre et vide. */
+    #[Route('/favorite-team', name: 'app_sport_favorite_team', methods: ['POST'])]
+    public function favoriteTeam(Request $request, EntityManagerInterface $em): Response
+    {
+        $this->getUser()->setFavoriteTeams($request->request->all('favorite_team'));
+        $em->flush();
+
+        $this->addFlash('success', 'Tes équipes porte-bonheur sont enregistrées.');
+
+        return $this->redirectToRoute('app_sport');
     }
 }

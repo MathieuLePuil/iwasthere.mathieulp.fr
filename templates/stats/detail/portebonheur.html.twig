@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Porte-bonheur — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5">
+
+    <div class="flex items-center gap-3 mb-6">
+        {{ m.back_button(path('app_stats')) }}
+        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Porte-bonheur</h1>
+    </div>
+
+    {% set sport_labels = {'football': '⚽ Football', 'rugby': '🏉 Rugby'} %}
+    {% for t in data.teams %}
+    <div class="mb-8">
+
+        {# ── Résumé ── #}
+        <div class="card mb-3 text-center py-6">
+            <div class="text-4xl mb-1">🍀</div>
+            <p class="text-xs" style="color: var(--fg-4)">{{ sport_labels[t.sport] ?? t.sport }}</p>
+            <p class="font-semibold text-lg" style="color: var(--fg-1)">{{ t.team }}</p>
+            {% if t.win_rate is not null %}
+            <p class="text-5xl font-black mt-2" style="color: var(--positive)">{{ t.win_rate }}%</p>
+            <p class="text-sm mt-1" style="color: var(--fg-3)">de victoires quand tu es au stade</p>
+            {% else %}
+            <p class="text-sm mt-3" style="color: var(--fg-3)">Aucun match départageable pour l'instant</p>
+            {% endif %}
+        </div>
+
+        {# ── Bilan chiffré ── #}
+        <div class="grid grid-cols-3 gap-3 mb-3">
+            <div class="card text-center py-4">
+                <p class="text-2xl font-black" style="color: var(--positive)">{{ t.wins }}</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Victoire{{ t.wins > 1 ? 's' : '' }}</p>
+            </div>
+            <div class="card text-center py-4">
+                <p class="text-2xl font-black" style="color: var(--fg-2)">{{ t.draws }}</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Nul{{ t.draws > 1 ? 's' : '' }}</p>
+            </div>
+            <div class="card text-center py-4">
+                <p class="text-2xl font-black" style="color: var(--negative)">{{ t.losses }}</p>
+                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Défaite{{ t.losses > 1 ? 's' : '' }}</p>
+            </div>
+        </div>
+
+        <p class="text-xs mb-3 px-1" style="color: var(--fg-4)">
+            Sur {{ t.attended }} match{{ t.attended > 1 ? 's' : '' }} vu{{ t.attended > 1 ? 's' : '' }}
+            où {{ t.team }} jouait{% if t.unknown > 0 %}, dont {{ t.unknown }} sans résultat départageable (exclu{{ t.unknown > 1 ? 's' : '' }} du taux){% endif %}.
+        </p>
+
+        {# ── Détail des matchs ── #}
+        <div class="card" style="padding: 0; overflow: hidden">
+            {% for match in t.matches %}
+            {% set p = match.participation %}
+            {% set sl = p.event.scoreline %}
+            <a href="{{ path('app_event_show', {id: p.event.id}) }}"
+               class="block px-4 py-3 no-underline transition-colors"
+               style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}">
+                <div class="flex items-center gap-3">
+                    {% set badge = {
+                        'win':     {'label': 'V', 'color': 'var(--positive)', 'bg': 'var(--positive-soft)'},
+                        'draw':    {'label': 'N', 'color': 'var(--fg-2)', 'bg': 'var(--bg-3)'},
+                        'loss':    {'label': 'D', 'color': 'var(--negative)', 'bg': 'rgba(232,155,142,0.15)'},
+                        'unknown': {'label': '?', 'color': 'var(--fg-4)', 'bg': 'var(--bg-3)'}
+                    }[match.result] %}
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0"
+                          style="color: {{ badge.color }}; background: {{ badge.bg }}">{{ badge.label }}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm truncate" style="color: var(--fg-1)">{{ p.event.teams }}</p>
+                        <p class="text-xs mt-0.5" style="color: var(--fg-4)">
+                            {{ p.event.date|date('d/m/Y') }}{% if p.event.tournamentName %} · {{ p.event.tournamentName }}{% endif %}
+                        </p>
+                    </div>
+                    {% if sl %}
+                    <span class="text-sm font-bold flex-shrink-0" style="color: var(--fg-1); font-family: var(--font-mono)">{{ sl.score }}</span>
+                    {% elseif p.event.finalScore %}
+                    <span class="text-sm font-bold flex-shrink-0" style="color: var(--fg-1); font-family: var(--font-mono)">{{ p.event.finalScore }}</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

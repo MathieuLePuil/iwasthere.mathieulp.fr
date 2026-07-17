@@ -43,6 +43,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $bio = null;
 
     /**
+     * Équipe porte-bonheur par sport collectif, saisie librement : une entrée par
+     * sport, ex. ['football' => 'ESTAC', 'rugby' => 'Stade Français']. Sert au bilan
+     * sportif, où on la rapproche par nom des camps « A vs B » des matchs vus. Vide
+     * tant que l'utilisateur n'a rien choisi.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $favoriteTeams = [];
+
+    /**
      * Le compte est-il ouvert au monde ? 'public' ou 'private', et rien d'autre.
      *
      * C'est le seul réglage de confidentialité qui existe, et il régit tout :
@@ -191,6 +202,40 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->bio = $bio;
 
         return $this;
+    }
+
+    /** Les sports collectifs où une équipe porte-bonheur a un sens (le tennis est individuel). */
+    public const COLLECTIVE_SPORTS = ['football', 'rugby'];
+
+    /** @return array<string, string> */
+    public function getFavoriteTeams(): array
+    {
+        return $this->favoriteTeams;
+    }
+
+    /**
+     * Ne retient que les sports collectifs connus et les noms non vides : une case
+     * laissée vide retire l'équipe de ce sport.
+     *
+     * @param array<string, string|null> $teams
+     */
+    public function setFavoriteTeams(array $teams): static
+    {
+        $clean = [];
+        foreach (self::COLLECTIVE_SPORTS as $sport) {
+            $name = trim((string) ($teams[$sport] ?? ''));
+            if ($name !== '') {
+                $clean[$sport] = $name;
+            }
+        }
+        $this->favoriteTeams = $clean;
+
+        return $this;
+    }
+
+    public function getFavoriteTeam(string $sport): ?string
+    {
+        return $this->favoriteTeams[$sport] ?? null;
     }
 
     public function getProfileVisibility(): string
