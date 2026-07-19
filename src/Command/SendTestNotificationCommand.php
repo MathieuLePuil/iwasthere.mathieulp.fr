@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Message\SendPushNotification;
 use App\Repository\UserRepository;
 use App\Service\NotificationService;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -13,6 +14,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsCommand(
     name: 'app:push:test',
@@ -23,6 +25,7 @@ class SendTestNotificationCommand extends Command
     public function __construct(
         private readonly NotificationService $notificationService,
         private readonly UserRepository $userRepository,
+        private readonly MessageBusInterface $bus,
     ) {
         parent::__construct();
     }
@@ -31,7 +34,8 @@ class SendTestNotificationCommand extends Command
     {
         $this
             ->addArgument('message', InputArgument::OPTIONAL, 'Notification body', 'Ceci est une notification de test.')
-            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Target a single user by username (with or without @)');
+            ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Target a single user by username (with or without @)')
+            ->addOption('async', 'a', InputOption::VALUE_NONE, 'Dispatch through Messenger instead of sending directly (tests the production path)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -49,6 +53,13 @@ class SendTestNotificationCommand extends Command
                 return Command::FAILURE;
             }
             $userId = (string) $user->getId();
+        }
+
+        if ($input->getOption('async')) {
+            $this->bus->dispatch(new SendPushNotification('IWasThere — Test', $message, $userId));
+            $io->writeln('Message dispatché sur le transport async — il partira quand le worker le consommera.');
+
+            return Command::SUCCESS;
         }
 
         $result = $this->notificationService->sendNotification('IWasThere — Test', $message, $userId);

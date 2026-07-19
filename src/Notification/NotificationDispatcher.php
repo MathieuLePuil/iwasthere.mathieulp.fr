@@ -6,9 +6,10 @@ namespace App\Notification;
 
 use App\Entity\Notification;
 use App\Entity\User;
+use App\Message\SendPushNotification;
 use App\Repository\NotificationRepository;
-use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Le point d'entrée unique pour notifier quelqu'un.
@@ -27,7 +28,7 @@ final class NotificationDispatcher
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly NotificationRepository $notifRepo,
-        private readonly NotificationService $pushService,
+        private readonly MessageBusInterface $bus,
     ) {}
 
     /**
@@ -96,13 +97,13 @@ final class NotificationDispatcher
         return true;
     }
 
-    /** Pousse sans rien inscrire, si l'utilisateur veut ce type. */
+    /** Pousse sans rien inscrire, si l'utilisateur veut ce type. L'envoi part en asynchrone. */
     public function push(User $recipient, NotificationType $type, string $title, string $body, ?string $url = null): void
     {
         if (!$recipient->wantsPush($type)) {
             return;
         }
 
-        $this->pushService->sendNotification($title, $body, (string) $recipient->getId(), $url);
+        $this->bus->dispatch(new SendPushNotification($title, $body, (string) $recipient->getId(), $url));
     }
 }
