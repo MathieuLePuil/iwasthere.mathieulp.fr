@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IWasThere change d'adresse</title>
+</head>
+<body style="margin:0;padding:0;background:#0B0D10;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <div style="max-width:480px;margin:32px auto;background:#111318;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.07)">
+
+        {# Header #}
+        <div style="background:linear-gradient(135deg,#1a1f2e 0%,#0d1220 100%);padding:32px 24px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.07)">
+            <img src="https://iwasthereapp.app/logo.png" alt="IWasThere" width="56" height="56" style="display:block;margin:0 auto 12px;width:56px;height:56px">
+            <h1 style="margin:0;font-size:20px;font-weight:700;color:#F2F3F5;letter-spacing:-0.01em">IWasThere</h1>
+        </div>
+
+        {# Body #}
+        <div style="padding:32px 24px">
+            <h2 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#F2F3F5">L'application a changé d'adresse</h2>
+            <p style="margin:0 0 20px;font-size:14px;color:#9CA3AF;line-height:1.6">
+                Bonjour {{ user.displayName }},<br><br>
+                IWasThere vit maintenant sur <strong style="color:#F2F3F5">iwasthereapp.app</strong>.
+                Ton compte ne change pas : même pseudo, mêmes identifiants, rien à recréer.
+                Pour continuer à utiliser l'application depuis ton téléphone, il faut juste mettre à jour le raccourci installé sur ton écran d'accueil — sans ça, l'ancien raccourci ne fonctionnera plus.
+            </p>
+
+            <div style="background:rgba(61,220,151,0.08);border:1px solid rgba(61,220,151,0.25);border-radius:12px;padding:16px 20px;margin:0 0 20px">
+                <p style="margin:0;font-size:14px;color:#3DDC97;line-height:1.5;font-weight:600">
+                    ✓ Toutes tes données sont toujours là
+                </p>
+                <p style="margin:6px 0 0;font-size:13px;color:#9CA3AF;line-height:1.5">
+                    Souvenirs, événements, statistiques, amis : rien n'a été perdu ni réinitialisé pendant le changement d'adresse.
+                </p>
+            </div>
+
+            <div style="background:#0d0f14;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;margin:0 0 24px">
+                <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em">Marche à suivre</p>
+                <table role="presentation" style="width:100%;border-collapse:collapse">
+                    <tr>
+                        <td style="width:24px;vertical-align:top;padding-bottom:14px;color:#3DDC97;font-weight:700;font-size:13px">1.</td>
+                        <td style="vertical-align:top;padding-bottom:14px;font-size:13px;color:#D1D5DB;line-height:1.5">Supprime l'application de l'écran d'accueil de ton téléphone</td>
+                    </tr>
+                    <tr>
+                        <td style="width:24px;vertical-align:top;padding-bottom:14px;color:#3DDC97;font-weight:700;font-size:13px">2.</td>
+                        <td style="vertical-align:top;padding-bottom:14px;font-size:13px;color:#D1D5DB;line-height:1.5">Rends-toi sur <strong style="color:#F2F3F5">iwasthereapp.app</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="width:24px;vertical-align:top;padding-bottom:14px;color:#3DDC97;font-weight:700;font-size:13px">3.</td>
+                        <td style="vertical-align:top;padding-bottom:14px;font-size:13px;color:#D1D5DB;line-height:1.5">Ajoute-la à nouveau à l'écran d'accueil</td>
+                    </tr>
+                    <tr>
+                        <td style="width:24px;vertical-align:top;color:#3DDC97;font-weight:700;font-size:13px">4.</td>
+                        <td style="vertical-align:top;font-size:13px;color:#D1D5DB;line-height:1.5">Réactive les notifications dans les paramètres de l'application</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="text-align:center;margin:28px 0">
+                <a href="https://iwasthereapp.app"
+                   style="display:inline-block;background:#3DDC97;color:#0B0D10;text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:12px;letter-spacing:-0.01em">
+                    Aller sur iwasthereapp.app
+                </a>
+            </div>
+
+        </div>
+
+        {# Footer #}
+        <div style="padding:16px 24px;background:#0d0f14;border-top:1px solid rgba(255,255,255,0.05);text-align:center">
+            <p style="margin:0;font-size:11px;color:#4B5563">
+                IWasThere — Ton journal d'expériences live
+            </p>
+        </div>
+    </div>
+</body>
+</html>
