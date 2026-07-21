@@ -37,12 +37,19 @@
      le violet devient foncé — voir l'override du bloc light. */
   --on-positive: #0B0D10;
 
-  /* Teintes de catégorie servant de remplissage aux graphes (répartition, notes).
-     Concert/festival réutilisent --positive/--negative ; ces trois-là et la note
-     étoilée sont réécrits en clair pour rester nets sur piste claire. */
-  --cat-football: #60A5FA;
-  --cat-rugby:    #A8B89A;
-  --cat-tennis:   #F4D04A;
+  /* Couleur secondaire par type d'événement : une teinte propre à chaque type,
+     déclinée en accent (texte/trait) + -soft (aplat de fond des badges/chips).
+     Un seul jeu de tokens sert PARTOUT — badges, graphes de répartition — pour
+     qu'un même type porte toujours exactement la même couleur. Football passe au
+     bleu (et non plus au vert) pour ne pas se confondre avec le vert-sauge du
+     rugby. Tout est réécrit dans le bloc clair pour tenir sur piste claire. */
+  --type-concert:  #C890FF; --type-concert-soft:  rgba(176, 96, 255, 0.15);
+  --type-festival: #D6714A; --type-festival-soft: rgba(214, 113, 74, 0.14);
+  --type-football: #60A5FA; --type-football-soft: rgba(96, 165, 250, 0.14);
+  --type-rugby:    #A8B89A; --type-rugby-soft:    rgba(168, 184, 154, 0.14);
+  --type-tennis:   #F4D04A; --type-tennis-soft:   rgba(244, 208, 74, 0.12);
+  --type-default:  #8B95A1; --type-default-soft:  rgba(139, 149, 161, 0.18);
+
   --rating:       #FBBF24;
 }
 
@@ -78,12 +85,17 @@
      assez clair (#C8654F) pour garder du texte noir — 4.84:1, AA validé. */
   --on-positive: #FFFFFF;
 
-  /* Bleu, sauge et jaune pastel disparaissaient sur la piste claire des graphes
-     (le jaune tennis avait la même luminance que le fond) ; le label « N ★ » en
-     ambre tombait à 1.7:1 sur blanc. Versions foncées, lisibles en clair. */
-  --cat-football: #2563EB;
-  --cat-rugby:    #5A6A2E;
-  --cat-tennis:   #806600;
+  /* Versions foncées des teintes de type : les pastels (bleu, sauge, jaune, et
+     l'ambre du « N ★ » qui tombait à 1.7:1) disparaissaient sur piste claire —
+     le jaune tennis avait la même luminance que le fond. Ces valeurs tiennent
+     l'AA (4.5:1) en texte de badge sur carte blanche. */
+  --type-concert:  #7B2FBE; --type-concert-soft:  rgba(123, 47, 190, 0.10);
+  --type-festival: #B4451E; --type-festival-soft: rgba(180, 69, 30, 0.10);
+  --type-football: #2563EB; --type-football-soft: rgba(37, 99, 235, 0.10);
+  --type-rugby:    #5A6A2E; --type-rugby-soft:    rgba(90, 106, 46, 0.12);
+  --type-tennis:   #806600; --type-tennis-soft:   rgba(128, 102, 0, 0.10);
+  --type-default:  var(--fg-2); --type-default-soft: rgba(11, 13, 16, 0.06);
+
   --rating:       #B45309;
 }
 
@@ -496,12 +508,14 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .badge-concert  { background: rgba(176, 96, 255, 0.15); color: #C890FF; }
-  .badge-festival { background: rgba(214, 113, 74, 0.14); color: #D6714A; }
-  .badge-football { background: rgba(74, 222, 128, 0.12);  color: #7EE8A2; }
-  .badge-rugby    { background: rgba(163, 177, 138, 0.14); color: #A8B89A; }
-  .badge-tennis   { background: rgba(234, 179, 8, 0.12);   color: #F4D04A; }
-  .badge-default  { background: rgba(139, 149, 161, 0.18); color: #8B95A1; }
+  /* Un badge = la couleur secondaire de son type (accent + aplat -soft). Les
+     tokens basculent seuls en clair, donc plus besoin d'override par thème. */
+  .badge-concert  { background: var(--type-concert-soft);  color: var(--type-concert); }
+  .badge-festival { background: var(--type-festival-soft); color: var(--type-festival); }
+  .badge-football { background: var(--type-football-soft); color: var(--type-football); }
+  .badge-rugby    { background: var(--type-rugby-soft);    color: var(--type-rugby); }
+  .badge-tennis   { background: var(--type-tennis-soft);   color: var(--type-tennis); }
+  .badge-default  { background: var(--type-default-soft);  color: var(--type-default); }
 
   /* Section title */
   .section-title {
@@ -1199,18 +1213,8 @@
 :root[data-theme="light"] .iwt-flash--warning { --flash-bg: #FDF4E3; --flash-border: rgba(180, 83, 9, 0.32); --flash-icon: #B45309; }
 :root[data-theme="light"] .iwt-flash--info    { --flash-bg: #E9F1FE; --flash-border: rgba(29, 78, 216, 0.30); --flash-icon: #1D4ED8; }
 
-/* ── Pastilles de catégorie — clair ──
-   Les teintes des badges sont calibrées pour le sombre : du texte pastel clair sur
-   un fond sombre. Sur les cartes blanches du clair elles s'effondraient — le jaune
-   tennis (#F4D04A) ne faisait que 1.5:1, le vert football et le violet concert à
-   peine mieux. On garde l'identité colorée mais chaque teinte descend à un ton
-   foncé et saturé qui passe AA (≥ 4.5:1) sur les fonds pâles. */
-:root[data-theme="light"] .badge-concert  { background: rgba(123, 47, 190, 0.10); color: #7B2FBE; }
-:root[data-theme="light"] .badge-festival { background: rgba(180, 69, 30, 0.10);  color: #B4451E; }
-:root[data-theme="light"] .badge-football { background: rgba(21, 128, 61, 0.10);  color: #15803D; }
-:root[data-theme="light"] .badge-rugby    { background: rgba(90, 106, 46, 0.12);  color: #5A6A2E; }
-:root[data-theme="light"] .badge-tennis   { background: rgba(128, 102, 0, 0.10);  color: #806600; }
-:root[data-theme="light"] .badge-default  { background: rgba(11, 13, 16, 0.06);   color: var(--fg-2); }
+/* Les badges de type n'ont plus d'override clair : ils lisent les tokens
+   --type-*(-soft), déjà rebasculés en versions foncées AA dans le bloc clair. */
 
 /* ── Art-tags (pastille de type sur l'affiche) — clair ──
    Cas particulier : le tag surmonte tantôt une affiche sombre (hero d'accueil),

@@ -12,18 +12,18 @@
     </div>
 
     {% set type_labels = {
-        'concert':  {label: 'Concerts',  emoji: '🎤', color: 'var(--positive)'},
-        'festival': {label: 'En festival', emoji: '🎪', color: 'var(--negative)'},
-        'football': {label: 'Football',  emoji: '⚽', color: 'var(--cat-football)'},
-        'rugby':    {label: 'Rugby',     emoji: '🏉', color: 'var(--cat-rugby)'},
-        'tennis':   {label: 'Tennis',    emoji: '🎾', color: 'var(--cat-tennis)'},
+        'concert':  {label: 'Concerts',  emoji: '🎤', color: 'var(--type-concert)'},
+        'festival': {label: 'En festival', emoji: '🎪', color: 'var(--type-festival)'},
+        'football': {label: 'Football',  emoji: '⚽', color: 'var(--type-football)'},
+        'rugby':    {label: 'Rugby',     emoji: '🏉', color: 'var(--type-rugby)'},
+        'tennis':   {label: 'Tennis',    emoji: '🎾', color: 'var(--type-tennis)'},
     } %}
 
     <div class="card mb-4">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par type d'événement</h2>
         <div class="space-y-2">
             {% for type, count in data.types %}
-            {% set cfg = type_labels[type] ?? {label: type, emoji: '🎟️', color: 'var(--positive)'} %}
+            {% set cfg = type_labels[type] ?? {label: type, emoji: '🎟️', color: 'var(--type-default)'} %}
             <div class="flex items-center gap-3">
                 <span class="text-xl">{{ cfg.emoji }}</span>
                 <div class="flex-1">
@@ -55,10 +55,10 @@
                 </div>
                 <div class="flex h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
                     {% if cats.music > 0 %}
-                    <div class="h-full" style="width: {{ (cats.music / year_total * 100)|round }}%; background: var(--positive)"></div>
+                    <div class="h-full" style="width: {{ (cats.music / year_total * 100)|round }}%; background: var(--type-concert)"></div>
                     {% endif %}
                     {% if cats.sport > 0 %}
-                    <div class="h-full" style="width: {{ (cats.sport / year_total * 100)|round }}%; background: var(--cat-football)"></div>
+                    <div class="h-full" style="width: {{ (cats.sport / year_total * 100)|round }}%; background: var(--type-football)"></div>
                     {% endif %}
                 </div>
             </div>
