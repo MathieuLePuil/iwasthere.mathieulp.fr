@@ -1,0 +1,272 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Compléter — {{ event.artistName ?? event.tournamentName ?? 'Événement' }} — IWasThere{% endblock %}
+
+{% set name = event.artistName ?? event.tournamentName ?? event.teams ?? 'Événement' %}
+{% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾', 'basket': '🏀'} %}
+{% set emoji = type_emoji[event.type] ?? '🎫' %}
+{% set has_setlist = event.category == 'music' and event.setlist|length > 0 %}
+{% set first_rating = participation.rating is null %}
+{% set saved_friends = participation.friends %}
+{% set saved_app_ids = saved_friends|filter(f => f.type == 'app')|map(f => f.userId) %}
+
+{% block body %}
+<form method="post"
+      enctype="multipart/form-data"
+      class="cmpl"
+      data-controller="completion"
+      data-completion-url-value="{{ path('app_event_complete', {id: event.id}) }}"
+      data-completion-show-url-value="{{ path('app_event_show', {id: event.id}) }}">
+
+    {# ── Barre de progression + fermeture ── #}
+    <div class="cmpl-chrome" data-completion-chrome>
+        <a href="{{ path('app_event_show', {id: event.id}) }}" class="cmpl-close" aria-label="Fermer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </a>
+        <div class="cmpl-track"><div class="cmpl-fill" data-completion-target="bar"></div></div>
+        <span class="cmpl-count"><b data-completion-target="current">1</b>/<span data-completion-target="total">1</span></span>
+    </div>
+
+    <div class="cmpl-stage">
+
+        {# ── Étape : intro ── #}
+        <section class="cmpl-step" data-completion-target="step" data-step="intro">
+            <div class="cmpl-poster poster-{{ event.artistImageUrl ? '' : (event.type ?? 'default') }}"
+                 {% if event.artistImageUrl %}style="background: linear-gradient(180deg, rgba(11,13,16,.15) 0%, rgba(11,13,16,.7) 100%), url('{{ event.artistImageUrl }}') center 25%/cover"{% endif %}>
+                <span class="cmpl-poster-emoji">{{ emoji }}</span>
+            </div>
+            <h1 class="cmpl-title">C'était comment&nbsp;?</h1>
+            <p class="cmpl-lead">
+                Deux minutes pour garder une trace de
+                <b style="color: var(--fg-1)">{{ name }}</b>
+                — {{ event.date|date('d/m/Y') }}{% if event.venue %} · {{ event.venue.name }}{% endif %}.
+            </p>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">C'est parti ✨</button>
+            </div>
+        </section>
+
+        {# ── Étape : note ── #}
+        <section class="cmpl-step" data-completion-target="step" data-step="rating">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">Ta note</span>
+                <h2 class="cmpl-h2">Alors, ce {{ event.category == 'sport' ? 'match' : 'moment' }}&nbsp;?</h2>
+                <p class="cmpl-sub">Touche une étoile — tu pourras changer d'avis plus tard.</p>
+            </div>
+            <div class="cmpl-stars">
+                {% for i in 1..5 %}
+                <label class="cmpl-star-lbl">
+                    <input type="radio" name="rating" value="{{ i }}" class="sr-only"
+                           {% if first_rating %}data-first="1"{% endif %}
+                           {% if participation.rating == i %}checked{% endif %}
+                           data-action="completion#onRate">
+                    <svg data-star viewBox="0 0 20 20" fill="currentColor"
+                         style="color: {{ participation.rating >= i ? 'var(--positive)' : 'var(--bg-3)' }}">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="cmpl-rating-hint" data-rating-hint>Touche une étoile</p>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-secondary cmpl-skip" data-action="completion#next">Passer</button>
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">Continuer</button>
+            </div>
+        </section>
+
+        {# ── Étape : résultat (sport) ── #}
+        {% if event.category == 'sport' %}
+        <section class="cmpl-step" data-completion-target="step" data-step="result" data-type="{{ event.type }}">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">Le résultat</span>
+                <h2 class="cmpl-h2">Quel a été le score&nbsp;?</h2>
+                {% if event.teams %}<p class="cmpl-sub">{{ event.teams }}</p>{% endif %}
+            </div>
+            <input type="text" name="final_score" class="input-field cmpl-score"
+                   placeholder="{{ event.type == 'tennis' ? '6/4 7/5' : '3 - 1' }}"
+                   value="{{ event.finalScore }}" autocomplete="off" inputmode="text">
+            {% if event.type == 'tennis' %}
+            {% set winner_parts = event.teams and ' vs ' in event.teams
+                ? event.teams|split(' vs ', 2)|map(t => t|trim)
+                : ['Joueur 1', 'Joueur 2'] %}
+            <p class="cmpl-mini-label">Qui a gagné&nbsp;?</p>
+            <div class="cmpl-winner">
+                {% for i in [1, 2] %}
+                <label class="cmpl-winner-opt">
+                    <input type="checkbox" name="winner" value="{{ i }}" class="sr-only"
+                           onchange="cmplExclusiveWinner(this)"
+                           {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winner_parts[i-1]|lower) %}checked{% endif %}>
+                    <span class="cmpl-winner-box">🏆 {{ winner_parts[i-1] }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <p class="cmpl-error" data-cmpl-error hidden></p>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-secondary cmpl-skip" data-action="completion#next">Passer</button>
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">Continuer</button>
+            </div>
+        </section>
+        {% endif %}
+
+        {# ── Étape : ressenti ── #}
+        <section class="cmpl-step" data-completion-target="step" data-step="comment">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">Ton ressenti</span>
+                <h2 class="cmpl-h2">Un moment à retenir&nbsp;?</h2>
+                <p class="cmpl-sub">Une phrase, une anecdote, l'ambiance… ou rien du tout.</p>
+            </div>
+            <textarea name="comment" rows="4" class="input-field cmpl-textarea"
+                      placeholder="{{ event.category == 'sport' ? 'L\'ambiance dans le stade, le but décisif…' : 'Le rappel, la première note, la foule…' }}">{{ participation.comment }}</textarea>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-secondary cmpl-skip" data-action="completion#next">Passer</button>
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">Continuer</button>
+            </div>
+        </section>
+
+        {# ── Étape : setlist retrouvée (musique) ── #}
+        {% if has_setlist %}
+        <section class="cmpl-step" data-completion-target="step" data-step="setlist">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">🎶 Setlist</span>
+                <h2 class="cmpl-h2">On a retrouvé la setlist&nbsp;!</h2>
+                <p class="cmpl-sub">{{ event.setlistNormalized|length + event.setlistEncoresNormalized|length }} titres joués ce soir-là.</p>
+            </div>
+            <div class="cmpl-setlist">
+                <ol>
+                    {% for song in event.setlistNormalized|slice(0, 6) %}
+                    <li><span class="cmpl-setlist-num">{{ loop.index }}</span>{{ song.name }}</li>
+                    {% endfor %}
+                </ol>
+                {% set remaining = event.setlistNormalized|length + event.setlistEncoresNormalized|length - 6 %}
+                {% if remaining > 0 %}
+                <p class="cmpl-setlist-more">+ {{ remaining }} autre{{ remaining > 1 ? 's' : '' }} sur ta fiche</p>
+                {% endif %}
+            </div>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">Génial, la suite</button>
+            </div>
+        </section>
+        {% endif %}
+
+        {# ── Étape : avec qui ── #}
+        <section class="cmpl-step" data-completion-target="step" data-step="friends">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">Avec qui</span>
+                <h2 class="cmpl-h2">Tu y étais accompagné&nbsp;?</h2>
+                <p class="cmpl-sub">Taggue les personnes présentes — elles seront prévenues.</p>
+            </div>
+
+            <div data-controller="event-friends">
+                <span class="sr-only" data-event-friends-target="toggle" aria-hidden="true"></span>
+                <div data-event-friends-target="panel">
+                    {% if confirmed_friends|length > 0 %}
+                    <p class="cmpl-mini-label">Tes amis sur IWasThere</p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        {% for rel in confirmed_friends %}
+                        {% set f = rel.owner == app.user ? rel.friendUser : rel.owner %}
+                        {% if f %}
+                        <label class="cursor-pointer select-none">
+                            <input type="checkbox" name="friends_app[]" value="{{ f.id }}" class="sr-only"
+                                   data-event-friends-target="appCheckbox"
+                                   {% if f.id ~ '' in saved_app_ids %}checked{% endif %}>
+                            <div class="flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all text-sm font-medium"
+                                 style="border-color: var(--border-default); background: var(--bg-2); color: var(--fg-2)">
+                                {% if f.avatarUrl %}
+                                    <img src="{{ f.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt="">
+                                {% else %}
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                         style="background: var(--positive-soft); color: var(--positive)">{{ f.displayName|first|upper }}</div>
+                                {% endif %}
+                                <span>{{ f.displayName }}</span>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% for f in saved_friends|filter(f => f.type == 'external') %}
+                        <input type="hidden" data-prefill-external value="{{ f.name }}">
+                    {% endfor %}
+
+                    <p class="cmpl-mini-label">Quelqu'un d'autre&nbsp;?</p>
+                    <div class="flex gap-2">
+                        <input type="text" data-event-friends-target="nameInput"
+                               data-action="keydown->event-friends#handleEnter"
+                               placeholder="Prénom ou pseudo…" class="input-field flex-1">
+                        <button type="button" data-action="click->event-friends#addExternal"
+                                class="btn-secondary px-4 shrink-0">Ajouter</button>
+                    </div>
+                    <div data-event-friends-target="tagList" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+            </div>
+
+            <div class="cmpl-nav">
+                <button type="button" class="btn-secondary cmpl-skip" data-action="completion#next">Passer</button>
+                <button type="button" class="btn-primary cmpl-cta" data-action="completion#next">Continuer</button>
+            </div>
+        </section>
+
+        {# ── Étape : photo ── #}
+        <section class="cmpl-step" data-completion-target="step" data-step="photo">
+            <div class="cmpl-head">
+                <span class="cmpl-kicker">Souvenir</span>
+                <h2 class="cmpl-h2">Une photo de la soirée&nbsp;?</h2>
+                <p class="cmpl-sub">Elle habillera ton ticket collector.</p>
+            </div>
+
+            <div data-photo-frame hidden class="cmpl-photo-frame">
+                <img data-completion-target="photoPreview" alt="Aperçu" class="cmpl-photo-img">
+            </div>
+
+            <label class="cmpl-dropzone">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                    <circle cx="12" cy="13" r="3"/>
+                </svg>
+                <span class="cmpl-dropzone-txt">Choisir une photo</span>
+                <span class="cmpl-dropzone-sub">optionnel · JPEG, PNG, WebP</span>
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                       class="sr-only" data-action="completion#onPhoto">
+            </label>
+
+            <p class="cmpl-error" data-cmpl-error hidden></p>
+            <div class="cmpl-nav">
+                <button type="button" class="btn-secondary cmpl-skip" data-completion-finish data-action="completion#next">Passer</button>
+                <button type="button" class="btn-primary cmpl-cta" data-completion-finish data-action="completion#next">Terminer 🎉</button>
+            </div>
+        </section>
+
+        {# ── Écran de fin (célébration) ── #}
+        <section class="cmpl-step cmpl-done" data-completion-target="step" data-completion-done>
+            <div class="cmpl-confetti" aria-hidden="true">
+                {% set colors = ['#B060FF', '#7EE8A2', '#F4D04A', '#60A5FA', '#E89B8E', '#C890FF'] %}
+                {% for i in 1..16 %}
+                <span style="left: {{ (i * 6.1)|round }}%; background: {{ colors[i % 6] }};
+                             animation-delay: {{ (i * 0.09)|round(2) }}s;
+                             animation-duration: {{ (1.6 + (i % 5) * 0.28)|round(2) }}s;"></span>
+                {% endfor %}
+            </div>
+            <div class="cmpl-done-badge">🎉</div>
+            <h2 class="cmpl-title">Fiche complétée&nbsp;!</h2>
+            <p class="cmpl-lead">Ton souvenir de <b style="color: var(--fg-1)">{{ name }}</b> est bien rangé dans ton journal.</p>
+            <div class="cmpl-nav">
+                <a href="{{ path('app_event_show', {id: event.id}) }}" class="btn-primary cmpl-cta" data-turbo="false">Voir ma fiche</a>
+                <a href="{{ path('app_home') }}" class="btn-secondary cmpl-skip" data-turbo="false">Retour à l'accueil</a>
+            </div>
+        </section>
+
+    </div>
+</form>
+
+<script>
+    /* Case vainqueur exclusive (tennis) : cocher l'un décoche l'autre. */
+    function cmplExclusiveWinner(el) {
+        if (!el.checked) return;
+        el.closest('.cmpl-winner').querySelectorAll('input[name="winner"]').forEach(function (c) {
+            if (c !== el) c.checked = false;
+        });
+    }
+</script>
+{% endblock %}

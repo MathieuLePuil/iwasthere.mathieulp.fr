@@ -138,7 +138,7 @@ class SendEventRemindersCommand extends Command
             $count === 1
                 ? 'Tu n\'as pas encore rempli ta fiche pour ' . $this->eventName($first) . '.'
                 : sprintf('%d événements attendent ta note et tes commentaires.', $count),
-            $count === 1 ? '/event/' . $first->getId() . '/edit' : '/',
+            $count === 1 ? '/event/' . $first->getId() . '/complete' : '/',
             dedupeKey: 'completion:' . $today,
         );
 

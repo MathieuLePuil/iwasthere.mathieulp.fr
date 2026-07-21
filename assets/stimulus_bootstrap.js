@@ -14,6 +14,8 @@ import TicketController from './controllers/ticket_controller.js';
 import FormLoaderController from './controllers/form_loader_controller.js';
 import FeedController from './controllers/feed_controller.js';
 import RewindController from './controllers/rewind_controller.js';
+import CompletionController from './controllers/completion_controller.js';
+import SouvenirGateController from './controllers/souvenir_gate_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -31,3 +33,5 @@ app.register('ticket', TicketController);
 app.register('form-loader', FormLoaderController);
 app.register('feed', FeedController);
 app.register('rewind', RewindController);
+app.register('completion', CompletionController);
+app.register('souvenir-gate', SouvenirGateController);

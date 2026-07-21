@@ -11,7 +11,7 @@
         <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Modifier la fiche</h1>
     </div>
 
-    <form method="post" class="space-y-5" data-controller="form-loader">
+    <form method="post" class="space-y-5" data-controller="form-loader souvenir-gate">
 
         {# Event info — date + type #}
         <div class="card space-y-4">
@@ -20,7 +20,9 @@
                 <div>
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date</label>
                     <input type="date" name="date" class="input-field"
-                           value="{{ event.date|date('Y-m-d') }}" required>
+                           value="{{ event.date|date('Y-m-d') }}" required
+                           data-souvenir-gate-target="date"
+                           data-action="change->souvenir-gate#update">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Heure de début</label>
@@ -120,6 +122,9 @@
             <p class="text-xs mt-1" style="color: var(--fg-4)">Note, setlist, photo et souvenirs seront disponibles une fois l'événement passé.</p>
         </div>
         {% else %}
+        {# Enveloppe observée : si la date repasse dans le futur, tout le souvenir est
+           masqué et ses champs désactivés (voir le contrôleur souvenir-gate). #}
+        <div class="space-y-5" data-souvenir-gate-target="pastOnly">
 
         {# Rating #}
         <div class="card">
@@ -228,6 +233,7 @@
                    placeholder="120" min="0" value="{{ participation.duration }}">
         </div>
 
+        </div>{# /pastOnly #}
         {% endif %}
 
         {# Factual event data #}

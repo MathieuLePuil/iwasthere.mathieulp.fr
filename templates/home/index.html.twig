@@ -63,7 +63,7 @@
                     {% for p in pending_reminders|slice(0, 1) %}{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}{% endfor %}{% if pending_reminders|length > 1 %} +{{ pending_reminders|length - 1 }} autre{{ pending_reminders|length > 2 ? 's' : '' }}{% endif %}
                 </span>
             </div>
-            <a href="{{ path('app_event_show', {id: pending_reminders[0].event.id}) }}" class="iwt-reminder-cta">
+            <a href="{{ path('app_event_complete', {id: pending_reminders[0].event.id}) }}" class="iwt-reminder-cta">
                 Compléter
             </a>
         </div>

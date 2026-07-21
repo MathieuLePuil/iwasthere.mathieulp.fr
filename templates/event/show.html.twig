@@ -150,7 +150,16 @@
                     <span class="text-sm" style="color: var(--fg-3)">{{ participation.rating }}/5</span>
                 </div>
             {% elseif event.isPast %}
-                <p class="text-sm mb-2" style="color: var(--fg-3)">⭐ Note non renseignée</p>
+                <a href="{{ path('app_event_complete', {id: event.id}) }}"
+                   class="flex items-center gap-3 -m-1 mb-1 p-3 rounded-xl no-underline transition-colors"
+                   style="background: var(--positive-soft); border: 1px solid rgba(176,96,255,0.18)">
+                    <span class="text-xl flex-shrink-0">✨</span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-medium" style="color: var(--fg-1)">Complète ta fiche</span>
+                        <span class="block text-xs mt-0.5" style="color: var(--fg-3)">Note, souvenir, photo — en deux minutes</span>
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
             {% else %}
                 <p class="text-sm mb-2" style="color: var(--fg-3)">📅 À venir — tu pourras noter l'événement une fois passé</p>
             {% endif %}

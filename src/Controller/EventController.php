@@ -605,6 +605,187 @@ if (!empty($data['duration'])) {
         ]);
     }
 
+    /**
+     * Le mini-parcours guidé de complétion (le lendemain d'un événement) : une note,
+     * un ressenti, le résultat ou la setlist, les amis et une photo — une étape à la
+     * fois. Le GET rend le flow ; le POST (fetch, `Accept: application/json`) enregistre
+     * le souvenir et répond en JSON pour laisser le client dérouler l'écran de fin.
+     */
+    #[Route('/{id}/complete', name: 'app_event_complete', methods: ['GET', 'POST'])]
+    public function complete(
+        Event $event,
+        Request $request,
+        EntityManagerInterface $em,
+        EventParticipationRepository $participationRepo,
+        FriendRepository $friendRepo,
+        UserRepository $userRepo,
+        NotificationDispatcher $notifier,
+        ActivityNotifier $activity,
+        EventImageService $images,
+        SetlistFmService $setlistFm,
+    ): Response {
+        $user = $this->getUser();
+
+        // Le souvenir (note, résultat, photo…) n'existe qu'une fois l'événement passé
+        if (!$event->isPast()) {
+            return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
+        }
+
+        $participation = $participationRepo->findByUserAndEvent($user, $event);
+        if (!$participation) {
+            // Arrivée par un tag ou un lien direct : on rattache la participation
+            $participation = new EventParticipation();
+            $participation->setEvent($event)->setUser($user)->setStatus('past');
+            $em->persist($participation);
+            $event->setParticipantCount($event->getParticipantCount() + 1);
+            $em->flush();
+        }
+
+        if ($request->isMethod('POST')) {
+            return $this->handleCompletion(
+                $event, $participation, $request, $em, $images, $userRepo, $notifier, $activity
+            );
+        }
+
+        // Le lendemain, la setlist est souvent disponible : on tente l'import à l'ouverture
+        // pour offrir la belle étape « setlist retrouvée » plutôt qu'un champ vide.
+        if ($event->getCategory() === 'music' && empty($event->getSetlist())) {
+            $setlistFm->tryImportSetlist($event);
+        }
+
+        return $this->render('event/complete.html.twig', [
+            'event'             => $event,
+            'participation'     => $participation,
+            'confirmed_friends' => $friendRepo->findConfirmedFriends($user),
+        ]);
+    }
+
+    /**
+     * Enregistre les données du souvenir issues du parcours guidé. Symétrique de la
+     * partie « souvenir » de edit(), mais bornée aux champs du flow et répondant en JSON.
+     */
+    private function handleCompletion(
+        Event $event,
+        EventParticipation $participation,
+        Request $request,
+        EntityManagerInterface $em,
+        EventImageService $images,
+        UserRepository $userRepo,
+        NotificationDispatcher $notifier,
+        ActivityNotifier $activity,
+    ): JsonResponse {
+        $data = $request->request->all();
+
+        // Même garde que edit() : un score de tennis ne dit pas qui a gagné, la case
+        // vainqueur est donc requise dès qu'un score est saisi.
+        if ($event->getType() === 'tennis' && $this->tennisWinnerMissing($data)) {
+            return $this->json([
+                'ok'    => false,
+                'step'  => 'result',
+                'error' => self::TENNIS_WINNER_REQUIRED,
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // ── Ressenti (personnel) ──
+        if (isset($data['rating']) && $data['rating'] !== '') {
+            $participation->setRating((int) $data['rating']);
+        }
+        if (isset($data['comment'])) {
+            $participation->setComment(trim($data['comment']) !== '' ? $data['comment'] : null);
+        }
+
+        // ── Résultat (sport, donnée partagée de l'événement) ──
+        if ($event->getCategory() === 'sport') {
+            if (isset($data['final_score'])) {
+                $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
+            }
+            // La case vainqueur n'existe que pour le tennis ; les autres sports la déduisent du score
+            $event->setWinner(
+                $event->getType() === 'tennis' && in_array($data['winner'] ?? '', ['1', '2'], true)
+                    ? $data['winner'] : null
+            );
+        }
+
+        // ── Setlist (musique) — saisie manuelle éventuelle ──
+        if (isset($data['setlist']) && is_array($data['setlist'])) {
+            $setlistLines = array_values(array_filter(array_map('trim', $data['setlist'])));
+            if (!empty($setlistLines)) {
+                $event->setSetlist($setlistLines)->setSetlistSource('manual');
+            }
+        }
+
+        // ── Avec qui ──
+        $oldAppFriendIds = array_column(
+            array_filter($participation->getFriends() ?? [], fn ($f) => ($f['type'] ?? '') === 'app'),
+            'userId'
+        );
+        $friendsData = [];
+        foreach ($data['friends_app'] ?? [] as $uid) {
+            $friendUser = $userRepo->find($uid);
+            if ($friendUser) {
+                $friendsData[] = [
+                    'type'        => 'app',
+                    'userId'      => (string) $friendUser->getId(),
+                    'username'    => $friendUser->getUsername(),
+                    'displayName' => $friendUser->getDisplayName(),
+                ];
+            }
+        }
+        foreach ($data['friends_external'] ?? [] as $name) {
+            $name = trim((string) $name);
+            if ($name !== '') {
+                $friendsData[] = ['type' => 'external', 'name' => $name];
+            }
+        }
+        $participation->setFriends($friendsData);
+
+        // ── Photo (facultative) ──
+        $file = $request->files->get('image');
+        if ($file) {
+            $path = $images->saveUploadedFile($file, (string) $event->getId(), (string) $participation->getUser()->getId());
+            if ($path !== null) {
+                $participation->setImageUrl($path);
+            }
+        }
+
+        $em->flush();
+
+        // Prévient les amis nouvellement tagués (mêmes règles que edit())
+        $me = $participation->getUser();
+        foreach ($friendsData as $friend) {
+            if (($friend['type'] ?? '') !== 'app' || in_array($friend['userId'], $oldAppFriendIds, true)) {
+                continue;
+            }
+            $taggedUser = $userRepo->find($friend['userId']);
+            if (!$taggedUser) {
+                continue;
+            }
+            $notifier->dispatch(
+                $taggedUser,
+                NotificationType::FriendTaggedInEvent,
+                $me->getDisplayName() . ' t\'a ajouté à un événement',
+                $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                $this->generateUrl('app_notifications'),
+                [
+                    'eventId'         => (string) $event->getId(),
+                    'participationId' => (string) $participation->getId(),
+                    'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                ],
+            );
+        }
+        $em->flush();
+
+        // Le souvenir n'est annoncé qu'une fois (dédoublonné sur la participation)
+        if ($participation->getRating() || $participation->getComment() || $participation->getImageUrl()) {
+            $activity->announceMemory($participation);
+        }
+
+        return $this->json([
+            'ok'       => true,
+            'redirect' => $this->generateUrl('app_event_show', ['id' => $event->getId()]),
+        ]);
+    }
+
     #[Route('/{id}/image', name: 'app_event_image', methods: ['POST'])]
     public function uploadImage(
         Event $event,

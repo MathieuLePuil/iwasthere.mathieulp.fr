@@ -74,7 +74,7 @@
     </div>
     {% endif %}
 
-    <form method="post" action="{{ path('app_event_new') }}" class="space-y-5" data-controller="form-loader">
+    <form method="post" action="{{ path('app_event_new') }}" class="space-y-5" data-controller="form-loader souvenir-gate">
         <input type="hidden" name="category" id="input-category" value="{{ category }}">
 
         {# Type selector (shown after category) #}
@@ -190,6 +190,8 @@
                 <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date *</label>
                 <input type="date" name="date" id="input-date" class="input-field" required
                        value="{{ 'now'|date('Y-m-d') }}"
+                       data-souvenir-gate-target="date"
+                       data-action="change->souvenir-gate#update"
                        onchange="checkPastDate(this.value)">
             </div>
             <div>
@@ -213,7 +215,7 @@
         </div>
 
         {# Past-only fields — hidden until a past date is selected #}
-        <div id="past-extra-fields" class="hidden space-y-4">
+        <div id="past-extra-fields" class="hidden space-y-4" data-souvenir-gate-target="pastOnly">
 
             {# Durée — music only #}
             <div id="duration-field-past" class="{% if category != 'music' %}hidden{% endif %}">

@@ -1204,3 +1204,341 @@
 
 #app-header { view-transition-name: app-header; }
 #app-nav    { view-transition-name: app-nav; }
+
+/* ── Complétion guidée (le flow du lendemain, J+1) ──
+   Un mini-parcours en étapes : une seule visible à la fois, pilotée par le
+   contrôleur Stimulus « completion ». S'appuie sur les tokens de thème, donc
+   fonctionne en clair comme en sombre sans règle dédiée. */
+.cmpl {
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: 0.5rem 1.25rem 2rem;
+}
+
+.cmpl-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+.cmpl-close {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--fg-3);
+  text-decoration: none;
+}
+.cmpl-close:active { opacity: 0.6; }
+.cmpl-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.cmpl-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--positive);
+  transition: width 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.cmpl-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--fg-4);
+  flex-shrink: 0;
+  min-width: 2.2rem;
+  text-align: right;
+}
+.cmpl-count b { color: var(--fg-1); font-weight: 600; }
+
+.cmpl-stage { position: relative; }
+
+/* Une étape = une carte plein écran ; masquée tant qu'elle n'est pas active */
+.cmpl-step { display: none; }
+.cmpl-step.is-active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 13rem);
+  animation: cmpl-in 0.34s cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes cmpl-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cmpl-head { text-align: center; margin-bottom: 1.5rem; }
+.cmpl-kicker {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--positive);
+  margin-bottom: 0.45rem;
+}
+.cmpl-h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg-1);
+  line-height: 1.2;
+}
+.cmpl-sub {
+  font-size: 0.875rem;
+  color: var(--fg-3);
+  margin-top: 0.45rem;
+  line-height: 1.45;
+}
+
+/* Intro & fin */
+.cmpl-poster {
+  height: 150px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.cmpl-poster-emoji {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45));
+}
+.cmpl-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+  text-align: center;
+  line-height: 1.15;
+}
+.cmpl-lead {
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-top: 0.6rem;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+/* Étoiles */
+.cmpl-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+}
+.cmpl-star-lbl { cursor: pointer; padding: 0.15rem; -webkit-tap-highlight-color: transparent; }
+.cmpl-star-lbl [data-star] {
+  width: 2.85rem;
+  height: 2.85rem;
+  display: block;
+  transition: color 0.16s ease, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cmpl-star-lbl:active [data-star] { transform: scale(0.88); }
+.cmpl-rating-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  min-height: 1.3em;
+  color: var(--fg-4);
+  transition: color 0.16s ease;
+}
+
+/* Score & vainqueur */
+.cmpl-score {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding-block: 1rem;
+}
+.cmpl-mini-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--fg-3);
+  margin: 1.25rem 0 0.6rem;
+}
+.cmpl-winner { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.cmpl-winner-opt { cursor: pointer; }
+.cmpl-winner-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 14px;
+  border: 2px solid var(--border-default);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+.cmpl-winner-opt input:checked + .cmpl-winner-box {
+  border-color: var(--positive);
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+
+.cmpl-textarea { resize: none; min-height: 8rem; line-height: 1.55; }
+
+/* Setlist retrouvée */
+.cmpl-setlist {
+  background: var(--bg-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 0.5rem 1.1rem;
+}
+.cmpl-setlist ol { margin: 0; padding: 0; list-style: none; }
+.cmpl-setlist li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  color: var(--fg-1);
+}
+.cmpl-setlist li:last-child { border-bottom: none; }
+.cmpl-setlist-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--fg-4);
+  width: 1.25rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.cmpl-setlist-more {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--positive);
+  font-weight: 500;
+  margin-top: 0.75rem;
+}
+
+/* Photo */
+.cmpl-photo-frame {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+  border: 1px solid var(--border-subtle);
+}
+.cmpl-photo-img { display: block; width: 100%; max-height: 260px; object-fit: cover; }
+.cmpl-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem;
+  border-radius: 16px;
+  border: 1.5px dashed var(--border-default);
+  background: var(--bg-2);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.14s, background 0.14s;
+}
+.cmpl-dropzone:hover { border-color: var(--border-strong); }
+.cmpl-dropzone:active { background: var(--bg-3); }
+.cmpl-dropzone-txt { font-weight: 600; font-size: 0.95rem; color: var(--fg-2); }
+.cmpl-dropzone-sub { font-size: 0.78rem; color: var(--fg-4); }
+
+.cmpl-error {
+  color: var(--negative);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Barre d'actions — collée en bas de l'étape pour un ressenti d'app */
+.cmpl-nav {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 1.75rem;
+}
+.cmpl-cta { flex: 1; }
+.cmpl-skip { flex: 0 0 auto; padding-inline: 1.4rem; }
+.cmpl-nav .btn-primary,
+.cmpl-nav .btn-secondary {
+  padding-block: 0.85rem;
+  font-size: 0.95rem;
+}
+
+/* Écran de fin */
+.cmpl-done {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cmpl-done > *:not(.cmpl-confetti) { position: relative; z-index: 1; }
+.cmpl-done-badge {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 999px;
+  background: var(--positive-soft);
+  border: 1px solid color-mix(in srgb, var(--positive) 30%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 1.5rem;
+  animation: cmpl-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cmpl-done .cmpl-nav { flex-direction: column; width: 100%; max-width: 20rem; margin-inline: auto; margin-top: 2rem; }
+.cmpl-done .cmpl-nav .cmpl-skip { padding-inline: 1rem; }
+
+@keyframes cmpl-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Confettis — chaque brin reçoit sa position, sa teinte et son tempo en inline */
+.cmpl-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.cmpl-confetti span {
+  position: absolute;
+  top: -12%;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: cmpl-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes cmpl-fall {
+  0%   { transform: translateY(0) rotate(0); opacity: 0.95; }
+  100% { transform: translateY(115vh) rotate(720deg); opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmpl-step.is-active,
+  .cmpl-done-badge { animation: none; }
+  .cmpl-confetti { display: none; }
+  .cmpl-fill { transition: none; }
+}
