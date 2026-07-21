@@ -11,7 +11,7 @@
         {% if event.artistImageUrl %}
         <div class="absolute inset-0" style="background: url('{{ event.artistImageUrl }}') center 25% / cover no-repeat"></div>
         {% else %}
-        <div class="absolute inset-0 poster-{{ event.type ?? 'default' }}"></div>
+        <div class="absolute inset-0 poster-{{ event.type ?? 'default' }}" style="--evt-hue: {{ event_hue(event) }}"></div>
         {% endif %}
         <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,13,16,0) {{ event.artistImageUrl ? '40%' : '0%' }}, var(--bg-0) 100%); z-index: 1"></div>
 

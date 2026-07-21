@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Twig;
 
+use App\Entity\Event;
 use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
 use App\Repository\NotificationRepository;
@@ -26,7 +27,30 @@ class AppExtension extends AbstractExtension
             new TwigFunction('notification_type', $this->notificationType(...)),
             new TwigFunction('greeting', $this->greeting(...)),
             new TwigFunction('reaction_emojis', $this->reactionEmojis(...)),
+            new TwigFunction('event_hue', $this->eventHue(...)),
         ];
+    }
+
+    /**
+     * Teinte (0-359) dérivée du nom de l'évènement, de façon déterministe et
+     * stable : deux affichages du même artiste/tournoi donnent toujours la même
+     * couleur. Sert à colorer subtilement les posters sans photo (cf. --evt-hue
+     * / --evt-tint dans app.css) pour que chaque miniature ait sa propre teinte
+     * plutôt que le dégradé unique et un peu terne du type.
+     */
+    public function eventHue(Event $event): int
+    {
+        $name = $event->getArtistName()
+            ?? $event->getTournamentName()
+            ?? $event->getTeams()
+            ?? 'Événement';
+
+        // crc32 : hash déterministe, réparti et sans dépendance externe. Le
+        // décalage doré (137°) étale les teintes de noms proches sur la roue
+        // plutôt que de les tasser côte à côte.
+        $hash = crc32(mb_strtolower(trim($name)));
+
+        return (int) (($hash * 137) % 360);
     }
 
     /**

@@ -116,7 +116,7 @@
         {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
         <div class="iwt-hero">
             <div class="iwt-hero-poster{% if not next_event.event.artistImageUrl %} poster-{{ next_event.event.type ?? 'default' }}{% endif %}"
-                 {% if next_event.event.artistImageUrl %}style="background: linear-gradient(180deg, rgba(11,13,16,0.2) 0%, rgba(11,13,16,0.75) 100%), url('{{ next_event.event.artistImageUrl }}') center 25%/cover"{% endif %}>
+                 style="{% if next_event.event.artistImageUrl %}background: linear-gradient(180deg, rgba(11,13,16,0.2) 0%, rgba(11,13,16,0.75) 100%), url('{{ next_event.event.artistImageUrl }}') center 25%/cover{% else %}--evt-hue: {{ event_hue(next_event.event) }}{% endif %}">
                 <span class="iwt-hero-art-tag iwt-hero-art-tag--{{ next_event.event.type ?? 'default' }}">{{ type_emoji[next_event.event.type] ?? '🎫' }} {{ next_event.event.type ? next_event.event.type|capitalize : 'Événement' }}</span>
                 <div class="poster-title">
                     <span class="name">{{ next_event.event.artistName ?? next_event.event.tournamentName ?? 'Événement' }}</span>

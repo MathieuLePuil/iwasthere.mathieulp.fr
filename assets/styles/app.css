@@ -935,35 +935,55 @@
 }
 
 /* ── Poster art backgrounds ── */
+/* Teinte déterministe par évènement : `event_hue()` pose --evt-hue (0-359) sur
+   l'élément, et --evt-tint décline deux halos discrets (accent + complémentaire
+   à +150°) qu'on empile AU-DESSUS du dégradé de type. Résultat : chaque poster
+   sans photo garde l'identité couleur de son type mais gagne une nuance propre
+   au nom, au lieu d'un aplat identique et un peu terne. Volontairement léger
+   (alpha ~0.14) pour rester une nuance, pas une couleur franche. Le fallback de
+   teinte évite d'invalider tout le `background` quand --evt-hue n'est pas posé.
+   Les substitutions var() se résolvant au point d'usage, --evt-tint défini ici
+   lit bien le --evt-hue propre à chaque élément. */
+:root {
+  --evt-tint:
+    radial-gradient(115% 90% at 85% 8%,  hsl(var(--evt-hue, 210) 68% 58% / 0.16) 0%, transparent 55%),
+    radial-gradient(105% 80% at 8% 96%,  hsl(calc(var(--evt-hue, 210) + 150) 60% 55% / 0.10) 0%, transparent 55%);
+}
 .poster-concert, .poster-music {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 50% 0%, #07334A 0%, transparent 65%),
     linear-gradient(180deg, #061119 0%, #04070A 100%);
 }
 .poster-festival {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 10% 10%, #5C3120 0%, transparent 55%),
     radial-gradient(120% 100% at 95% 90%, #2A160F 0%, transparent 60%),
     linear-gradient(135deg, #1A0E09 0%, #0B0604 100%);
 }
 .poster-football {
   background:
+    var(--evt-tint),
     radial-gradient(140% 80% at 50% 100%, #0E2E1A 0%, transparent 60%),
     radial-gradient(120% 80% at 10% 10%, #1B2638 0%, transparent 55%),
     linear-gradient(180deg, #050912 0%, #020407 100%);
 }
 .poster-rugby {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 30% 80%, #2A3010 0%, transparent 55%),
     linear-gradient(180deg, #0A0F03 0%, #030500 100%);
 }
 .poster-tennis {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 80% 80%, #321414 0%, transparent 60%),
     linear-gradient(180deg, #160808 0%, #060304 100%);
 }
 .poster-default {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 30% 20%, #1F1F2A 0%, transparent 60%),
     linear-gradient(180deg, #0A0A12 0%, #050507 100%);
 }
