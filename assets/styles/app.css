@@ -31,6 +31,19 @@
   --positive-soft: rgba(176, 96, 255, 0.14);
   --negative:      #E89B8E;
   --negative-soft: rgba(232, 155, 142, 0.14);
+
+  /* Texte posé SUR un aplat --positive. En sombre le violet est clair (#B060FF),
+     le noir y contraste le mieux (5.3:1). Ce token bascule au blanc en clair, où
+     le violet devient foncé — voir l'override du bloc light. */
+  --on-positive: #0B0D10;
+
+  /* Teintes de catégorie servant de remplissage aux graphes (répartition, notes).
+     Concert/festival réutilisent --positive/--negative ; ces trois-là et la note
+     étoilée sont réécrits en clair pour rester nets sur piste claire. */
+  --cat-football: #60A5FA;
+  --cat-rugby:    #A8B89A;
+  --cat-tennis:   #F4D04A;
+  --rating:       #FBBF24;
 }
 
 /* ── Semantic tokens — light ──
@@ -59,6 +72,19 @@
   --positive-soft: rgba(123, 47, 190, 0.10);
   --negative:      #C8654F;
   --negative-soft: rgba(200, 101, 79, 0.10);
+
+  /* Le violet clair passe au violet foncé : le noir n'y ferait plus que 2.67:1
+     (texte noir sur bouton violet). Le blanc y remonte à 7:1. Le --negative reste
+     assez clair (#C8654F) pour garder du texte noir — 4.84:1, AA validé. */
+  --on-positive: #FFFFFF;
+
+  /* Bleu, sauge et jaune pastel disparaissaient sur la piste claire des graphes
+     (le jaune tennis avait la même luminance que le fond) ; le label « N ★ » en
+     ambre tombait à 1.7:1 sur blanc. Versions foncées, lisibles en clair. */
+  --cat-football: #2563EB;
+  --cat-rugby:    #5A6A2E;
+  --cat-tennis:   #806600;
+  --rating:       #B45309;
 }
 
 /* ── Tailwind theme remapping ── */
@@ -288,7 +314,7 @@
 }
 .onb-card--primary .onb-step {
   background: var(--positive);
-  color: #0B0D10;
+  color: var(--on-positive);
 }
 .onb-card-body { flex: 1; min-width: 0; }
 .onb-card-title {
@@ -315,7 +341,7 @@
   /* Buttons */
   .btn-primary {
     background-color: var(--positive);
-    color: #0B0D10;
+    color: var(--on-positive);
     padding-inline: 1rem;
     padding-block: 0.5rem;
     border-radius: 999px;
@@ -366,7 +392,7 @@
     height: 1.1em;
     margin: -0.55em 0 0 -0.55em;
     border-radius: 50%;
-    border: 2px solid #0B0D10;
+    border: 2px solid var(--on-positive);
     border-top-color: transparent;
     animation: btn-spin 0.6s linear infinite;
   }
@@ -475,6 +501,7 @@
   .badge-football { background: rgba(74, 222, 128, 0.12);  color: #7EE8A2; }
   .badge-rugby    { background: rgba(163, 177, 138, 0.14); color: #A8B89A; }
   .badge-tennis   { background: rgba(234, 179, 8, 0.12);   color: #F4D04A; }
+  .badge-default  { background: rgba(139, 149, 161, 0.18); color: #8B95A1; }
 
   /* Section title */
   .section-title {
@@ -803,7 +830,7 @@
   .iwt-reminder-sub { font-size: 12px; color: var(--fg-2); }
   .iwt-reminder-cta {
     background: var(--positive);
-    color: #0B0D10;
+    color: var(--on-positive);
     border: none;
     border-radius: 999px;
     padding: 7px 12px;
@@ -1171,6 +1198,31 @@
 :root[data-theme="light"] .iwt-flash--error   { --flash-bg: #FDECEA; --flash-border: rgba(180, 64, 42, 0.32); --flash-icon: #B4402A; }
 :root[data-theme="light"] .iwt-flash--warning { --flash-bg: #FDF4E3; --flash-border: rgba(180, 83, 9, 0.32); --flash-icon: #B45309; }
 :root[data-theme="light"] .iwt-flash--info    { --flash-bg: #E9F1FE; --flash-border: rgba(29, 78, 216, 0.30); --flash-icon: #1D4ED8; }
+
+/* ── Pastilles de catégorie — clair ──
+   Les teintes des badges sont calibrées pour le sombre : du texte pastel clair sur
+   un fond sombre. Sur les cartes blanches du clair elles s'effondraient — le jaune
+   tennis (#F4D04A) ne faisait que 1.5:1, le vert football et le violet concert à
+   peine mieux. On garde l'identité colorée mais chaque teinte descend à un ton
+   foncé et saturé qui passe AA (≥ 4.5:1) sur les fonds pâles. */
+:root[data-theme="light"] .badge-concert  { background: rgba(123, 47, 190, 0.10); color: #7B2FBE; }
+:root[data-theme="light"] .badge-festival { background: rgba(180, 69, 30, 0.10);  color: #B4451E; }
+:root[data-theme="light"] .badge-football { background: rgba(21, 128, 61, 0.10);  color: #15803D; }
+:root[data-theme="light"] .badge-rugby    { background: rgba(90, 106, 46, 0.12);  color: #5A6A2E; }
+:root[data-theme="light"] .badge-tennis   { background: rgba(128, 102, 0, 0.10);  color: #806600; }
+:root[data-theme="light"] .badge-default  { background: rgba(11, 13, 16, 0.06);   color: var(--fg-2); }
+
+/* ── Art-tags (pastille de type sur l'affiche) — clair ──
+   Cas particulier : le tag surmonte tantôt une affiche sombre (hero d'accueil),
+   tantôt le fond clair de la page (fiche event, où le dégradé a déjà viré au
+   canevas). Un fond translucide ne peut pas être lisible des deux côtés — en clair
+   on le rend donc opaque : pastille pâle pleine + texte foncé, lisible quel que
+   soit l'arrière-plan. */
+:root[data-theme="light"] .iwt-hero-art-tag--concert  { background: #F3E9FC; color: #7B2FBE; }
+:root[data-theme="light"] .iwt-hero-art-tag--festival { background: #FBEBE1; color: #B4451E; }
+:root[data-theme="light"] .iwt-hero-art-tag--football { background: #E4F5EA; color: #15803D; }
+:root[data-theme="light"] .iwt-hero-art-tag--rugby    { background: #EFF1E7; color: #5A6A2E; }
+:root[data-theme="light"] .iwt-hero-art-tag--tennis   { background: #F7F0D6; color: #806600; }
 
 /* ── Transitions de page ──
    Turbo 8 rend chaque visite dans document.startViewTransition() grâce à la meta

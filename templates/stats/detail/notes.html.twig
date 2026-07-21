@@ -28,7 +28,7 @@
         <div class="space-y-2">
             {% for note, count in data.distribution %}
             <div class="flex items-center gap-3">
-                <span class="text-sm font-medium w-8 flex-shrink-0" style="color: #FBBF24">{{ note }} ★</span>
+                <span class="text-sm font-medium w-8 flex-shrink-0" style="color: var(--rating)">{{ note }} ★</span>
                 <div class="flex-1 h-6 rounded-lg overflow-hidden" style="background: var(--bg-3)">
                     {% if count > 0 %}
                     <div class="h-full rounded-lg flex items-center px-2"

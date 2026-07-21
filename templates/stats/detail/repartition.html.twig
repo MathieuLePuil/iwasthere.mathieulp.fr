@@ -14,9 +14,9 @@
     {% set type_labels = {
         'concert':  {label: 'Concerts',  emoji: '🎤', color: 'var(--positive)'},
         'festival': {label: 'En festival', emoji: '🎪', color: 'var(--negative)'},
-        'football': {label: 'Football',  emoji: '⚽', color: '#60A5FA'},
-        'rugby':    {label: 'Rugby',     emoji: '🏉', color: '#A8B89A'},
-        'tennis':   {label: 'Tennis',    emoji: '🎾', color: '#F4D04A'},
+        'football': {label: 'Football',  emoji: '⚽', color: 'var(--cat-football)'},
+        'rugby':    {label: 'Rugby',     emoji: '🏉', color: 'var(--cat-rugby)'},
+        'tennis':   {label: 'Tennis',    emoji: '🎾', color: 'var(--cat-tennis)'},
     } %}
 
     <div class="card mb-4">
@@ -58,7 +58,7 @@
                     <div class="h-full" style="width: {{ (cats.music / year_total * 100)|round }}%; background: var(--positive)"></div>
                     {% endif %}
                     {% if cats.sport > 0 %}
-                    <div class="h-full" style="width: {{ (cats.sport / year_total * 100)|round }}%; background: #60A5FA"></div>
+                    <div class="h-full" style="width: {{ (cats.sport / year_total * 100)|round }}%; background: var(--cat-football)"></div>
                     {% endif %}
                 </div>
             </div>

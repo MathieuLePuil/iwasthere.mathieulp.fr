@@ -42,7 +42,7 @@
            style="{{ tab == 'amis' ? 'background: var(--bg-1); color: var(--fg-1); box-shadow: 0 1px 3px rgba(0,0,0,0.3)' : 'color: var(--fg-3)' }}">
             Amis
             {% if pending_requests|length > 0 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold" style="background: var(--positive); color: #0B0D10">{{ pending_requests|length }}</span>
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold" style="background: var(--positive); color: var(--on-positive)">{{ pending_requests|length }}</span>
             {% else %}
                 <span class="text-xs" style="color: var(--fg-4)">({{ friends|length }})</span>
             {% endif %}

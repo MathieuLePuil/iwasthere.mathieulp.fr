@@ -83,7 +83,7 @@
                 </svg>
                 <span data-notification-badge-target="badge"
                       class="absolute top-0.5 right-0.5 min-w-[16px] h-4 text-[9px] font-bold rounded-full flex items-center justify-center px-0.5"
-                      style="background: var(--positive); color: #0B0D10; {% if _unread == 0 %}display:none{% endif %}">
+                      style="background: var(--positive); color: var(--on-positive); {% if _unread == 0 %}display:none{% endif %}">
                     {{ _unread > 9 ? '9+' : _unread }}
                 </span>
             </a>

@@ -39,7 +39,7 @@
                     {% if count > 0 %}
                     <div class="h-full rounded-lg flex items-center px-2"
                          style="width: max({{ max_month > 0 ? (count / max_month * 100)|round : 0 }}%, 22px); background: var(--positive)">
-                        <span class="text-xs font-bold" style="color: #0B0D10">{{ count }}</span>
+                        <span class="text-xs font-bold" style="color: var(--on-positive)">{{ count }}</span>
                     </div>
                     {% endif %}
                 </div>
