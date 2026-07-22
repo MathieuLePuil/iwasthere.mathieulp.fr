@@ -54,19 +54,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private array $favoriteTeams = [];
 
     /**
-     * Le compte est-il ouvert au monde ? 'public' ou 'private', et rien d'autre.
+     * Audience de chaque partie du profil, indépendamment : une entrée par catégorie
+     * (voir PRIVACY_CATEGORIES), chaque valeur étant un niveau (voir PRIVACY_LEVELS).
+     * Ex. ['events' => 'friends', 'stats' => 'public', 'friends' => 'private'].
      *
-     * C'est le seul réglage de confidentialité qui existe, et il régit tout :
+     * Une clé absente vaut « amis » (getPrivacyLevel), ce qui reproduit l'ancien
+     * compte privé par défaut. Ce réglage ne régit que ce que montre la *page profil*
+     * (/p/{pseudo} et le profil dans l'app) : le feed et le classement continuent de
+     * ne filtrer que sur l'amitié, un ami y voit donc toujours l'activité.
      *
-     *  - public  : n'importe qui voit les événements, connecté ou non, sur /p/{pseudo} ;
-     *  - private : seuls les amis les voient ; les autres tombent sur un cadenas.
-     *
-     * Un ami voit donc toujours tout : il n'y a ni visibilité par événement, ni moyen
-     * de se cacher de ses propres amis. C'est ce qui permet au feed et au classement
-     * de ne filtrer sur rien d'autre que l'amitié.
+     * @var array<string, string>
      */
-    #[ORM\Column(length: 20, options: ['default' => 'private'])]
-    private string $profileVisibility = 'private';
+    #[ORM\Column(type: 'json')]
+    private array $privacySettings = [];
 
 
     /** Thème de l'interface : 'dark', 'light' ou 'auto' (suit le réglage système) */
@@ -238,22 +238,65 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->favoriteTeams[$sport] ?? null;
     }
 
-    public function getProfileVisibility(): string
+    /** Les parties du profil dont on règle l'audience séparément. */
+    public const PRIVACY_CATEGORIES = ['events', 'stats', 'friends'];
+
+    /** Les audiences possibles, de la plus fermée à la plus ouverte. */
+    public const PRIVACY_LEVELS = ['private', 'friends', 'public'];
+
+    /** @return array<string, string> */
+    public function getPrivacySettings(): array
     {
-        return $this->profileVisibility;
+        return $this->privacySettings;
     }
 
-    public function setProfileVisibility(string $profileVisibility): static
+    /**
+     * Audience d'une catégorie. Une valeur absente ou invalide retombe sur « amis »,
+     * qui équivaut à l'ancien compte privé : visible des amis, caché des autres.
+     */
+    public function getPrivacyLevel(string $category): string
     {
-        $this->profileVisibility = $profileVisibility;
+        $level = $this->privacySettings[$category] ?? null;
+
+        return in_array($level, self::PRIVACY_LEVELS, true) ? $level : 'friends';
+    }
+
+    public function setPrivacyLevel(string $category, string $level): static
+    {
+        if (in_array($category, self::PRIVACY_CATEGORIES, true)
+            && in_array($level, self::PRIVACY_LEVELS, true)) {
+            $this->privacySettings[$category] = $level;
+        }
 
         return $this;
     }
 
-    /** Raccourci de lecture : « ce compte est-il ouvert à tout le monde ? » */
+    /**
+     * Le regardeur — décrit par « est-ce lui-même ? » et « sont-ils amis ? » — a-t-il
+     * le droit de voir cette catégorie ?
+     *
+     *  - public  : tout le monde, même déconnecté ;
+     *  - friends : lui-même et ses amis ;
+     *  - private : lui-même seulement.
+     */
+    public function canBeSeenBy(string $category, bool $isSelf, bool $areFriends): bool
+    {
+        return match ($this->getPrivacyLevel($category)) {
+            'public'  => true,
+            'friends' => $isSelf || $areFriends,
+            'private' => $isSelf,
+            default   => $isSelf,
+        };
+    }
+
+    /**
+     * Raccourci historique : « les événements sont-ils ouverts à tout le monde ? ».
+     * Sert encore au noindex SEO, à l'affichage de la note sur la page événement et
+     * à l'admin, qui n'ont pas besoin de la granularité par catégorie.
+     */
     public function isPublicProfile(): bool
     {
-        return $this->profileVisibility === 'public';
+        return $this->getPrivacyLevel('events') === 'public';
     }
 
     public function getTheme(): string

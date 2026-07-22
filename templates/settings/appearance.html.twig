@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Apparence — Paramètres{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {{ m.back_button(path('app_settings'), 'Paramètres') }}
+
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Apparence</h1>
+
+    {# ── Thème ── #}
+    <div class="card" data-controller="theme" data-theme-url-value="{{ path('app_settings_theme') }}">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Thème</h2>
+        <p class="text-xs mb-3" style="color: var(--fg-3)">« Auto » suit le réglage clair/sombre de ton téléphone.</p>
+        <div class="iwt-segmented">
+            {% for value, label in {'light': '☀️ Clair', 'dark': '🌙 Sombre', 'auto': '⚙️ Auto'} %}
+            <label class="iwt-segmented-option">
+                <input type="radio" name="theme" value="{{ value }}"
+                       data-action="theme#select" data-theme-theme-param="{{ value }}"
+                       {{ app.user.theme == value ? 'checked' : '' }}>
+                <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

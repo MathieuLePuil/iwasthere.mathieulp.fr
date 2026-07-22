@@ -31,7 +31,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 Amis
             </span>
-            {% if can_view_history %}
+            {% if can_see_events %}
             <a href="{{ path('app_profile_in_common', {username: profile_user.username}) }}"
                class="btn-secondary flex w-full items-center justify-center gap-2 py-2.5 mt-2 text-sm">
                 🤝 En commun
@@ -66,8 +66,8 @@
     </div>
     {% endif %}
 
-    {# Stats #}
-    {% if can_view_history and total_events is not null %}
+    {# Stats — compteur d'événements, piloté par l'audience « stats » #}
+    {% if can_see_stats and total_events is not null %}
     <a href="{{ path('app_profile_view_events', {username: profile_user.username}) }}"
        class="card mb-5 text-center py-4 block no-underline">
         <p class="text-3xl font-black" style="color: var(--positive)">{{ total_events }}</p>
@@ -75,8 +75,36 @@
     </a>
     {% endif %}
 
-    {# Events history #}
-    {% if can_view_history %}
+    {# Liste d'amis — pilotée par l'audience « friends » #}
+    {% if can_see_friends and friends|length > 0 %}
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="font-medium" style="color: var(--fg-1)">Amis ({{ friends|length }})</h2>
+    </div>
+    <div class="card mb-5">
+        <div class="flex flex-wrap gap-4 justify-center">
+            {% for friend in friends|slice(0, 8) %}
+            {% set fu = friend.owner == profile_user ? friend.friendUser : friend.owner %}
+            {% if fu %}
+            <a href="{{ path('app_profile_view', {username: fu.username}) }}"
+               class="flex flex-col items-center no-underline" style="width: 60px">
+                {{ m.avatar(fu, 'md') }}
+                <p class="text-[11px] text-center mt-1 truncate w-full" style="color: var(--fg-3)">{{ fu.displayName }}</p>
+            </a>
+            {% endif %}
+            {% endfor %}
+            {% if friends|length > 8 %}
+            <div class="flex flex-col items-center justify-center" style="width: 60px">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
+                     style="background: var(--bg-2); color: var(--fg-3)">+{{ friends|length - 8 }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Events history — piloté par l'audience « events » #}
+    {% set can_see_anything = can_see_events or can_see_stats or can_see_friends %}
+    {% if can_see_events %}
         {% if events|length == 0 %}
             <div class="text-center py-12">
                 <p class="text-4xl mb-2">🎵</p>
@@ -112,14 +140,15 @@
                 {% endfor %}
             </div>
         {% endif %}
-    {% else %}
+    {% endif %}
+
+    {# Rien de ce profil n'est visible pour ce regardeur : le cadenas. #}
+    {% if not can_see_anything and not is_self %}
         <div class="card text-center py-10">
             <p class="text-4xl mb-3">🔒</p>
             <p class="font-medium" style="color: var(--fg-1)">Compte privé</p>
-            {# Un compte privé n'a plus qu'une porte : l'amitié. Le message n'a donc
-               plus de cas où renvoyer à autre chose. #}
             <p class="text-sm mt-1" style="color: var(--fg-3)">
-                Ajoute {{ profile_user.displayName }} en ami pour voir ses événements
+                Ajoute {{ profile_user.displayName }} en ami pour voir son profil
             </p>
         </div>
     {% endif %}

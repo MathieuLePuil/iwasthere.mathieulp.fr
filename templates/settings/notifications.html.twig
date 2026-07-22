@@ -1,0 +1,175 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Notifications — Paramètres{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {{ m.back_button(path('app_settings'), 'Paramètres') }}
+
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Notifications</h1>
+
+    {# ── Notifications push ── #}
+    {% if vapid_public_key %}
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
+        <p class="text-xs mb-3" style="color: var(--fg-3)">
+            Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
+        </p>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:.875rem; font-weight:500; color:var(--fg-1)">Activer les notifications</div>
+            </div>
+            <label style="position:relative; display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0;">
+                <input type="checkbox" id="notif-toggle"
+                       style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;">
+                <span id="notif-track"
+                      style="width:48px; height:26px; background:#2c2c2e; border-radius:999px;
+                             position:relative; display:block; transition:background .2s;">
+                    <span id="notif-thumb"
+                          style="position:absolute; top:2px; left:2px; width:22px; height:22px;
+                                 background:#888; border-radius:50%;
+                                 transition:transform .2s, background .2s;"></span>
+                </span>
+            </label>
+        </div>
+    </div>
+
+    <script data-turbo-eval="false">
+    (function() {
+        const toggle = document.getElementById('notif-toggle');
+        const track = document.getElementById('notif-track');
+        const thumb = document.getElementById('notif-thumb');
+        const publicKey = "{{ vapid_public_key|default('') }}";
+        const subscribeUrl = "{{ path('app_subscribe') }}";
+
+        function urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const base64 = (b64 + pad).replace(/\-/g, '+').replace(/_/g, '/');
+            const raw = window.atob(base64);
+            const out = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+            return out;
+        }
+
+        function paint(on) {
+            if (on) {
+                track.style.background = 'rgba(61,220,151,0.30)';
+                thumb.style.background = '#3DDC97';
+                thumb.style.transform = 'translateX(22px)';
+            } else {
+                track.style.background = '#2c2c2e';
+                thumb.style.background = '#888';
+                thumb.style.transform = 'translateX(0)';
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        if (!publicKey) {
+            toggle.disabled = true;
+        } else {
+            if (Notification.permission === 'granted') {
+                toggle.checked = true;
+                paint(true);
+            } else if (Notification.permission === 'denied') {
+                toggle.disabled = true;
+            }
+
+            toggle.addEventListener('change', async function() {
+                paint(this.checked);
+                if (this.checked) {
+                    const ok = await subscribeUser();
+                    if (!ok) {
+                        this.checked = false;
+                        paint(false);
+                    }
+                } else {
+                    await unsubscribeUser();
+                }
+            });
+        }
+
+        async function subscribeUser() {
+            if (!('serviceWorker' in navigator)) return false;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return false;
+
+                const reg = await navigator.serviceWorker.ready;
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicKey)
+                    });
+                }
+
+                const response = await fetch(subscribeUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+                return response.ok;
+            } catch (e) {
+                console.error('subscribeUser error:', e);
+                return false;
+            }
+        }
+
+        async function unsubscribeUser() {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) await sub.unsubscribe();
+            } catch (e) {
+                console.error('unsubscribeUser error:', e);
+            }
+        }
+    })();
+    </script>
+    {% endif %}
+
+    {# ── Préférences : une ligne par type de notification, groupées ── #}
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Préférences de notifications</h2>
+        <p class="text-xs mb-4" style="color: var(--fg-3)">
+            Ces réglages ne concernent que les push. Tout reste consultable dans tes notifications.
+        </p>
+        <form method="post" action="{{ path('app_settings_notifications') }}" data-controller="form-loader">
+            {% for group, types in notif_groups %}
+            <p class="text-[11px] font-bold uppercase tracking-wider mt-4 mb-2" style="color: var(--fg-4); font-family: var(--font-mono)">{{ group }}</p>
+            <div class="space-y-3">
+                {% for type in types %}
+                {# Une clé absente vaut « activé » : un type ajouté après coup est reçu par défaut #}
+                <label class="flex items-start justify-between gap-3 cursor-pointer">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm" style="color: var(--fg-2)">{{ type.icon }} {{ type.label }}</p>
+                        <p class="text-xs mt-0.5" style="color: var(--fg-4)">{{ type.description }}</p>
+                    </div>
+                    <input type="checkbox" name="notif_{{ type.value }}" value="1"
+                           class="w-5 h-5 rounded accent-[#3DDC97] flex-shrink-0 mt-0.5"
+                           {{ app.user.notifPrefs[type.value] ?? true ? 'checked' : '' }}>
+                </label>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle)">
+                <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure des rappels</label>
+                <p class="text-xs mb-2" style="color: var(--fg-4)">Quand partent le rappel du jour J et celui de complétion.</p>
+                <input type="time" name="notif_completion_time"
+                       value="{{ app.user.notifCompletionTime ?? '08:00' }}"
+                       class="input-field w-auto">
+            </div>
+
+            <button type="submit" class="btn-primary w-full py-3 mt-4">Sauvegarder</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

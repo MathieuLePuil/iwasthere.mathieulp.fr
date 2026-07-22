@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Confidentialité — Paramètres{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {{ m.back_button(path('app_settings'), 'Paramètres') }}
+
+    <div>
+        <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Confidentialité</h1>
+        <p class="text-sm mt-1" style="color: var(--fg-3)">
+            Choisis, pour chaque partie de ton profil, qui peut la voir.
+        </p>
+    </div>
+
+    <div class="card">
+        <p class="text-xs mb-4" style="color: var(--fg-4)">
+            Privé = toi seul · Amis = tes amis · Public = tout le monde.
+            Tes amis te voient toujours dans le feed et le classement, quel que soit ce réglage.
+        </p>
+
+        <form method="post" action="{{ path('app_settings_privacy') }}" data-controller="form-loader">
+            <div class="space-y-5">
+                {% set categories = {
+                    'events':  {'label': 'Événements', 'help': 'Ton historique et tes derniers événements.'},
+                    'stats':   {'label': 'Stats & succès', 'help': 'Ton compteur d\'événements, ta note moyenne et tes badges.'},
+                    'friends': {'label': 'Liste d\'amis', 'help': 'Avec qui tu es ami.'}
+                } %}
+                {% set levels = {'private': '🔒 Privé', 'friends': '👥 Amis', 'public': '🌍 Public'} %}
+
+                {% for cat, meta in categories %}
+                <div>
+                    <label class="block text-sm font-medium" style="color: var(--fg-2)">{{ meta.label }}</label>
+                    <p class="text-xs mb-2" style="color: var(--fg-4)">{{ meta.help }}</p>
+                    <div class="iwt-segmented">
+                        {% set current = app.user.getPrivacyLevel(cat) %}
+                        {% for value, label in levels %}
+                        <label class="iwt-segmented-option">
+                            <input type="radio" name="privacy_{{ cat }}" value="{{ value }}"
+                                   {{ current == value ? 'checked' : '' }}>
+                            <span>{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn-primary w-full py-3 mt-5">Sauvegarder</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

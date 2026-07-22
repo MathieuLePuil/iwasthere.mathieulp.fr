@@ -1,0 +1,96 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Compte — Paramètres{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {{ m.back_button(path('app_settings'), 'Paramètres') }}
+
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Compte</h1>
+
+    {# ── Infos du compte ── #}
+    <div class="card" style="background: var(--bg-2)">
+        <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+                <span style="color: var(--fg-3)">Email</span>
+                <span class="font-medium" style="color: var(--fg-1)">{{ app.user.email }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span style="color: var(--fg-3)">Pseudo</span>
+                <span class="font-medium" style="color: var(--fg-1)">@{{ app.user.username }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span style="color: var(--fg-3)">Membre depuis</span>
+                <span class="font-medium" style="color: var(--fg-1)">{{ app.user.createdAt|date('d/m/Y') }}</span>
+            </div>
+            {% if app.user.googleId %}
+            <div class="flex justify-between">
+                <span style="color: var(--fg-3)">Connexion</span>
+                <span class="font-medium" style="color: var(--fg-1)">Google</span>
+            </div>
+            <div class="flex justify-between items-center pt-1" style="border-top: 1px solid var(--border-subtle)">
+                <span style="color: var(--fg-3)">Photo de profil</span>
+                <a href="{{ path('app_google_refresh_avatar') }}" class="text-xs font-medium" style="color: var(--positive)">
+                    Synchroniser depuis Google →
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Changer le mot de passe ── #}
+    {% if app.user.password %}
+    <div class="card">
+        <h2 class="font-medium mb-4" style="color: var(--fg-1)">Changer le mot de passe</h2>
+        <form method="post" action="{{ path('app_settings_password') }}" data-controller="form-loader">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Mot de passe actuel</label>
+                    <input type="password" name="current_password" class="input-field" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Nouveau mot de passe</label>
+                    <input type="password" name="new_password" class="input-field" minlength="8" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Confirmer le mot de passe</label>
+                    <input type="password" name="confirm_password" class="input-field" required>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3">Changer le mot de passe</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {# ── Aide & support ── #}
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Aide &amp; support</h2>
+        <p class="text-sm mb-3" style="color: var(--fg-3)">
+            Un bug à signaler, une amélioration à proposer ? Écris-nous.
+        </p>
+        <a href="mailto:support@iwasthereapp.app" class="btn-secondary w-full py-3 block text-center">
+            Contacter le support
+        </a>
+    </div>
+
+    {# ── Zone dangereuse ── #}
+    <div class="card" style="border: 1px solid rgba(232,155,142,0.3)">
+        <h2 class="font-medium mb-2" style="color: var(--negative)">Zone dangereuse</h2>
+        <p class="text-sm mb-4" style="color: var(--fg-3)">La suppression de ton compte est irréversible. Toutes tes données seront définitivement perdues.</p>
+        <details>
+            <summary class="text-sm font-medium cursor-pointer" style="color: var(--negative)">Supprimer mon compte</summary>
+            <form method="post" action="{{ path('app_settings_delete_account') }}" class="mt-4">
+                <p class="text-sm mb-3" style="color: var(--fg-2)">Tape <strong>SUPPRIMER</strong> pour confirmer :</p>
+                <input type="text" name="confirmation" placeholder="SUPPRIMER"
+                       class="input-field mb-3" style="border-color: rgba(232,155,142,0.4)" required>
+                <button type="submit" class="btn-danger w-full py-3">
+                    Supprimer définitivement
+                </button>
+            </form>
+        </details>
+    </div>
+
+</div>
+{% endblock %}

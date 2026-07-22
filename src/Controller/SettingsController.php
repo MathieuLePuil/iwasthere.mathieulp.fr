@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use App\Service\AccountDeletionService;
@@ -21,19 +22,48 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 #[Route('/settings')]
 class SettingsController extends AbstractController
 {
-    /** Les deux seuls états d'un compte ; tout le reste est une saisie forgée. */
-    private const VISIBILITIES = ['public', 'private'];
-
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,
     ) {}
 
+    /** Le sommaire : une simple liste de liens vers chaque rubrique de réglages. */
     #[Route('', name: 'app_settings')]
     public function index(): Response
     {
-        return $this->render('settings/index.html.twig', [
+        return $this->render('settings/index.html.twig');
+    }
+
+    #[Route('/profil', name: 'app_settings_profile_page', methods: ['GET'])]
+    public function profilePage(): Response
+    {
+        return $this->render('settings/profile.html.twig');
+    }
+
+    #[Route('/apparence', name: 'app_settings_appearance_page', methods: ['GET'])]
+    public function appearancePage(): Response
+    {
+        return $this->render('settings/appearance.html.twig');
+    }
+
+    #[Route('/confidentialite', name: 'app_settings_privacy_page', methods: ['GET'])]
+    public function privacyPage(): Response
+    {
+        return $this->render('settings/privacy.html.twig');
+    }
+
+    // Même URL que la sauvegarde POST plus bas : Symfony les distingue par la méthode.
+    #[Route('/notifications', name: 'app_settings_notifications_page', methods: ['GET'])]
+    public function notificationsPage(): Response
+    {
+        return $this->render('settings/notifications.html.twig', [
             'notif_groups' => NotificationType::groups(),
         ]);
+    }
+
+    #[Route('/compte', name: 'app_settings_account_page', methods: ['GET'])]
+    public function accountPage(): Response
+    {
+        return $this->render('settings/account.html.twig');
     }
 
     #[Route('/check-username', name: 'app_settings_check_username', methods: ['GET'])]
@@ -67,7 +97,7 @@ class SettingsController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Préférences de notifications sauvegardées.');
-        return $this->redirectToRoute('app_settings');
+        return $this->redirectToRoute('app_settings_notifications_page');
     }
 
     /** Appelé en fetch par le contrôleur Stimulus : le thème est déjà appliqué côté client. */
@@ -86,28 +116,31 @@ class SettingsController extends AbstractController
     }
 
     /**
-     * Le compte bascule entre public et privé, et c'est tout : il n'y a plus de
-     * visibilité par événement à réaligner, ni de réglage de départ. Un ami voit
-     * toujours tout ; ce réglage ne décide que du sort des inconnus.
+     * Une audience par catégorie (événements, stats, liste d'amis), chacune parmi
+     * private | friends | public. Une catégorie absente du formulaire est laissée
+     * telle quelle ; une valeur forgée fait échouer toute la sauvegarde.
      */
     #[Route('/privacy', name: 'app_settings_privacy', methods: ['POST'])]
     public function savePrivacy(Request $request, EntityManagerInterface $em): Response
     {
-        $visibility = $request->request->get('profile_visibility');
+        $user = $this->getUser();
 
-        if (!in_array($visibility, self::VISIBILITIES, true)) {
-            $this->addFlash('error', 'Visibilité inconnue.');
-            return $this->redirectToRoute('app_settings');
+        foreach (User::PRIVACY_CATEGORIES as $category) {
+            $level = $request->request->get('privacy_' . $category);
+            if ($level === null) {
+                continue;
+            }
+            if (!in_array($level, User::PRIVACY_LEVELS, true)) {
+                $this->addFlash('error', 'Réglage de confidentialité invalide.');
+                return $this->redirectToRoute('app_settings_privacy_page');
+            }
+            $user->setPrivacyLevel($category, $level);
         }
 
-        $this->getUser()->setProfileVisibility($visibility);
         $em->flush();
 
-        $this->addFlash('success', $visibility === 'public'
-            ? 'Ton compte est public : tout le monde peut voir tes événements.'
-            : 'Ton compte est privé : seuls tes amis voient tes événements.');
-
-        return $this->redirectToRoute('app_settings');
+        $this->addFlash('success', 'Réglages de confidentialité sauvegardés.');
+        return $this->redirectToRoute('app_settings_privacy_page');
     }
 
     #[Route('/profile', name: 'app_settings_profile', methods: ['POST'])]
@@ -127,19 +160,19 @@ class SettingsController extends AbstractController
         if ($newUsername && $newUsername !== $user->getUserIdentifier()) {
             if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
                 $this->addFlash('error', 'Le pseudo doit faire 3 à 30 caractères (lettres minuscules, chiffres, _).');
-                return $this->redirectToRoute('app_settings');
+                return $this->redirectToRoute('app_settings_profile_page');
             }
             $existing = $userRepo->findOneBy(['username' => $newUsername]);
             if ($existing !== null) {
                 $this->addFlash('error', 'Ce pseudo est déjà utilisé.');
-                return $this->redirectToRoute('app_settings');
+                return $this->redirectToRoute('app_settings_profile_page');
             }
             $user->setUsername($newUsername);
         }
 
         $em->flush();
         $this->addFlash('success', 'Profil mis à jour.');
-        return $this->redirectToRoute('app_settings');
+        return $this->redirectToRoute('app_settings_profile_page');
     }
 
     #[Route('/password', name: 'app_settings_password', methods: ['POST'])]
@@ -155,21 +188,21 @@ class SettingsController extends AbstractController
 
         if (!$user->getPassword() || !$hasher->isPasswordValid($user, $current)) {
             $this->addFlash('error', 'Mot de passe actuel incorrect.');
-            return $this->redirectToRoute('app_settings');
+            return $this->redirectToRoute('app_settings_account_page');
         }
         if ($new !== $confirm) {
             $this->addFlash('error', 'Les nouveaux mots de passe ne correspondent pas.');
-            return $this->redirectToRoute('app_settings');
+            return $this->redirectToRoute('app_settings_account_page');
         }
         if (strlen($new) < 8) {
             $this->addFlash('error', 'Le mot de passe doit faire au moins 8 caractères.');
-            return $this->redirectToRoute('app_settings');
+            return $this->redirectToRoute('app_settings_account_page');
         }
 
         $user->setPassword($hasher->hashPassword($user, $new));
         $em->flush();
         $this->addFlash('success', 'Mot de passe modifié avec succès.');
-        return $this->redirectToRoute('app_settings');
+        return $this->redirectToRoute('app_settings_account_page');
     }
 
     #[Route('/delete', name: 'app_settings_delete_account', methods: ['POST'])]
@@ -179,7 +212,7 @@ class SettingsController extends AbstractController
         $confirmation = $request->request->get('confirmation');
         if ($confirmation !== 'SUPPRIMER') {
             $this->addFlash('error', 'Confirmation incorrecte. Tape exactement SUPPRIMER.');
-            return $this->redirectToRoute('app_settings');
+            return $this->redirectToRoute('app_settings_account_page');
         }
 
         // Déconnexion après la suppression : si elle échoue, le compte existe

@@ -16,14 +16,14 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * La page d'un compte, à une adresse que tout le monde peut ouvrir, connecté ou non.
  *
- * L'adresse existe toujours ; c'est le contenu qui dépend du compte :
+ * L'adresse existe toujours ; c'est le contenu qui dépend du compte. Chaque partie
+ * (événements, stats & succès, liste d'amis) a sa propre audience réglée dans les
+ * Paramètres — private, friends ou public — et s'affiche indépendamment selon que le
+ * regardeur est lui-même, un ami, ou un inconnu (voir User::canBeSeenBy). Quand rien
+ * n'est visible pour un inconnu, il tombe sur un cadenas et de quoi demander l'amitié.
  *
- *  - public                    : les événements sont montrés à qui veut ;
- *  - privé, et on est l'ami    : montrés aussi — privé ne l'est jamais entre amis ;
- *  - privé, et on ne l'est pas : cadenas, et de quoi demander l'amitié.
- *
- * L'en-tête (pseudo, photo, bio, compteur) se voit dans tous les cas : c'est ce qui
- * permet de reconnaître la personne à qui l'on demande son amitié.
+ * L'en-tête (pseudo, photo, bio) se voit dans tous les cas : c'est ce qui permet de
+ * reconnaître la personne à qui l'on demande son amitié.
  *
  * Volontairement hors du préfixe /profile, qui est derrière le pare-feu et dont la
  * route /profile/{username} capterait de toute façon l'URL.
@@ -49,22 +49,29 @@ class PublicProfileController extends AbstractController
         $viewer = $this->getUser();
         $isSelf = $viewer instanceof User && $viewer->getId()->equals($profileUser->getId());
         $areFriends = $viewer instanceof User && !$isSelf && $friendRepo->areFriends($viewer, $profileUser);
-        $canSee = $profileUser->isPublicProfile() || $isSelf || $areFriends;
+
+        // Chaque partie du profil a sa propre audience : événements, stats et liste
+        // d'amis s'affichent ou se cachent indépendamment les unes des autres.
+        $canSeeEvents = $profileUser->canBeSeenBy('events', $isSelf, $areFriends);
+        $canSeeStats = $profileUser->canBeSeenBy('stats', $isSelf, $areFriends);
+        $canSeeFriends = $profileUser->canBeSeenBy('friends', $isSelf, $areFriends);
 
         $response = $this->render('public/profile.html.twig', [
             'profile_user' => $profileUser,
-            'can_see' => $canSee,
+            'can_see_events' => $canSeeEvents,
+            'can_see_stats' => $canSeeStats,
+            'can_see_friends' => $canSeeFriends,
             'is_self' => $isSelf,
             'are_friends' => $areFriends,
             // La relation sert à savoir quoi proposer : demander, patienter, ou rien.
             'relationship' => $viewer instanceof User && !$isSelf
                 ? $friendRepo->findRelationship($viewer, $profileUser)
                 : null,
-            // Le compteur reste affiché derrière le cadenas : il dit ce qu'on rate,
-            // sans rien dire de ce qui a été vécu.
-            'total_events' => $partRepo->countPastForProfile($profileUser),
-            'events' => $canSee ? $partRepo->findRecentPastForProfile($profileUser, self::EVENTS_SHOWN) : [],
-            'badges' => $canSee ? $badges->forUser($profileUser) : null,
+            // Le compteur ne s'affiche que si les stats sont visibles pour ce regardeur.
+            'total_events' => $canSeeStats ? $partRepo->countPastForProfile($profileUser) : null,
+            'events' => $canSeeEvents ? $partRepo->findRecentPastForProfile($profileUser, self::EVENTS_SHOWN) : [],
+            'badges' => $canSeeStats ? $badges->forUser($profileUser) : null,
+            'friends' => $canSeeFriends ? $friendRepo->findConfirmedFriends($profileUser) : [],
         ]);
 
         // Un compte privé n'a rien à faire dans un moteur de recherche, même réduit à

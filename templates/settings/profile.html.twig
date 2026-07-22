@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Profil — Paramètres{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    {{ m.back_button(path('app_settings'), 'Paramètres') }}
+
+    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Profil</h1>
+
+    {# ── Infos du profil ── #}
+    <div class="card">
+        <form method="post" action="{{ path('app_settings_profile') }}" data-controller="form-loader">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Nom affiché</label>
+                    <input type="text" name="display_name" value="{{ app.user.displayName }}"
+                           class="input-field" placeholder="Votre nom" required>
+                </div>
+                <div data-controller="username-check"
+                     data-username-check-endpoint-value="{{ path('app_settings_check_username') }}">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Pseudo (@)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm pointer-events-none" style="color: var(--fg-4)">@</span>
+                        <input type="text" name="username"
+                               value="{{ app.user.username }}"
+                               class="input-field pl-7"
+                               data-username-check-target="input"
+                               data-action="input->username-check#check"
+                               minlength="3" maxlength="30"
+                               autocomplete="off"
+                               placeholder="ton_pseudo">
+                    </div>
+                    <div data-username-check-target="feedback"></div>
+                    <p class="text-xs mt-1" style="color: var(--fg-4)">Lettres minuscules, chiffres et _ uniquement</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--fg-3)">Bio</label>
+                    <textarea name="bio" rows="3" class="input-field resize-none"
+                              placeholder="Une courte description...">{{ app.user.bio }}</textarea>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3">Enregistrer le profil</button>
+            </div>
+        </form>
+    </div>
+
+    {# ── Lien public ── #}
+    {% set share_url = url('app_public_profile', {username: app.user.username}) %}
+    <div class="card">
+        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Mon lien</h2>
+        <p class="text-sm mb-3" style="color: var(--fg-3)">
+            {% if app.user.isPublicProfile %}
+                L'adresse de ton profil, à partager où tu veux. Tout le monde peut l'ouvrir,
+                même sans compte. Tes notes et tes commentaires n'y figurent jamais.
+            {% else %}
+                L'adresse de ton profil. Ton compte étant privé, ceux qui ne sont pas tes amis
+                y verront un cadenas et pourront te demander en ami.
+            {% endif %}
+        </p>
+
+        <div data-controller="copy">
+            <div class="flex gap-2">
+                <input type="text" class="input-field" readonly value="{{ share_url }}"
+                       data-copy-target="source" onfocus="this.select()">
+                <button type="button" class="btn-secondary px-4 flex-shrink-0"
+                        data-action="copy#copy" data-copy-target="button">Copier</button>
+            </div>
+            <a href="{{ share_url }}" target="_blank" rel="noopener"
+               class="inline-block text-sm font-medium mt-3" style="color: var(--positive)">
+                Voir la page →
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

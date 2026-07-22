@@ -417,8 +417,8 @@ class ProfileController extends AbstractController
         $isSelf = $profileUser === $currentUser;
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
 
-        // Public, ou ami : il n'y a pas de troisième cas.
-        $canViewHistory = $isSelf || $profileUser->isPublicProfile() || $areFriends;
+        // L'historique complet suit l'audience « événements » du profil.
+        $canViewHistory = $profileUser->canBeSeenBy('events', $isSelf, $areFriends);
 
         if (!$canViewHistory) {
             return $this->redirectToRoute('app_profile_view', ['username' => $username]);
@@ -467,20 +467,26 @@ class ProfileController extends AbstractController
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
         $relationship = $friendRepo->findRelationship($currentUser, $profileUser);
 
-        // Public, ou ami : il n'y a pas de troisième cas.
-        $canViewHistory = $isSelf || $profileUser->isPublicProfile() || $areFriends;
+        // Chaque partie du profil a son audience : événements, stats et liste d'amis
+        // s'affichent indépendamment selon ce que le regardeur a le droit de voir.
+        $canSeeEvents = $profileUser->canBeSeenBy('events', $isSelf, $areFriends);
+        $canSeeStats = $profileUser->canBeSeenBy('stats', $isSelf, $areFriends);
+        $canSeeFriends = $profileUser->canBeSeenBy('friends', $isSelf, $areFriends);
 
-        $events = $canViewHistory ? $partRepo->findByUser($profileUser, 10) : [];
-        $totalEvents = $canViewHistory ? $partRepo->countByUser($profileUser) : null;
+        $events = $canSeeEvents ? $partRepo->findByUser($profileUser, 10) : [];
+        $totalEvents = $canSeeStats ? $partRepo->countByUser($profileUser) : null;
 
         return $this->render('profile/view.html.twig', [
             'profile_user' => $profileUser,
             'is_self' => $isSelf,
             'are_friends' => $areFriends,
             'relationship' => $relationship,
-            'can_view_history' => $canViewHistory,
+            'can_see_events' => $canSeeEvents,
+            'can_see_stats' => $canSeeStats,
+            'can_see_friends' => $canSeeFriends,
             'events' => $events,
             'total_events' => $totalEvents,
+            'friends' => $canSeeFriends ? $friendRepo->findConfirmedFriends($profileUser) : [],
         ]);
     }
 }
