@@ -68,53 +68,67 @@
                 </div>
             </div>
 
-            {# La liste des événements du groupe #}
+            {# La liste des événements du groupe. Chaque événement est une tuile
+               autonome : titre + note sur la même ligne, puis souvenirs et réactions
+               dessous, pour que plusieurs concerts d'un même jour restent compacts. #}
             {% for g in grp.events %}
-            <a href="{{ path('app_event_show', {id: g.event.id}) }}"
-               class="flex items-center gap-3 mx-3 mb-2 px-3 py-2 rounded-xl no-underline"
-               style="background: var(--bg-2)">
-                {{ m.event_thumb(g.event) }}
-                <div class="flex-1 min-w-0">
-                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
-                </div>
-                {% if g.my_participation %}
-                <span class="text-[10px] font-medium flex-shrink-0" style="color: var(--positive)">✓ Toi aussi</span>
-                {% endif %}
-            </a>
+            <div class="mx-3 mb-2 rounded-xl overflow-hidden" style="background: var(--bg-2)">
 
-            {# Souvenirs des amis sur cet événement (note / commentaire / photo), puis
-               les réactions. Le bloc est rendu même sans souvenir, contrairement à
-               avant : réagir au seul fait qu'un ami y était a du sens, et c'est le
-               seul geste possible sur un événement qu'il n'a pas raconté. #}
-            {% for p in g.participations %}
-                {% set has_memory = p.rating or p.comment or p.imageUrl %}
-                <div class="px-4 pb-3">
-                    {% if n > 1 or p.rating %}
-                    <div class="flex items-center gap-2">
-                        {% if n > 1 %}
-                            <span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>
+                {# En-tête de l'événement : vignette + titre (la note descend sur la
+                   ligne des réactions, car le « + » ne peut pas vivre dans ce lien). #}
+                <a href="{{ path('app_event_show', {id: g.event.id}) }}"
+                   class="flex items-center gap-3 px-3 py-2.5 no-underline">
+                    {{ m.event_thumb(g.event) }}
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
+                    </div>
+                    {% if g.my_participation %}
+                    <span class="text-[10px] font-medium flex-shrink-0" style="color: var(--positive)">✓ Toi aussi</span>
+                    {% endif %}
+                </a>
+
+                {# Souvenirs des amis (note / commentaire / photo) puis réactions. Rendu
+                   même sans souvenir : réagir au seul fait qu'un ami y était a du sens. #}
+                {% for p in g.participations %}
+                    {% set rstate = reactions[p.id.toRfc4122]|default({}) %}
+                    {% set has_body = p.comment or p.imageUrl %}
+                    {% set has_meta = (n > 1) or p.rating %}
+                    {# « + » collé à droite de la note seulement s'il n'y a encore aucune
+                       réaction ni souvenir. Dès qu'une réaction existe, elle passe sous
+                       la note (les pastilles + le « + » occupent leur propre ligne). #}
+                    {% set inline = (not has_body) and (rstate is empty) %}
+                    <div class="px-3 pb-2.5{% if not loop.first or has_body %} pt-0.5{% endif %}">
+                        {% if inline %}
+                            <div class="flex items-center gap-2 flex-wrap">
+                                {% if n > 1 %}<span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>{% endif %}
+                                {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
+                                {{ m.reaction_bar(p, rstate) }}
+                            </div>
+                        {% else %}
+                            {% if has_meta %}
+                            <div class="flex items-center gap-2">
+                                {% if n > 1 %}<span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>{% endif %}
+                                {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
+                            </div>
+                            {% endif %}
+                            {% if p.comment %}
+                            <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--fg-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">« {{ p.comment }} »</p>
+                            {% endif %}
+                            {% if p.imageUrl %}
+                            <img src="{{ p.imageUrl }}" alt="" loading="lazy"
+                                 class="w-full object-cover rounded-xl mt-2.5 block"
+                                 style="max-height: 240px; border: 1px solid var(--border-subtle)">
+                            {% endif %}
+                            <div class="{{ has_meta or has_body ? 'mt-2' : '' }}">{{ m.reaction_bar(p, rstate) }}</div>
                         {% endif %}
-                        {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
                     </div>
-                    {% endif %}
-                    {% if p.comment %}
-                    <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--fg-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">« {{ p.comment }} »</p>
-                    {% endif %}
-                    {% if p.imageUrl %}
-                    <img src="{{ p.imageUrl }}" alt="" loading="lazy"
-                         class="w-full object-cover rounded-xl mt-2.5 block"
-                         style="max-height: 240px; border: 1px solid var(--border-subtle)">
-                    {% endif %}
-                    <div class="{{ has_memory or n > 1 ? 'mt-2' : '' }}">
-                        {{ m.reaction_bar(p, reactions[p.id.toRfc4122]|default({})) }}
-                    </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
 
-            {# Accompagnants tagués (« avec qui »), hors ceux déjà nommés plus haut #}
-            {% if g.companions %}
-            <p class="text-xs px-4 pb-2.5 -mt-1" style="color: var(--fg-3)">avec {{ g.companions|join(', ') }}</p>
-            {% endif %}
+                {# Accompagnants tagués (« avec qui »), hors ceux déjà nommés plus haut #}
+                {% if g.companions %}
+                <p class="text-xs px-3 pb-2.5 -mt-1" style="color: var(--fg-3)">avec {{ g.companions|join(', ') }}</p>
+                {% endif %}
+            </div>
             {% endfor %}
 
         </div>

@@ -170,13 +170,11 @@
                     {% endfor %}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm leading-snug truncate" style="color: var(--fg-2)">
-                        <span class="font-semibold" style="color: var(--fg-1)">{{ firstUser.displayName }}</span>
-                        {%- if n > 1 %} et {{ n - 1 }} autre{{ n > 2 ? 's' }}{% endif %}
-                        {{ n > 1 ? 'étaient à' : 'était à' }}
+                    <p class="text-sm font-semibold leading-snug truncate" style="color: var(--fg-1)">
+                        {{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}
                     </p>
                     <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">
-                        {{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}
+                        <span class="font-medium" style="color: var(--fg-2)">{{ firstUser.displayName }}</span>{% if n > 1 %} et {{ n - 1 }} autre{{ n > 2 ? 's' }}{% endif %} {{ n > 1 ? 'y étaient' : 'y était' }}
                     </p>
                 </div>
                 <span class="text-[11px] flex-shrink-0" style="color: var(--fg-4)">{{ g.date_label }}</span>
