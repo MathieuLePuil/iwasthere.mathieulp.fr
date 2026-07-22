@@ -237,6 +237,11 @@ if (!empty($data['duration'])) {
                     if (!$taggedUser) {
                         continue;
                     }
+                    // Événement déjà commun (on a rejoint un événement existant où l'ami
+                    // participe déjà) : pas d'invitation pour un événement qu'il vit déjà.
+                    if ($em->getRepository(EventParticipation::class)->findOneBy(['event' => $event, 'user' => $taggedUser]) !== null) {
+                        continue;
+                    }
                     $notifier->dispatch(
                         $taggedUser,
                         NotificationType::FriendTaggedInEvent,
@@ -570,6 +575,11 @@ if (!empty($data['duration'])) {
                 if (!$taggedUser) {
                     continue;
                 }
+                // Événement déjà commun : l'ami y a sa propre participation, l'inviter
+                // à un événement qu'il vit déjà n'aurait pas de sens.
+                if ($participationRepo->findByUserAndEvent($taggedUser, $event) !== null) {
+                    continue;
+                }
                 $notifier->dispatch(
                     $taggedUser,
                     NotificationType::FriendTaggedInEvent,
@@ -643,7 +653,7 @@ if (!empty($data['duration'])) {
 
         if ($request->isMethod('POST')) {
             return $this->handleCompletion(
-                $event, $participation, $request, $em, $images, $userRepo, $notifier, $activity
+                $event, $participation, $request, $em, $images, $userRepo, $participationRepo, $notifier, $activity
             );
         }
 
@@ -671,6 +681,7 @@ if (!empty($data['duration'])) {
         EntityManagerInterface $em,
         EventImageService $images,
         UserRepository $userRepo,
+        EventParticipationRepository $participationRepo,
         NotificationDispatcher $notifier,
         ActivityNotifier $activity,
     ): JsonResponse {
@@ -758,6 +769,11 @@ if (!empty($data['duration'])) {
             }
             $taggedUser = $userRepo->find($friend['userId']);
             if (!$taggedUser) {
+                continue;
+            }
+            // Événement déjà commun : l'ami y a sa propre participation, l'inviter
+            // à un événement qu'il vit déjà n'aurait pas de sens.
+            if ($participationRepo->findByUserAndEvent($taggedUser, $event) !== null) {
                 continue;
             }
             $notifier->dispatch(

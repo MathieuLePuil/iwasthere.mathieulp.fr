@@ -50,9 +50,11 @@
     </div>
 {% endmacro %}
 
-{# Square list thumbnail: artist photo when available, else type-colored poster #}
-{% macro event_thumb(event) %}
-    <div class="w-11 h-11 rounded-lg flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
+{# Square list thumbnail: artist photo when available, else type-colored poster.
+   `size` : 'md' (défaut, 44px) ou 'lg' (48px, coins plus arrondis) pour les cartes. #}
+{% macro event_thumb(event, size) %}
+    {% set box = {'md': 'w-11 h-11 rounded-lg', 'lg': 'w-12 h-12 rounded-xl'}[size ?? 'md'] ?? 'w-11 h-11 rounded-lg' %}
+    <div class="{{ box }} flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
         <div class="w-full h-full flex items-center justify-center{% if not event.artistImageUrl %} poster-{{ event.type ?? 'default' }}{% endif %}"
              style="{% if event.artistImageUrl %}background: linear-gradient(rgba(11,13,16,0.45), rgba(11,13,16,0.45)), url('{{ event.artistImageUrl }}') center/cover{% else %}--evt-hue: {{ event_hue(event) }}{% endif %}">
             <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
