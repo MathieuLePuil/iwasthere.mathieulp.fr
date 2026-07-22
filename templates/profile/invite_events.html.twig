@@ -36,7 +36,7 @@
                 <span class="ml-auto text-xs" style="color: var(--fg-4)" id="invite-count">0 / {{ participations|length }}</span>
             </label>
 
-            <div class="space-y-3 mb-24">
+            <div class="space-y-3 mb-40">
                 {% for p in participations %}
                 <label class="card flex items-center gap-3 cursor-pointer select-none">
                     <input type="checkbox" name="participations[]" value="{{ p.id }}"
@@ -58,8 +58,8 @@
                 {% endfor %}
             </div>
 
-            <div class="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3" style="background: var(--bg-1); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
-                <button type="submit" id="invite-submit" class="btn-primary w-full py-3" disabled style="opacity: 0.5">
+            <div class="fixed left-0 right-0 z-40 px-4 pt-3 pb-3" style="bottom: calc(4rem + min(env(safe-area-inset-bottom, 0px), 12px)); background: var(--bg-1); border-top: 1px solid var(--border-subtle)">
+                <button type="submit" id="invite-submit" class="btn-primary w-full py-3" disabled>
                     Inviter aux événements sélectionnés
                 </button>
             </div>
@@ -80,7 +80,6 @@
                 counter.textContent = checked + ' / ' + boxes.length;
                 selectAll.checked = checked === boxes.length;
                 submit.disabled = checked === 0;
-                submit.style.opacity = checked === 0 ? '0.5' : '1';
             }
 
             selectAll.addEventListener('change', function () {

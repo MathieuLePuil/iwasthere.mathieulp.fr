@@ -370,6 +370,17 @@
   }
   .btn-primary:hover { opacity: 0.9; }
   .btn-primary:active { scale: 0.97; opacity: 0.85; }
+  /* État désactivé : on n'atténue pas le violet (une opacité globale le délave en
+     lavande pâle et grise le texte), on bascule sur un aplat neutre lisible qui se
+     lit clairement comme « inactif ». Retour au violet plein dès que réactivé. */
+  .btn-primary:disabled,
+  .btn-primary[disabled] {
+    background-color: var(--bg-3);
+    color: var(--fg-4);
+    opacity: 1;
+    scale: 1;
+    cursor: not-allowed;
+  }
 
   .btn-secondary {
     background-color: var(--bg-2);
