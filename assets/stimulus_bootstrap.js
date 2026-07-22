@@ -16,6 +16,7 @@ import FeedController from './controllers/feed_controller.js';
 import RewindController from './controllers/rewind_controller.js';
 import CompletionController from './controllers/completion_controller.js';
 import SouvenirGateController from './controllers/souvenir_gate_controller.js';
+import CelebrateController from './controllers/celebrate_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -35,3 +36,4 @@ app.register('feed', FeedController);
 app.register('rewind', RewindController);
 app.register('completion', CompletionController);
 app.register('souvenir-gate', SouvenirGateController);
+app.register('celebrate', CelebrateController);

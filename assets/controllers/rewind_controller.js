@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { burstConfetti } from '../confetti.js';
 
 /**
  * Le diaporama du Rewind, façon story : barres de progression, avance auto,
@@ -164,6 +165,12 @@ export default class extends Controller {
                 bar.style.setProperty('--rw-duration', `${this.durationValue}ms`);
             }
         });
+
+        // La dernière diapo est le bouquet final : une salve, une seule fois.
+        if (i === this.slideTargets.length - 1 && !this.celebrated) {
+            this.celebrated = true;
+            setTimeout(() => burstConfetti({ count: 120, power: 1.1 }), 260);
+        }
 
         this.schedule();
     }

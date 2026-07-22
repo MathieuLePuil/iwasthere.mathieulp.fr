@@ -1599,6 +1599,23 @@
   100% { transform: scale(1); }
 }
 
+/* Récompense — la pastille d'un succès tout juste décroché « rebondit » à
+   l'apparition (piloté par celebrate_controller, qui pose aussi --pop-delay pour
+   décaler chaque badge neuf). Un halo bref accompagne le rebond. */
+.iwt-earned-pop {
+  transform-origin: center;
+  animation: iwt-earned-pop 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: var(--pop-delay, 0ms);
+}
+@keyframes iwt-earned-pop {
+  0%   { transform: scale(0.55); box-shadow: 0 0 0 0 color-mix(in srgb, var(--positive) 55%, transparent); }
+  55%  { transform: scale(1.2); }
+  100% { transform: scale(1); box-shadow: 0 0 0 10px color-mix(in srgb, var(--positive) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iwt-earned-pop { animation: none; }
+}
+
 /* Confettis — chaque brin reçoit sa position, sa teinte et son tempo en inline */
 .cmpl-confetti {
   position: absolute;

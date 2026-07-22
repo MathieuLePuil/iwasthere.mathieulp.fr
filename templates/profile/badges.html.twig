@@ -4,7 +4,11 @@
 {% block title %}Succès — IWasThere{% endblock %}
 
 {% block body %}
-<div class="px-4 py-5">
+{# Clés des succès déjà décrochés : le contrôleur les compare à ce que le
+   navigateur a déjà vu pour ne fêter (confettis + pop) que les nouveaux. #}
+{% set earned_keys = [] %}
+{% for family in badges.families %}{% for t in family.tiers %}{% if t.earned %}{% set earned_keys = earned_keys|merge([t.badge.value]) %}{% endif %}{% endfor %}{% endfor %}
+<div class="px-4 py-5" data-controller="celebrate" data-celebrate-keys-value="{{ earned_keys|json_encode }}">
 
     {{ m.back_button(path('app_profile'), 'Mon Profil') }}
 
@@ -41,6 +45,7 @@
             <div class="px-4 py-3" style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}{% if t.earned %}; background: var(--positive-soft){% endif %}">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                         {% if t.earned %}data-badge-key="{{ t.badge.value }}"{% endif %}
                          style="{% if t.earned %}background: rgba(61,220,151,0.14); border: 1px solid rgba(61,220,151,0.3){% else %}background: var(--bg-2); border: 1px solid var(--border-subtle); filter: grayscale(1); opacity: {{ t.locked_ahead ? '0.4' : '0.65' }}{% endif %}">{{ t.badge.icon }}</div>
 
                     <div class="flex-1 min-w-0">
