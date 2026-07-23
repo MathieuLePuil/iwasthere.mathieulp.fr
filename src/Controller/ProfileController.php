@@ -427,6 +427,7 @@ class ProfileController extends AbstractController
         $tab = $request->query->get('tab', 'past') === 'upcoming' ? 'upcoming' : 'past';
         $type = $request->query->get('type', '');
         $year = $request->query->get('year', '');
+        $sort = $request->query->get('sort', 'date'); // date, rating
         $perPage = 20;
 
         $pastCount = $partRepo->countHistory($profileUser, 'past', $type, $year);
@@ -436,7 +437,7 @@ class ProfileController extends AbstractController
         $totalPages = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, $request->query->getInt('page', 1)), $totalPages);
 
-        $participations = $partRepo->findHistoryPage($profileUser, $tab, $type, $year, $page, $perPage);
+        $participations = $partRepo->findHistoryPage($profileUser, $tab, $type, $year, $page, $perPage, $sort);
 
         return $this->render('profile/view_events.html.twig', [
             'profile_user'   => $profileUser,
@@ -445,6 +446,7 @@ class ProfileController extends AbstractController
             'tab'            => $tab,
             'filter_type'    => $type,
             'filter_year'    => $year,
+            'sort_by'        => $sort,
             'years'          => $partRepo->findHistoryYears($profileUser),
             'past_count'     => $pastCount,
             'upcoming_count' => $upcomingCount,

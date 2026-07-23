@@ -1,5 +1,6 @@
 {% extends 'base.html.twig' %}
 {% import 'components/_macros.html.twig' as m %}
+{% import 'components/_filters.html.twig' as f %}
 
 {% block title %}Musique — IWasThere{% endblock %}
 
@@ -12,47 +13,40 @@
            class="iwt-icon-btn text-lg font-bold leading-none" style="color: var(--positive)">+</a>
     </div>
 
-    {# Segmented tab #}
-    <div class="iwt-segmented mb-4">
-        <a href="{{ path('app_music', app.request.query.all|merge({tab: 'past'})) }}"
-           class="{{ tab == 'past' ? 'active' : '' }}">
-            Passés · {{ past_count }}
-        </a>
-        <a href="{{ path('app_music', app.request.query.all|merge({tab: 'upcoming'})) }}"
-           class="{{ tab == 'upcoming' ? 'active' : '' }}">
-            À venir · {{ upcoming_count }}
-        </a>
-    </div>
-
-    {# Pill filters #}
-    <div class="flex gap-2 overflow-x-auto pb-2 mb-3" style="scrollbar-width: none">
-        <a href="{{ path('app_music', app.request.query.all|merge({type: '', page: null})) }}"
-           class="iwt-pill{{ filter_type == '' ? ' active' : '' }}">Tous</a>
-        <a href="{{ path('app_music', app.request.query.all|merge({type: 'concert'})) }}"
-           class="iwt-pill{{ filter_type == 'concert' ? ' active' : '' }}">🎤 Concerts</a>
-        <a href="{{ path('app_music', app.request.query.all|merge({type: 'festival'})) }}"
-           class="iwt-pill{{ filter_type == 'festival' ? ' active' : '' }}">🎪 Festivals</a>
-        {% for year in years %}
-        <a href="{{ path('app_music', app.request.query.all|merge({year: year})) }}"
-           class="iwt-pill{{ filter_year == year ~ '' ? ' active' : '' }}">{{ year }}</a>
-        {% endfor %}
-    </div>
-
-    {# Sort (past only) #}
-    {% if tab == 'past' and participations|length > 0 %}
-    <div class="flex gap-2 mb-4 items-center">
-        <span class="section-title">Trier :</span>
-        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'date'})) }}"
-           class="iwt-pill{{ sort_by == 'date' ? ' active' : '' }}">Date</a>
-        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'rating'})) }}"
-           class="iwt-pill{{ sort_by == 'rating' ? ' active' : '' }}">Note</a>
-        <a href="{{ path('app_music', app.request.query.all|merge({sort: 'duration'})) }}"
-           class="iwt-pill{{ sort_by == 'duration' ? ' active' : '' }}">Durée</a>
-    </div>
-    {% endif %}
+    {{ f.bar(
+        route:          'app_music',
+        query:          app.request.query.all,
+        tab:            tab,
+        past_count:     past_count,
+        upcoming_count: upcoming_count,
+        types: [
+            {value: '',         label: 'Tous'},
+            {value: 'concert',  label: '🎤 Concerts'},
+            {value: 'festival', label: '🎪 Festivals'}
+        ],
+        active_type: filter_type,
+        years:       years,
+        active_year: filter_year,
+        sorts: [
+            {value: 'date',     label: 'Plus récents'},
+            {value: 'rating',   label: 'Mieux notés'},
+            {value: 'duration', label: 'Plus longs'}
+        ],
+        active_sort: sort_by,
+        count:       participations|length
+    ) }}
 
     {# Events list #}
     {% if participations|length == 0 %}
+        {% if filter_type or filter_year %}
+        {{ m.empty_state(
+            '🎵',
+            'Aucun résultat',
+            'Aucun événement musical avec ces filtres',
+            path('app_music', {tab: tab}),
+            'Réinitialiser les filtres'
+        ) }}
+        {% else %}
         {{ m.empty_state(
             tab == 'upcoming' ? '📅' : '🎵',
             tab == 'upcoming' ? 'Aucun événement à venir' : 'Aucun souvenir musical',
@@ -60,6 +54,7 @@
             path('app_event_new', {category: 'music'}),
             '+ Ajouter un événement'
         ) }}
+        {% endif %}
     {% else %}
         {# Group by year for past events sorted by date #}
         {% if tab == 'past' and sort_by == 'date' %}

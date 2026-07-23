@@ -359,10 +359,22 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /** @return EventParticipation[] */
-    public function findHistoryPage(User $user, string $tab, string $type = '', string $year = '', int $page = 1, int $perPage = 20): array
+    public function findHistoryPage(User $user, string $tab, string $type = '', string $year = '', int $page = 1, int $perPage = 20, string $sortBy = 'date'): array
     {
-        return $this->buildHistoryQb($user, $tab, $type, $year)
-            ->orderBy('e.date', $tab === 'upcoming' ? 'ASC' : 'DESC')
+        $qb = $this->buildHistoryQb($user, $tab, $type, $year);
+
+        // « À venir » se lit toujours du plus proche au plus lointain ; le tri choisi
+        // ne s'applique qu'au passé. « Mieux notés » renvoie les sans-note en fin.
+        if ($tab === 'upcoming') {
+            $qb->orderBy('e.date', 'ASC');
+        } else {
+            match ($sortBy) {
+                'rating' => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
+                default  => $qb->orderBy('e.date', 'DESC'),
+            };
+        }
+
+        return $qb
             ->setFirstResult(($page - 1) * $perPage)
             ->setMaxResults($perPage)
             ->getQuery()
@@ -467,7 +479,7 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /** @return EventParticipation[] */
-    public function findSportPast(User $user, string $sport = '', string $year = ''): array
+    public function findSportPast(User $user, string $sport = '', string $year = '', string $sortBy = 'date'): array
     {
         $qb = $this->createQueryBuilder('p')
             ->join('p.event', 'e')
@@ -477,14 +489,19 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->andWhere('e.category = :cat')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
             ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('cat', 'sport')
-            ->orderBy('e.date', 'DESC');
+            ->setParameter('cat', 'sport');
         if ($sport) {
             $qb->andWhere('e.type = :sport')->setParameter('sport', $sport);
         }
         if ($year) {
             $qb->andWhere('YEAR(e.date) = :year')->setParameter('year', (int) $year);
         }
+        // « Mieux notés » place les matchs sans note en fin de liste, la date départageant
+        // à note égale ; le tri par défaut reste l'antéchronologique.
+        match ($sortBy) {
+            'rating' => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
+            default  => $qb->orderBy('e.date', 'DESC'),
+        };
         return $qb->getQuery()->getResult();
     }
 

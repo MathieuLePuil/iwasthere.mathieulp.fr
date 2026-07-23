@@ -21,11 +21,12 @@ class SportController extends AbstractController
     {
         $user = $this->getUser();
         $tab = $request->query->get('tab', 'past');
-        $filterSport = $request->query->get('sport', '');
+        $filterType = $request->query->get('type', ''); // football, rugby, tennis, ''
         $filterYear = $request->query->get('year', '');
+        $sortBy = $request->query->get('sort', 'date'); // date, rating
 
-        $pastParticipations = $repo->findSportPast($user, $filterSport, $filterYear);
-        $upcomingParticipations = $repo->findSportUpcoming($user, $filterSport);
+        $pastParticipations = $repo->findSportPast($user, $filterType, $filterYear, $sortBy);
+        $upcomingParticipations = $repo->findSportUpcoming($user, $filterType);
         $participations = $tab === 'upcoming' ? $upcomingParticipations : $pastParticipations;
 
         $years = $repo->findSportYears($user);
@@ -33,8 +34,9 @@ class SportController extends AbstractController
         return $this->render('sport/index.html.twig', [
             'participations' => $participations,
             'tab' => $tab,
-            'filter_sport' => $filterSport,
+            'filter_type' => $filterType,
             'filter_year' => $filterYear,
+            'sort_by' => $sortBy,
             'years' => $years,
             'past_count' => count($pastParticipations),
             'upcoming_count' => count($upcomingParticipations),

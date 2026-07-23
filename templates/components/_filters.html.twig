@@ -1,0 +1,90 @@
+{#
+  Barre de filtres & tri — unifiée pour Musique, Sport et l'historique de profil.
+
+  Une seule grammaire partout, pour lever la confusion d'avant (types et années
+  mélangés dans la même rangée de puces) :
+    1. un onglet « temps »        — Passés / À venir  (dimension exclusive)
+    2. une rangée de catégories   — Tous / Concerts / …  (dimension exclusive)
+    3. un tri + une année         — deux menus qui SE COMBINENT avec la catégorie
+
+  L'année et le tri ne concernent que le passé : masqués sur « À venir » (où la
+  liste est courte et toujours triée par date croissante).
+
+  Tous les liens repartent de `query` (les paramètres d'URL courants) : changer un
+  axe préserve les autres. `page` est remis à null à chaque changement de filtre.
+
+  Paramètres nommés :
+    route         nom de route (ex. 'app_music')
+    query         app.request.query.all — paramètres d'URL à préserver
+    tab           'past' | 'upcoming'
+    past_count / upcoming_count   compteurs des onglets
+    types         [{value, label}] — puces de catégorie (value '' = Tous)
+    active_type   catégorie active
+    years         liste d'années (int) — menu Année (défaut [])
+    active_year   année active en chaîne ('' = toutes, défaut '')
+    sorts         [{value, label}] — options de tri, la 1re est le défaut ([] = aucun tri)
+    active_sort   tri actif (défaut '')
+    count         nombre de résultats affichés — résumé + reset (défaut null = masqué)
+    fixed         params de route fixes à réinjecter, ex. {username: '…'} (défaut {})
+#}
+{% macro bar(route, query, tab, past_count, upcoming_count, types, active_type, years = [], active_year = '', sorts = [], active_sort = '', count = null, fixed = {}) %}
+    {% set base = query|merge(fixed) %}
+    {% set default_sort = sorts is not empty ? (sorts|first).value : '' %}
+    {% set is_filtered = active_type != '' or active_year != '' or (sorts is not empty and active_sort != '' and active_sort != default_sort) %}
+
+    {# 1. Onglet temps #}
+    <div class="iwt-segmented mb-3">
+        <a href="{{ path(route, base|merge({tab: 'past', page: null})) }}"
+           class="{{ tab == 'past' ? 'active' : '' }}">Passés · {{ past_count }}</a>
+        <a href="{{ path(route, base|merge({tab: 'upcoming', page: null})) }}"
+           class="{{ tab == 'upcoming' ? 'active' : '' }}">À venir · {{ upcoming_count }}</a>
+    </div>
+
+    {# 2. Catégories #}
+    <div class="iwt-chips mb-3">
+        {% for t in types %}
+            <a href="{{ path(route, base|merge({type: t.value ?: null, page: null})) }}"
+               class="iwt-pill{{ active_type == t.value ? ' active' : '' }}">{{ t.label }}</a>
+        {% endfor %}
+    </div>
+
+    {# 3. Tri + année (passé uniquement) #}
+    {% if tab == 'past' and (sorts is not empty or years is not empty) %}
+    <div class="iwt-toolbar mb-3">
+        {% if sorts is not empty %}
+        <select class="iwt-select iwt-select--sort{{ active_sort != '' and active_sort != default_sort ? ' is-active' : '' }}"
+                aria-label="Trier les événements" onchange="location.assign(this.value)">
+            {% for s in sorts %}
+                <option value="{{ path(route, base|merge({sort: s.value, page: null})) }}"
+                        {{ active_sort == s.value or (active_sort == '' and s.value == default_sort) ? 'selected' : '' }}>{{ s.label }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+
+        {% if years is not empty %}
+        <select class="iwt-select iwt-select--year{{ active_year != '' ? ' is-active' : '' }}"
+                aria-label="Filtrer par année" onchange="location.assign(this.value)">
+            <option value="{{ path(route, base|merge({year: null, page: null})) }}"
+                    {{ active_year == '' ? 'selected' : '' }}>Toutes les années</option>
+            {% for y in years %}
+                <option value="{{ path(route, base|merge({year: y, page: null})) }}"
+                        {{ active_year == y ~ '' ? 'selected' : '' }}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {# Résumé + réinitialisation #}
+    {% if count is not null and count > 0 %}
+    <div class="iwt-result-line mb-3">
+        <span>{{ count }} {{ count > 1 ? 'événements' : 'événement' }}</span>
+        {% if is_filtered %}
+        <a href="{{ path(route, base|merge({type: null, year: null, sort: null, page: null})) }}" class="iwt-reset">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            Réinitialiser
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+{% endmacro %}

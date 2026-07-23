@@ -1,5 +1,6 @@
 {% extends 'base.html.twig' %}
 {% import 'components/_macros.html.twig' as m %}
+{% import 'components/_filters.html.twig' as f %}
 
 {% block title %}Événements de {{ profile_user.displayName }} — IWasThere{% endblock %}
 
@@ -19,46 +20,44 @@
         </div>
     </div>
 
-    {# Segmented tab #}
-    <div class="iwt-segmented mb-4">
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, tab: 'past', page: null})) }}"
-           class="{{ tab == 'past' ? 'active' : '' }}">
-            Passés · {{ past_count }}
-        </a>
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, tab: 'upcoming', page: null})) }}"
-           class="{{ tab == 'upcoming' ? 'active' : '' }}">
-            À venir · {{ upcoming_count }}
-        </a>
-    </div>
-
-    {# Pill filters #}
-    <div class="flex gap-2 overflow-x-auto pb-2 mb-3" style="scrollbar-width: none">
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: null, year: null, page: null})) }}"
-           class="iwt-pill{{ filter_type == '' and filter_year == '' ? ' active' : '' }}">Tous</a>
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'concert' ? null : 'concert', page: null})) }}"
-           class="iwt-pill{{ filter_type == 'concert' ? ' active' : '' }}">🎤 Concerts</a>
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'festival' ? null : 'festival', page: null})) }}"
-           class="iwt-pill{{ filter_type == 'festival' ? ' active' : '' }}">🎪 Festivals</a>
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, type: filter_type == 'sport' ? null : 'sport', page: null})) }}"
-           class="iwt-pill{{ filter_type == 'sport' ? ' active' : '' }}">⚽ Sport</a>
-        {% for year in years %}
-        <a href="{{ path('app_profile_view_events', app.request.query.all|merge({username: profile_user.username, year: filter_year == year ~ '' ? null : year, page: null})) }}"
-           class="iwt-pill{{ filter_year == year ~ '' ? ' active' : '' }}">{{ year }}</a>
-        {% endfor %}
-    </div>
+    {{ f.bar(
+        route:          'app_profile_view_events',
+        query:          app.request.query.all,
+        fixed:          {username: profile_user.username},
+        tab:            tab,
+        past_count:     past_count,
+        upcoming_count: upcoming_count,
+        types: [
+            {value: '',         label: 'Tous'},
+            {value: 'concert',  label: '🎤 Concerts'},
+            {value: 'festival', label: '🎪 Festivals'},
+            {value: 'sport',    label: '⚽ Sport'}
+        ],
+        active_type: filter_type,
+        years:       years,
+        active_year: filter_year,
+        sorts: [
+            {value: 'date',   label: 'Plus récents'},
+            {value: 'rating', label: 'Mieux notés'}
+        ],
+        active_sort: sort_by,
+        count:       total
+    ) }}
 
     {# Events list #}
     {% if participations|length == 0 %}
         {{ m.empty_state(
             tab == 'upcoming' ? '📅' : '🎵',
-            tab == 'upcoming' ? 'Aucun événement à venir' : 'Aucun événement',
+            (filter_type or filter_year) ? 'Aucun résultat' : (tab == 'upcoming' ? 'Aucun événement à venir' : 'Aucun événement'),
             filter_type or filter_year
-                ? 'Aucun résultat avec ces filtres'
-                : (is_self ? 'Commence à archiver tes événements' : profile_user.displayName ~ ' n\'a encore rien archivé ici')
+                ? 'Aucun événement avec ces filtres'
+                : (is_self ? 'Commence à archiver tes événements' : profile_user.displayName ~ ' n\'a encore rien archivé ici'),
+            (filter_type or filter_year) ? path('app_profile_view_events', {username: profile_user.username, tab: tab}) : null,
+            (filter_type or filter_year) ? 'Réinitialiser les filtres' : null
         ) }}
     {% else %}
-        {# Group by year for past events #}
-        {% if tab == 'past' %}
+        {# Group by year for past events sorted by date #}
+        {% if tab == 'past' and sort_by == 'date' %}
             {% set current_year = null %}
             {% for p in participations %}
                 {% set event_year = p.event.date|date('Y') %}
