@@ -77,4 +77,30 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Les utilisateurs dont l'heure de rappel tombe dans l'une des minutes
+     * données (heure française, format « H:i »).
+     *
+     * La commande de rappels balaie une fenêtre de quelques minutes plutôt que
+     * la minute courante seule : un cron sauté ne doit pas faire perdre le
+     * rappel de la journée. Le dédoublonnage en aval évite le second envoi.
+     *
+     * @param list<string> $times
+     * @return User[]
+     */
+    public function findDueForReminders(array $times): array
+    {
+        if ($times === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('u')
+            // COALESCE : la colonne est nullable, l'absence vaut 08:00 comme partout
+            ->where('COALESCE(u.notifCompletionTime, :default) IN (:times)')
+            ->setParameter('default', '08:00')
+            ->setParameter('times', $times)
+            ->getQuery()
+            ->getResult();
+    }
 }

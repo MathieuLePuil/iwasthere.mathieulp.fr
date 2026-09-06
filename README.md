@@ -162,15 +162,64 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 
 8. **Maintenance.** Le `PushService` supprime automatiquement de la base les abonnements expirés (HTTP 410 / 404 du push server). Aucune commande de purge n'est nécessaire.
 
+9. **Crons.** ⚠️ **Sans eux, aucun push ne part.** Deux lignes, chacune protégée par
+   un `flock` pour qu'un passage ne chevauche pas le précédent :
+
+   ```cron
+   * * * * * /usr/bin/flock -n /chemin/var/messenger-worker.lock /usr/bin/php /chemin/bin/console messenger:consume async --env=prod --time-limit=3600 --memory-limit=128M --quiet >> /chemin/var/log/messenger-worker.log 2>&1
+   * * * * * /usr/bin/flock -n /chemin/var/reminders.lock /usr/bin/php /chemin/bin/console app:notifications:send-reminders --env=prod --quiet >> /chemin/var/log/reminders.log 2>&1
+   ```
+
+   Le premier consomme la file `async` : c'est lui qui envoie réellement les pushes,
+   toutes catégories confondues. Le second produit les rappels programmés. Les deux
+   tournent chaque minute — les rappels partent à l'heure choisie par chaque
+   utilisateur, à la minute près.
+
 ### Quand un push est-il envoyé ?
 
-| Événement déclencheur                  | Conditions                                                                  |
-|----------------------------------------|------------------------------------------------------------------------------|
-| Demande d'ami reçue                    | Destinataire a `notifFriendRequestEnabled = true`                            |
-| Demande d'ami acceptée                 | Toujours envoyé au demandeur initial                                         |
-| Ajouté en ami à un événement (tag)     | Destinataire a `notifFriendRequestEnabled = true`                            |
+| Type (`NotificationType`) | Déclencheur                                              | Produit par                    |
+|---------------------------|----------------------------------------------------------|--------------------------------|
+| `friend_request`          | Quelqu'un envoie une demande d'ami                       | `ProfileController`            |
+| `friend_accepted`         | La demande est acceptée                                  | `ProfileController`, `NotificationsController` |
+| `friend_tagged_in_event`  | Un ami t'ajoute comme accompagnant                       | `EventController`, `ProfileController` |
+| `friend_activity`         | Un ami ajoute un événement ou publie un souvenir         | `ActivityNotifier`             |
+| `friend_same_event`       | Deux amis sur le même événement (« vous y allez ensemble ? ») | `ActivityNotifier`, `EventController` |
+| `friend_reaction`         | Un ami réagit à un événement de ton journal              | `ReactionService`              |
+| `event_day` 🕐            | Le matin de l'événement                                  | `app:notifications:send-reminders` |
+| `event_completion` 🕐     | Les jours suivants, tant que la fiche n'est pas notée    | `app:notifications:send-reminders` |
+| `event_anniversary` 🕐    | Un événement vécu un jour comme aujourd'hui              | `app:notifications:send-reminders` |
+| `rewind_available`        | Publication du Rewind (déclenchement manuel)             | `app:rewind:unlock`            |
 
-Ces préférences se règlent dans **Paramètres → Préférences de notifications**.
+🕐 = rappel programmé, envoyé à l'heure choisie par l'utilisateur (`notifCompletionTime`,
+08:00 par défaut, heure française). Ces trois-là dépendent du cron ci-dessus.
+
+Les préférences se règlent dans **Paramètres → Notifications**. Elles ne coupent que
+le push : le fil in-app reste exhaustif — sauf pour les trois rappels programmés, qui
+ne sont pas produits du tout quand ils sont décochés (le rappel *est* la notification,
+il n'y a pas de fait sous-jacent à archiver).
+
+Pour vérifier sans rien envoyer :
+
+```bash
+php bin/console app:notifications:send-reminders --dry-run --user=@pseudo
+php bin/console app:notifications:send-reminders --dry-run --date=2026-09-17 --time=08:00
+php bin/console app:push:test --user=@pseudo --async "Test"   # chemin de prod complet
+```
+
+### Déployer sans perdre de notification
+
+Un `cache:clear` retire au worker en cours ses fichiers de conteneur : il meurt en
+plein traitement et le message reste réservé côté base. Arrête-le d'abord, le cron le
+relancera dans la minute :
+
+```bash
+pkill -TERM -f 'bin/console messenger:consume'
+php bin/console cache:clear --env=prod && php bin/console cache:warmup --env=prod
+```
+
+Si le worker meurt malgré tout, le transport rend le message consommable au bout de
+`redeliver_timeout` (300 s, voir `config/packages/messenger.yaml`) — la notification
+arrive en retard, elle n'est pas perdue.
 
 ---
 

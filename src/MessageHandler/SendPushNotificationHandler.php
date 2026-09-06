@@ -26,8 +26,10 @@ final readonly class SendPushNotificationHandler
             $message->url,
         );
 
+        // En prod, monolog n'écrit qu'à partir du niveau error : un warning ici
+        // se perdrait, et un push qui n'arrive jamais ne laisserait aucune trace
         if (($result['failed'] ?? 0) > 0) {
-            $this->logger->warning('Push partiellement échoué', [
+            $this->logger->error('Push partiellement échoué', [
                 'userId' => $message->userId,
                 'sent' => $result['sent'] ?? 0,
                 'failed' => $result['failed'],

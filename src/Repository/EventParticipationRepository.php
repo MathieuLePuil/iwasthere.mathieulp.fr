@@ -189,9 +189,11 @@ class EventParticipationRepository extends ServiceEntityRepository
      *
      * @return EventParticipation[]
      */
-    public function findToday(User $user): array
+    public function findToday(User $user, ?\DateTimeImmutable $today = null): array
     {
-        $today = new \DateTimeImmutable('today');
+        // Le jour de référence vient de l'appelant quand il en a un : la commande
+        // de rappels raisonne en heure française, le serveur tourne en UTC
+        $today = ($today ?? new \DateTimeImmutable('today'))->setTime(0, 0);
 
         return $this->createQueryBuilder('p')
             ->join('p.event', 'e')->addSelect('e')

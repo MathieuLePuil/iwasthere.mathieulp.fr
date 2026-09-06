@@ -6,6 +6,13 @@ framework:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    # Un worker tué en plein traitement (typiquement un cache:clear
+                    # de déploiement qui lui retire ses fichiers de conteneur) laisse
+                    # le message réservé. Passé ce délai il redevient consommable :
+                    # une notification n'attend donc que quelques minutes, pas l'heure
+                    # que vaut le défaut de Doctrine.
+                    redeliver_timeout: 300
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
