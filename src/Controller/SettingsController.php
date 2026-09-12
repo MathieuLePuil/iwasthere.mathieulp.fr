@@ -6,25 +6,24 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Http\Input;
-use App\Participation\CompanionSync;
 use App\Notification\NotificationType;
+use App\Participation\CompanionSync;
 use App\Repository\UserRepository;
 use App\Service\AccountDeletionService;
 use App\Service\DataExportService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/settings')]
-class SettingsController extends AbstractController
+class SettingsController extends AppController
 {
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,
@@ -77,17 +76,18 @@ class SettingsController extends AbstractController
         if (strlen($username) < 3) {
             return $this->json(['available' => null]);
         }
-        if ($username === $this->getUser()->getUsername()) {
+        if ($username === $this->user()->getUsername()) {
             return $this->json(['available' => 'current']);
         }
         $taken = $userRepo->findOneBy(['username' => $username]) !== null;
+
         return $this->json(['available' => !$taken]);
     }
 
     #[Route('/notifications', name: 'app_settings_notifications', methods: ['POST'])]
     public function saveNotifications(Request $request, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
 
         // Une case non cochée n'est pas postée : on part du catalogue et non de
         // la requête, sinon un type absent du formulaire serait réactivé en douce
@@ -104,6 +104,7 @@ class SettingsController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Préférences de notifications sauvegardées.');
+
         return $this->redirectToRoute('app_settings_notifications_page');
     }
 
@@ -116,7 +117,7 @@ class SettingsController extends AbstractController
             return $this->json(['ok' => false], Response::HTTP_BAD_REQUEST);
         }
 
-        $this->getUser()->setTheme($theme);
+        $this->user()->setTheme($theme);
         $em->flush();
 
         return $this->json(['ok' => true]);
@@ -130,7 +131,7 @@ class SettingsController extends AbstractController
     #[Route('/privacy', name: 'app_settings_privacy', methods: ['POST'])]
     public function savePrivacy(Request $request, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
 
         foreach (User::PRIVACY_CATEGORIES as $category) {
             $level = $request->request->get('privacy_' . $category);
@@ -139,6 +140,7 @@ class SettingsController extends AbstractController
             }
             if (!in_array($level, User::PRIVACY_LEVELS, true)) {
                 $this->addFlash('error', 'Réglage de confidentialité invalide.');
+
                 return $this->redirectToRoute('app_settings_privacy_page');
             }
             $user->setPrivacyLevel($category, $level);
@@ -147,13 +149,14 @@ class SettingsController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Réglages de confidentialité sauvegardés.');
+
         return $this->redirectToRoute('app_settings_privacy_page');
     }
 
     #[Route('/profile', name: 'app_settings_profile', methods: ['POST'])]
     public function saveProfile(Request $request, EntityManagerInterface $em, UserRepository $userRepo, CompanionSync $companions): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $before = [$user->getUsername(), $user->getDisplayName()];
 
         if ($displayName = Input::text($request->request->get('display_name'), 100)) {
@@ -166,11 +169,13 @@ class SettingsController extends AbstractController
         if ($newUsername && $newUsername !== $user->getUsername()) {
             if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
                 $this->addFlash('error', 'Le pseudo doit faire 3 à 30 caractères (lettres minuscules, chiffres, _).');
+
                 return $this->redirectToRoute('app_settings_profile_page');
             }
             $existing = $userRepo->findOneBy(['username' => $newUsername]);
             if ($existing !== null) {
                 $this->addFlash('error', 'Ce pseudo est déjà utilisé.');
+
                 return $this->redirectToRoute('app_settings_profile_page');
             }
             $user->setUsername($newUsername);
@@ -183,6 +188,7 @@ class SettingsController extends AbstractController
 
         $em->flush();
         $this->addFlash('success', 'Profil mis à jour.');
+
         return $this->redirectToRoute('app_settings_profile_page');
     }
 
@@ -190,29 +196,33 @@ class SettingsController extends AbstractController
     public function changePassword(
         Request $request,
         EntityManagerInterface $em,
-        UserPasswordHasherInterface $hasher
+        UserPasswordHasherInterface $hasher,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $current = (string) $request->request->get('current_password', '');
         $new = (string) $request->request->get('new_password', '');
         $confirm = (string) $request->request->get('confirm_password', '');
 
         if (!$user->getPassword() || !$hasher->isPasswordValid($user, $current)) {
             $this->addFlash('error', 'Mot de passe actuel incorrect.');
+
             return $this->redirectToRoute('app_settings_account_page');
         }
         if ($new !== $confirm) {
             $this->addFlash('error', 'Les nouveaux mots de passe ne correspondent pas.');
+
             return $this->redirectToRoute('app_settings_account_page');
         }
         if (strlen($new) < 8) {
             $this->addFlash('error', 'Le mot de passe doit faire au moins 8 caractères.');
+
             return $this->redirectToRoute('app_settings_account_page');
         }
 
         $user->setPassword($hasher->hashPassword($user, $new));
         $em->flush();
         $this->addFlash('success', 'Mot de passe modifié avec succès.');
+
         return $this->redirectToRoute('app_settings_account_page');
     }
 
@@ -220,7 +230,7 @@ class SettingsController extends AbstractController
     #[Route('/export', name: 'app_settings_export', methods: ['GET'])]
     public function export(Request $request, DataExportService $exporter): JsonResponse
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $response = new JsonResponse($exporter->export($user, $request->getSchemeAndHttpHost()));
         $response->setEncodingOptions(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
@@ -235,10 +245,11 @@ class SettingsController extends AbstractController
     #[Route('/delete', name: 'app_settings_delete_account', methods: ['POST'])]
     public function deleteAccount(Request $request, AccountDeletionService $accountDeletion): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $confirmation = $request->request->get('confirmation');
         if ($confirmation !== 'SUPPRIMER') {
             $this->addFlash('error', 'Confirmation incorrecte. Tape exactement SUPPRIMER.');
+
             return $this->redirectToRoute('app_settings_account_page');
         }
 

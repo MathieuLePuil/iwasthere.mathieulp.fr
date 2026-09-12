@@ -7,13 +7,12 @@ namespace App\Controller;
 use App\Repository\EventParticipationRepository;
 use App\Repository\NotificationRepository;
 use App\Service\FeedService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
-class HomeController extends AbstractController
+class HomeController extends AppController
 {
     /** Événements d'amis affichés en aperçu sur l'accueil */
     private const FEED_PREVIEW_MAX = 3;
@@ -24,7 +23,7 @@ class HomeController extends AbstractController
         NotificationRepository $notifRepo,
         FeedService $feedService,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
 
         // Next upcoming event
         $nextEvent = $participationRepo->findNextUpcoming($user);

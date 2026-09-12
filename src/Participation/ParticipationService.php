@@ -115,7 +115,7 @@ final class ParticipationService
             if ($other === $mine || $other->getUser() === $mine->getUser()) {
                 continue;
             }
-            foreach ($other->getFriends() ?? [] as $f) {
+            foreach ($other->getFriends() as $f) {
                 if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $userId) {
                     $this->linkCompanions($mine, $other);
                     break;

@@ -28,6 +28,7 @@ class SetlistFmService
     public function forceReimportSetlist(Event $event): bool
     {
         $event->setSetlistRetryCount(0)->setSetlistLastAttemptAt(null);
+
         return $this->tryImportSetlist($event);
     }
 
@@ -53,6 +54,7 @@ class SetlistFmService
 
             if (empty($setlists)) {
                 $this->em->flush();
+
                 return false;
             }
 
@@ -61,12 +63,13 @@ class SetlistFmService
             if ($bestSetlist) {
                 $this->applySetlist($event, $bestSetlist);
                 $this->em->flush();
+
                 return true;
             }
 
             $this->em->flush();
-            return false;
 
+            return false;
         } catch (SetlistFmRateLimitException $e) {
             // Transient: setlist.fm throttled us. Record the attempt time so we back off,
             // but do NOT burn the retry budget — the setlist may well exist.
@@ -75,6 +78,7 @@ class SetlistFmService
             ]);
             $event->setSetlistLastAttemptAt(new \DateTimeImmutable());
             $this->em->flush();
+
             return false;
         } catch (\Throwable $e) {
             $this->logger->warning('Setlist.fm import failed', [
@@ -84,6 +88,7 @@ class SetlistFmService
             $event->setSetlistRetryCount($event->getSetlistRetryCount() + 1)
                 ->setSetlistLastAttemptAt(new \DateTimeImmutable());
             $this->em->flush();
+
             return false;
         }
     }
@@ -97,7 +102,7 @@ class SetlistFmService
      */
     private function searchSetlists(string $artistName, string $date): array
     {
-        for ($attempt = 1; ; $attempt++) {
+        for ($attempt = 1;; $attempt++) {
             $response = $this->httpClient->request('GET', self::API_BASE . '/search/setlists', [
                 'headers' => [
                     'x-api-key' => $this->apiKey,
@@ -128,6 +133,7 @@ class SetlistFmService
             }
 
             $data = $response->toArray();
+
             return $data['setlist'] ?? [];
         }
     }

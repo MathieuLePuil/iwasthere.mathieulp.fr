@@ -48,7 +48,7 @@ class PwaController extends AbstractController
     #[Route('/manifest.json', name: 'app_manifest')]
     public function manifest(Packages $assets): JsonResponse
     {
-        $icon = fn(string $file, string $sizes, string $purpose = 'any') => [
+        $icon = fn (string $file, string $sizes, string $purpose = 'any') => [
             'src' => $assets->getUrl('images/icons/' . $file),
             'sizes' => $sizes,
             'type' => 'image/png',

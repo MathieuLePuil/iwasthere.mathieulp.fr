@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Analyse statique. Le container est compilé dans un cache à part (APP_CACHE_DIR)
+# pour ne jamais toucher var/cache/prod, que PHP-FPM sert avec OPcache figé.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+export APP_CACHE_DIR="${APP_CACHE_DIR:-$PWD/var/phpstan-cache}"
+APP_ENV=prod APP_DEBUG=1 php bin/console cache:warmup --quiet
+export PHPSTAN_CONTAINER_XML="$APP_CACHE_DIR/prod/App_KernelProdDebugContainer.xml"
+exec vendor/bin/phpstan analyse --memory-limit=1G "$@"

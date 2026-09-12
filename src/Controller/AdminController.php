@@ -6,22 +6,20 @@ namespace App\Controller;
 
 use App\Entity\AuditLog;
 use App\Entity\Event;
-use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Entity\Venue;
 use App\Event\EventType;
 use App\Http\Input;
+use App\Participation\CompanionSync;
+use App\Participation\ParticipationService;
 use App\Repository\AuditLogRepository;
 use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
-use App\Participation\CompanionSync;
-use App\Participation\ParticipationService;
 use App\Service\AccountDeletionService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -30,7 +28,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
 #[Route('/admin')]
-class AdminController extends AbstractController
+class AdminController extends AppController
 {
     private const PER_PAGE = 50;
 
@@ -47,7 +45,7 @@ class AdminController extends AbstractController
         ?string $newValue = null,
     ): void {
         $log = new AuditLog();
-        $log->setSuperAdminUserId($this->getUser()->getId())
+        $log->setSuperAdminUserId($this->user()->getId())
             ->setAction($action)
             ->setEntityType($entityType)
             ->setEntityId($entityId)
@@ -147,8 +145,9 @@ class AdminController extends AbstractController
     #[Route('/users/{id}/delete', name: 'app_admin_user_delete', methods: ['POST'])]
     public function deleteUser(User $user, AccountDeletionService $accountDeletion): Response
     {
-        if ($user === $this->getUser()) {
+        if ($user === $this->user()) {
             $this->addFlash('error', 'Tu ne peux pas supprimer ton propre compte depuis l\'admin.');
+
             return $this->redirectToRoute('app_admin_users');
         }
 

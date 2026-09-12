@@ -135,7 +135,7 @@ final class IcsExporter
             ?? 'Événement';
     }
 
-    private function description(Event $event, string $url): ?string
+    private function description(Event $event, string $url): string
     {
         $parts = array_filter([
             $event->getTourName(),

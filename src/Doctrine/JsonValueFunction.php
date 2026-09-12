@@ -20,7 +20,7 @@ use Doctrine\ORM\Query\TokenType;
 final class JsonValueFunction extends FunctionNode
 {
     private Node|string $field;
-    private Node|string $path;
+    private Node $path;
 
     public function parse(Parser $parser): void
     {

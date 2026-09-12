@@ -382,7 +382,7 @@ class StatsDetailService
      * retombe sur les deux plus récentes, dans l'ordre où on les lit — la plus
      * récente à gauche.
      *
-     * @param array<string, array<string, mixed>> $years indexé par année, déjà trié décroissant
+     * @param array<int|string, array<string, mixed>> $years indexé par année (clés numériques : PHP les convertit en int), déjà trié décroissant
      * @param array<string, mixed> $params
      */
     private function yearComparison(array $years, array $params): ?array
@@ -403,8 +403,8 @@ class StatsDetailService
 
         return [
             'available' => $available,
-            'a' => $years[(string) $a],
-            'b' => $years[(string) $b],
+            'a' => $years[$a],
+            'b' => $years[$b],
         ];
     }
 
@@ -520,6 +520,6 @@ class StatsDetailService
         }
         usort($friends, fn ($a, $b) => $b['count'] <=> $a['count']);
 
-        return ['friends' => array_values($friends), 'total' => count($friends)];
+        return ['friends' => $friends, 'total' => count($friends)];
     }
 }

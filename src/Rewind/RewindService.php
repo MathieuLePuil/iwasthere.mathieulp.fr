@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Rewind;
 
-use App\Event\EventType;
 use App\Entity\EventParticipation;
 use App\Entity\User;
+use App\Event\EventType;
 use App\Repository\EventParticipationRepository;
 
 /**
@@ -362,7 +362,7 @@ final class RewindService
             'kind' => 'number',
             'eyebrow' => 'Ta note moyenne',
             'title' => number_format($sum / count($rated), 1, ',', ' '),
-            'subtitle' => 'sur 5 — ' . count($rated) . ' ' . $this->plural(count($rated), 'fiche') . ' remplie' . (count($rated) > 1 ? 's' : ''),
+            'subtitle' => 'sur 5 — ' . count($rated) . ' ' . $this->plural(count($rated), 'fiche') . ' ' . $this->plural(count($rated), 'remplie'),
         ];
 
         if ($loved = $this->favourites($rated)) {

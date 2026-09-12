@@ -115,6 +115,7 @@ class DeezerArtistService
 
         if ($response->getStatusCode() !== 200) {
             $response->cancel();
+
             return null;
         }
 
@@ -183,6 +184,7 @@ class DeezerArtistService
         $response = $this->httpClient->request('GET', $url, ['timeout' => 8]);
         if ($response->getStatusCode() !== 200) {
             $response->cancel();
+
             return false;
         }
 

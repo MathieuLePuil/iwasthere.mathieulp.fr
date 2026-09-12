@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -55,9 +54,6 @@ class PromoteUserCommand extends Command
         }
 
         $role = $input->getOption('demote') ? 'user' : 'superAdmin';
-        if (!in_array($role, User::ROLES, true)) {
-            return Command::INVALID;
-        }
         $user->setRole($role);
         $this->em->flush();
 

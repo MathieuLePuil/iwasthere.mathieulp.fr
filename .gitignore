@@ -24,3 +24,9 @@ public/phpmyadmin/
 public/uploads/artists/
 public/uploads/avatars/
 public/uploads/events/
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###
+/var/phpstan-cache/
+/.php-cs-fixer.cache

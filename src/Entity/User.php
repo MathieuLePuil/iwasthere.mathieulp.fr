@@ -8,9 +8,9 @@ use App\Event\EventType;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -71,7 +71,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column(type: 'json')]
     private array $privacySettings = [];
-
 
     /** Thème de l'interface : 'dark', 'light' ou 'auto' (suit le réglage système) */
     #[ORM\Column(length: 10, options: ['default' => 'dark'])]
@@ -384,6 +383,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPasswordResetToken(?string $passwordResetToken): static
     {
         $this->passwordResetToken = $passwordResetToken;
+
         return $this;
     }
 
@@ -395,6 +395,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPasswordResetTokenExpiresAt(?\DateTimeImmutable $passwordResetTokenExpiresAt): static
     {
         $this->passwordResetTokenExpiresAt = $passwordResetTokenExpiresAt;
+
         return $this;
     }
 
@@ -413,6 +414,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFeedLastSeenAt(?\DateTimeImmutable $feedLastSeenAt): static
     {
         $this->feedLastSeenAt = $feedLastSeenAt;
+
         return $this;
     }
 

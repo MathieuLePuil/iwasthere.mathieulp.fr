@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
-class OnboardingController extends AbstractController
+class OnboardingController extends AppController
 {
     /**
      * Mini-parcours d'accueil après inscription : plutôt que d'arriver sur un accueil

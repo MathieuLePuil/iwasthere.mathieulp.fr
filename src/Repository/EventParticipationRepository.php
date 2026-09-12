@@ -329,6 +329,7 @@ class EventParticipationRepository extends ServiceEntityRepository
      * Participations de l'utilisateur pour un lot d'événements, indexées par id d'événement.
      *
      * @param Event[] $events
+     *
      * @return array<string, EventParticipation>
      */
     public function findByUserForEvents(User $user, array $events): array
@@ -361,7 +362,7 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->select('AVG(p.rating)')
             ->where('p.user = :user')
             ->andWhere('p.rating IS NOT NULL')
-            ->setParameter('user', $user->getId()->toBinary(), \Doctrine\DBAL\ParameterType::BINARY)
+            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -605,13 +606,23 @@ class EventParticipationRepository extends ServiceEntityRepository
             return ['total' => 0, 'has_data' => false];
         }
 
-        $concerts = 0; $festivals = 0; $sports = 0;
-        $totalDuration = 0; $totalRating = 0; $ratingCount = 0;
-        $artistVariants = []; $venues = []; $years = []; $months = []; $weekdays = [];
+        $concerts = 0;
+        $festivals = 0;
+        $sports = 0;
+        $totalDuration = 0;
+        $totalRating = 0;
+        $ratingCount = 0;
+        $artistVariants = [];
+        $venues = [];
+        $years = [];
+        $months = [];
+        $weekdays = [];
         $sportTypes = array_fill_keys(array_map(fn (EventType $t) => $t->value, EventType::ofCategory(EventCategory::Sport)), 0);
         $friends = [];
-        $byYear = []; $heatmap = [];
-        $firstDate = null; $lastDate = null;
+        $byYear = [];
+        $heatmap = [];
+        $firstDate = null;
+        $lastDate = null;
         $festivalGroups = [];
         $songVariants = [];
 
@@ -689,7 +700,7 @@ class EventParticipationRepository extends ServiceEntityRepository
         }
 
         foreach (FestivalEditions::group($pastParts) as $edition) {
-            $notes = array_filter(array_map(fn($p) => $p->getRating(), $edition));
+            $notes = array_filter(array_map(fn ($p) => $p->getRating(), $edition));
             $festivalGroups[] = [
                 'name'       => FestivalEditions::name($edition),
                 'year'       => FestivalEditions::year($edition),
@@ -697,7 +708,7 @@ class EventParticipationRepository extends ServiceEntityRepository
                 'avg_rating' => $notes !== [] ? round(array_sum($notes) / count($notes), 1) : null,
             ];
         }
-        usort($festivalGroups, fn($a, $b) => $b['count'] <=> $a['count']);
+        usort($festivalGroups, fn ($a, $b) => $b['count'] <=> $a['count']);
 
         // Regroupe les graphies d'un même artiste (casse, espaces) sous la variante la plus fréquente
         $artists = [];
@@ -716,26 +727,31 @@ class EventParticipationRepository extends ServiceEntityRepository
                 'count' => array_sum($v['names']),
             ];
         }
-        usort($songs, fn($a, $b) => [$b['count'], mb_strtolower($a['name'])] <=> [$a['count'], mb_strtolower($b['name'])]);
+        usort($songs, fn ($a, $b) => [$b['count'], mb_strtolower($a['name'])] <=> [$a['count'], mb_strtolower($b['name'])]);
 
-        arsort($artists); arsort($venues); arsort($friends);
+        arsort($artists);
+        arsort($venues);
+        arsort($friends);
         arsort($byYear);
 
-        $topYear = $byYear ? array_key_first($byYear) : null;
+        $topYear = array_key_first($byYear);
         $topArtistCount = $artists ? max($artists) : 0;
-        $topArtists = $topArtistCount > 0 ? array_keys(array_filter($artists, fn($c) => $c === $topArtistCount)) : [];
+        $topArtists = $topArtistCount > 0 ? array_keys(array_filter($artists, fn ($c) => $c === $topArtistCount)) : [];
         $topArtist = $topArtists ? implode(', ', $topArtists) : null;
         $topVenueCount = $venues ? max($venues) : 0;
-        $topVenues = $topVenueCount > 0 ? array_keys(array_filter($venues, fn($c) => $c === $topVenueCount)) : [];
+        $topVenues = $topVenueCount > 0 ? array_keys(array_filter($venues, fn ($c) => $c === $topVenueCount)) : [];
         $topVenue = $topVenues ? implode(', ', $topVenues) : null;
         $topFriend = $friends ? array_key_first($friends) : null;
 
         ksort($heatmap);
-        $streak = 0; $maxStreak = 0; $currentStreak = 0;
+        $streak = 0;
+        $maxStreak = 0;
+        $currentStreak = 0;
         $allDates = array_keys($heatmap);
         if ($allDates) {
             $prev = new \DateTimeImmutable($allDates[0]);
-            $currentStreak = 1; $maxStreak = 1;
+            $currentStreak = 1;
+            $maxStreak = 1;
             for ($i = 1; $i < count($allDates); $i++) {
                 $curr = new \DateTimeImmutable($allDates[$i]);
                 $diff = (int) $prev->diff($curr)->days;
@@ -766,10 +782,13 @@ class EventParticipationRepository extends ServiceEntityRepository
         }
         $months_ = array_keys($monthKeys);
         sort($months_);
-        $monthStreak = 0; $maxMonthStreak = 0; $currentMonthStreak = 0;
+        $monthStreak = 0;
+        $maxMonthStreak = 0;
+        $currentMonthStreak = 0;
         if ($months_) {
             $prevMonth = \DateTimeImmutable::createFromFormat('Y-m-d|', $months_[0] . '-01');
-            $currentMonthStreak = 1; $maxMonthStreak = 1;
+            $currentMonthStreak = 1;
+            $maxMonthStreak = 1;
             for ($i = 1; $i < count($months_); $i++) {
                 $currMonth = \DateTimeImmutable::createFromFormat('Y-m-d|', $months_[$i] . '-01');
                 // Comparaison sur le mois suivant plutôt que sur un écart de jours :
@@ -832,7 +851,7 @@ class EventParticipationRepository extends ServiceEntityRepository
             'sport_types' => $sportTypes,
             'total_duration_h' => round($totalDuration / 60, 1),
             'avg_duration_min' => $concerts + $festivals > 0 ? round($totalDuration / ($concerts + $festivals)) : 0,
-'avg_rating' => $ratingCount > 0 ? round($totalRating / $ratingCount, 1) : null,
+            'avg_rating' => $ratingCount > 0 ? round($totalRating / $ratingCount, 1) : null,
             'first_date' => $firstDate,
             'last_date' => $lastDate,
             'top_year' => $topYear,

@@ -27,7 +27,6 @@ use App\Repository\VenueRepository;
 use App\Service\EventImageService;
 use App\Service\IcsExporter;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -39,7 +38,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/event')]
-class EventController extends AbstractController
+class EventController extends AppController
 {
     private const TENNIS_WINNER_REQUIRED = 'Indique le vainqueur du match : un score de tennis ne permet pas de le déduire.';
 
@@ -114,7 +113,7 @@ class EventController extends AbstractController
                         ->setAddress('')
                         ->setLatitude(0.0)
                         ->setLongitude(0.0)
-                        ->setCreatedByUserId($this->getUser()->getId());
+                        ->setCreatedByUserId($this->user()->getId());
                     $em->persist($venue);
                 }
             }
@@ -129,7 +128,7 @@ class EventController extends AbstractController
                 $event->setCategory($type->category()->value)
                     ->setType($type->value)
                     ->setDate($date)
-                    ->setCreatedByUserId($this->getUser()->getId());
+                    ->setCreatedByUserId($this->user()->getId());
 
                 if ($startTime = Input::time($data['start_time'] ?? null)) {
                     $event->setStartTime($startTime);
@@ -163,7 +162,6 @@ class EventController extends AbstractController
                 }
             }
 
-
             // Souvenir data (score, note, durée…) only exists once the event is past
             if (!$event->isPast()) {
                 unset(
@@ -193,13 +191,13 @@ class EventController extends AbstractController
             // Create participation
             $existing = $em->getRepository(EventParticipation::class)->findOneBy([
                 'event' => $event,
-                'user' => $this->getUser(),
+                'user' => $this->user(),
             ]);
 
             if (!$existing) {
                 $participation = new EventParticipation();
                 $participation->setEvent($event)
-                    ->setUser($this->getUser());
+                    ->setUser($this->user());
 
                 $participation->setDuration(Input::int($data['duration'] ?? null, 1, 1440));
                 $participation->setRating(Input::int($data['rating'] ?? null, 1, 5));
@@ -245,7 +243,7 @@ class EventController extends AbstractController
             $type = $category->defaultType();
         }
 
-        $confirmedFriends = $friendRepo->findConfirmedFriends($this->getUser());
+        $confirmedFriends = $friendRepo->findConfirmedFriends($this->user());
 
         return $this->render('event/new.html.twig', [
             'category'          => $category->value,
@@ -352,7 +350,7 @@ class EventController extends AbstractController
     #[Route('/{id}', name: 'app_event_show')]
     public function show(Event $event, EventParticipationRepository $participationRepo, FriendRepository $friendRepo): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
 
         $allParticipations = $participationRepo->findByEventWithUsers($event);
@@ -364,7 +362,7 @@ class EventController extends AbstractController
         if (!$participation) {
             $userId = (string) $user->getId();
             foreach ($allParticipations as $p) {
-                foreach ($p->getFriends() ?? [] as $friend) {
+                foreach ($p->getFriends() as $friend) {
                     if (($friend['type'] ?? '') === 'app' && ($friend['userId'] ?? '') === $userId) {
                         $taggedIn = $p;
                         break 2;
@@ -405,7 +403,7 @@ class EventController extends AbstractController
         MessageBusInterface $bus,
         ParticipationService $participations,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
 
         if (!$participation) {
@@ -592,7 +590,7 @@ class EventController extends AbstractController
         MessageBusInterface $bus,
         ParticipationService $participations,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
 
         // Le souvenir (note, résultat, photo…) n'existe qu'une fois l'événement passé
         if (!$event->isPast()) {
@@ -721,7 +719,7 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         EntityManagerInterface $em,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
         if (!$participation) {
             throw $this->createAccessDeniedException();
@@ -729,18 +727,21 @@ class EventController extends AbstractController
 
         if (!$event->isPast()) {
             $this->addFlash('error', 'Tu pourras ajouter une photo une fois l\'événement passé.');
+
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
         $file = $request->files->get('image');
         if (!$file) {
             $this->addFlash('error', 'Aucun fichier reçu.');
+
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
         $path = $images->save($file, $participation);
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
+
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
@@ -759,7 +760,7 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         EntityManagerInterface $em,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
         if (!$participation) {
             throw $this->createAccessDeniedException();
@@ -782,7 +783,7 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         ParticipationService $participations,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($notification->getRecipient() !== $user || $notification->getType() !== 'friend_tagged_in_event') {
             throw $this->createAccessDeniedException();
         }
@@ -825,7 +826,7 @@ class EventController extends AbstractController
         Notification $notification,
         EntityManagerInterface $em,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($notification->getRecipient() !== $user || $notification->getType() !== 'friend_tagged_in_event') {
             throw $this->createAccessDeniedException();
         }
@@ -852,7 +853,7 @@ class EventController extends AbstractController
         NotificationDispatcher $notifier,
         ParticipationService $participations,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         [$event, $other] = $this->resolveTogether($notification, $user, $eventRepo, $userRepo);
 
         $mine = $participationRepo->findByUserAndEvent($user, $event);
@@ -913,7 +914,7 @@ class EventController extends AbstractController
         EventRepository $eventRepo,
         NotificationRepository $notifRepo,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         [$event, $other] = $this->resolveTogether($notification, $user, $eventRepo, $userRepo);
 
         $theirQuestion = $notifRepo->findTogetherQuestion($other, (string) $event->getId(), (string) $user->getId());
@@ -1054,12 +1055,12 @@ class EventController extends AbstractController
         EntityManagerInterface $em,
         NotificationRepository $notifRepo,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $userId = (string) $user->getId();
 
         $updatedFriends = array_values(array_filter(
-            $participation->getFriends() ?? [],
-            fn($f) => !(($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $userId)
+            $participation->getFriends(),
+            fn ($f) => !(($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $userId)
         ));
         $participation->setFriends($updatedFriends);
 
@@ -1082,7 +1083,7 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         ParticipationService $participations,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
 
         if ($participation) {

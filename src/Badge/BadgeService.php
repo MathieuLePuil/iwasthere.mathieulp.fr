@@ -105,7 +105,7 @@ final class BadgeService
         }
 
         // Les plus proches du but en tête : c'est le prochain effort qui motive.
-        usort($next, fn(array $a, array $b) => $b['percent'] <=> $a['percent']);
+        usort($next, fn (array $a, array $b) => $b['percent'] <=> $a['percent']);
 
         return [
             'families' => $families,
@@ -128,7 +128,7 @@ final class BadgeService
     private function highlights(array $sommets): array
     {
         $sommets = array_values($sommets);
-        usort($sommets, fn(array $a, array $b) => $b['tier'] <=> $a['tier']);
+        usort($sommets, fn (array $a, array $b) => $b['tier'] <=> $a['tier']);
 
         return array_slice($sommets, 0, self::HIGHLIGHTS);
     }

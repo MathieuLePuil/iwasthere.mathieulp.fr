@@ -21,6 +21,6 @@ final class Version20260602100000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addSql("ALTER TABLE event ADD COLUMN start_time VARCHAR(5) DEFAULT NULL");
+        $this->addSql('ALTER TABLE event ADD COLUMN start_time VARCHAR(5) DEFAULT NULL');
     }
 }

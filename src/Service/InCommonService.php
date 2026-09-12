@@ -85,6 +85,7 @@ class InCommonService
 
     /**
      * @param array<int, array{event: Event}> $past
+     *
      * @return array{total: int, concert: int, festival: int, sport: int}
      */
     private function counts(array $past): array
@@ -108,6 +109,7 @@ class InCommonService
      * Comparaison des notes, sur les seuls événements que les deux ont notés.
      *
      * @param array<int, array{mine: ?EventParticipation, theirs: ?EventParticipation}> $past
+     *
      * @return array{both: int, agree: int, mine_higher: int, theirs_higher: int, avg_gap: ?float}
      */
     private function ratings(array $past): array
@@ -146,6 +148,7 @@ class InCommonService
      * @param EventParticipation[] $mine
      * @param EventParticipation[] $theirs
      * @param array<int, array{event: Event}> $past
+     *
      * @return array<int, array{name: string, mine: int, theirs: int, together: int}>
      */
     private function commonArtists(array $mine, array $theirs, array $past, \DateTimeImmutable $today): array
@@ -189,6 +192,7 @@ class InCommonService
 
     /**
      * @param EventParticipation[] $parts
+     *
      * @return array<string, array{count: int, names: array<string, int>}>
      */
     private function countArtists(array $parts, \DateTimeImmutable $today): array

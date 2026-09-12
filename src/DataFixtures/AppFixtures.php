@@ -175,7 +175,6 @@ class AppFixtures extends Fixture
         foreach ($pending as [$from, $to]) {
             $manager->persist($this->makeFriend($this->users[$from], 'inApp', 'pending', $this->users[$to]));
         }
-
     }
 
     private function makeFriend(User $owner, string $type, ?string $status, ?User $friendUser): Friend
@@ -369,8 +368,8 @@ class AppFixtures extends Fixture
                 $participation->setUser($user);
 
                 if ($isPast) {
-                    $participation->setRating($ratings[($ci) % count($ratings)]);
-                    $participation->setComment($comments[($ci) % count($comments)]);
+                    $participation->setRating($ratings[$ci % count($ratings)]);
+                    $participation->setComment($comments[$ci % count($comments)]);
                     $participation->setDuration($event->getCategory() === 'music' ? 150 : 105);
                 }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Security;
 
 use App\Entity\User;
@@ -7,9 +9,9 @@ use App\Repository\UserRepository;
 use App\Service\AvatarService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
-use Psr\Log\LoggerInterface;
 use KnpU\OAuth2ClientBundle\Security\Authenticator\OAuth2Authenticator;
 use League\OAuth2\Client\Provider\GoogleUser;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -58,6 +60,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 if ($existingUser) {
                     $this->syncAvatar($existingUser, $googleUser);
                     $this->em->flush();
+
                     return $existingUser;
                 }
 
@@ -67,6 +70,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
                     $existingUser->setGoogleId($googleUser->getId());
                     $this->syncAvatar($existingUser, $googleUser);
                     $this->em->flush();
+
                     return $existingUser;
                 }
 
@@ -123,6 +127,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
             $username = $base . $counter;
             $counter++;
         }
+
         return $username;
     }
 
@@ -130,6 +135,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
     {
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             $this->removeTargetPath($request->getSession(), $firewallName);
+
             return new RedirectResponse($targetPath);
         }
 

@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Rewind\RewindService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
-class RewindController extends AbstractController
+class RewindController extends AppController
 {
     #[Route('/rewind', name: 'app_rewind')]
     public function index(RewindService $rewind): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
 
         // La fenêtre d'un mois fait foi : passé ce délai la page se referme,
         // même si le lien a été gardé quelque part

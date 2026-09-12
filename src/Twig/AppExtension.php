@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Twig;
 
 use App\Entity\Event;
+use App\Entity\User;
 use App\Event\EventCategory;
 use App\Event\EventType;
+use App\EventListener\SecurityHeadersListener;
 use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
-use App\EventListener\SecurityHeadersListener;
 use App\Repository\NotificationRepository;
 use App\Service\EventImageService;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -154,9 +155,11 @@ class AppExtension extends AbstractExtension
 
     public function getUnreadCount(): int
     {
-        if (!$user = $this->security->getUser()) {
+        $user = $this->security->getUser();
+        if (!$user instanceof User) {
             return 0;
         }
+
         return $this->notifRepo->countUnread($user);
     }
 }

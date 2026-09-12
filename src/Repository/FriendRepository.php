@@ -96,6 +96,7 @@ class FriendRepository extends ServiceEntityRepository
     public function areFriends(User $a, User $b): bool
     {
         $rel = $this->findRelationship($a, $b);
+
         return $rel !== null && $rel->getStatus() === 'confirmed';
     }
 }

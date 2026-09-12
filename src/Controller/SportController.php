@@ -6,7 +6,6 @@ namespace App\Controller;
 
 use App\Repository\EventParticipationRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,7 +13,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/sport')]
-class SportController extends AbstractController
+class SportController extends AppController
 {
     /** Une page à la fois ; les compteurs d'onglets viennent de COUNT, pas de listes chargées pour rien. */
     private const PER_PAGE = 30;
@@ -22,7 +21,7 @@ class SportController extends AbstractController
     #[Route('', name: 'app_sport')]
     public function index(Request $request, EventParticipationRepository $repo): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $tab = $request->query->get('tab', 'past') === 'upcoming' ? 'upcoming' : 'past';
         $filterType = (string) $request->query->get('type', '');
         $filterYear = preg_match('/^\d{4}$/', (string) $request->query->get('year', '')) ? (string) $request->query->get('year') : '';
@@ -53,7 +52,7 @@ class SportController extends AbstractController
     #[Route('/favorite-team', name: 'app_sport_favorite_team', methods: ['POST'])]
     public function favoriteTeam(Request $request, EntityManagerInterface $em): Response
     {
-        $this->getUser()->setFavoriteTeams($request->request->all('favorite_team'));
+        $this->user()->setFavoriteTeams($request->request->all('favorite_team'));
         $em->flush();
 
         $this->addFlash('success', 'Tes équipes porte-bonheur sont enregistrées.');

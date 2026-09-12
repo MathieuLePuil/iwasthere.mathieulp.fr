@@ -8,10 +8,10 @@ use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
-use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * @extends ServiceEntityRepository<User>
@@ -41,6 +41,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
      * Les utilisateurs de ces ids, en une requête. Les ids invalides sont ignorés.
      *
      * @param list<string> $ids
+     *
      * @return User[]
      */
     public function findByIds(array $ids): array
@@ -109,6 +110,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
      * rappel de la journée. Le dédoublonnage en aval évite le second envoi.
      *
      * @param list<string> $times
+     *
      * @return User[]
      */
     public function findDueForReminders(array $times): array

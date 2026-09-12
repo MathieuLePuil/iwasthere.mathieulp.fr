@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\User;
@@ -101,6 +103,7 @@ class SecurityController extends AbstractController
             return $this->json(['available' => null]);
         }
         $taken = $userRepo->findOneBy(['username' => $username]) !== null;
+
         return $this->json(['available' => !$taken]);
     }
 
@@ -167,6 +170,7 @@ class SecurityController extends AbstractController
 
             // Always show the same message to prevent email enumeration
             $this->addFlash('success', 'Si un compte existe avec cette adresse, tu recevras un email dans quelques instants.');
+
             return $this->redirectToRoute('app_forgot_password');
         }
 
@@ -191,6 +195,7 @@ class SecurityController extends AbstractController
 
         if (!$user || !$user->isPasswordResetTokenValid()) {
             $this->addFlash('error', 'Ce lien est invalide ou a expiré. Redemande une réinitialisation.');
+
             return $this->redirectToRoute('app_forgot_password');
         }
 
@@ -200,11 +205,13 @@ class SecurityController extends AbstractController
 
             if (strlen($newPassword) < 8) {
                 $this->addFlash('error', 'Le mot de passe doit faire au moins 8 caractères.');
+
                 return $this->render('security/reset_password.html.twig', ['token' => $token]);
             }
 
             if ($newPassword !== $confirm) {
                 $this->addFlash('error', 'Les mots de passe ne correspondent pas.');
+
                 return $this->render('security/reset_password.html.twig', ['token' => $token]);
             }
 
@@ -214,6 +221,7 @@ class SecurityController extends AbstractController
             $em->flush();
 
             $this->addFlash('success', 'Mot de passe mis à jour ! Tu peux maintenant te connecter.');
+
             return $this->redirectToRoute('app_login');
         }
 
@@ -237,6 +245,7 @@ class SecurityController extends AbstractController
     public function refreshGoogleAvatar(Request $request, ClientRegistry $clientRegistry): Response
     {
         $this->saveTargetPath($request->getSession(), 'main', $this->generateUrl('app_settings'));
+
         return $clientRegistry->getClient('google')->redirect(['email', 'profile'], []);
     }
 }

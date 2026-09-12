@@ -16,7 +16,6 @@ use App\Service\AvatarService;
 use App\Service\InCommonService;
 use App\Service\LeaderboardService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
@@ -29,7 +28,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/profile')]
-class ProfileController extends AbstractController
+class ProfileController extends AppController
 {
     #[Route('', name: 'app_profile')]
     public function index(
@@ -39,7 +38,7 @@ class ProfileController extends AbstractController
         BadgeService $badges,
         LeaderboardService $leaderboard,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         $friends = $friendRepo->findConfirmedFriends($user);
         $pendingRequests = $friendRepo->findPendingReceived($user);
         $sentRequests = $friendRepo->findPendingSent($user);
@@ -76,18 +75,19 @@ class ProfileController extends AbstractController
     public function badges(BadgeService $badges): Response
     {
         return $this->render('profile/badges.html.twig', [
-            'badges' => $badges->forUser($this->getUser()),
+            'badges' => $badges->forUser($this->user()),
         ]);
     }
 
     #[Route('/avatar', name: 'app_profile_avatar', methods: ['POST'])]
     public function avatar(Request $request, AvatarService $avatarService, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $file = $request->files->get('avatar');
 
         if (!$file) {
             $this->addFlash('error', 'Aucun fichier reçu.');
+
             return $this->redirectToRoute('app_profile');
         }
 
@@ -95,6 +95,7 @@ class ProfileController extends AbstractController
 
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
+
             return $this->redirectToRoute('app_profile');
         }
 
@@ -102,13 +103,14 @@ class ProfileController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Photo de profil mise à jour !');
+
         return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/search', name: 'app_profile_search')]
     public function search(Request $request, UserRepository $userRepo, FriendRepository $friendRepo): Response
     {
-        $currentUser = $this->getUser();
+        $currentUser = $this->user();
         $q = $request->query->get('q', '');
         // Strip @ prefix so users can search by @username
         if (str_starts_with($q, '@')) {
@@ -132,10 +134,11 @@ class ProfileController extends AbstractController
     #[Route('/friend/add/{id}', name: 'app_friend_add', methods: ['POST'])]
     public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, NotificationDispatcher $notifier): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
 
         if ($targetUser === $user) {
             $this->addFlash('error', 'Tu ne peux pas t\'ajouter toi-même.');
+
             return $this->redirectToRoute('app_profile_search');
         }
 
@@ -143,6 +146,7 @@ class ProfileController extends AbstractController
         if ($existing) {
             if ($existing->getStatus() !== 'refused') {
                 $this->addFlash('info', 'Une relation existe déjà avec cet utilisateur.');
+
                 return $this->redirectToRoute('app_profile_search');
             }
             // Un refus tient trente jours : sans ça, la demande refusée revenait dans
@@ -151,6 +155,7 @@ class ProfileController extends AbstractController
             $refusedMe = $existing->getOwner() === $user;
             if ($refusedMe && $existing->getCreatedAt() > new \DateTimeImmutable('-30 days')) {
                 $this->addFlash('info', 'Ta demande n\'a pas été acceptée. Tu pourras la renvoyer dans quelques semaines.');
+
                 return $this->redirectToRoute('app_profile_search');
             }
             $em->remove($existing);
@@ -176,26 +181,28 @@ class ProfileController extends AbstractController
         );
 
         $this->addFlash('success', 'Demande d\'ami envoyée à @' . $targetUser->getUsername() . ' !');
+
         return $this->redirectToRoute('app_profile_search');
     }
 
     #[Route('/friend/remove/{id}', name: 'app_friend_remove', methods: ['POST'])]
     public function removeFriend(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getOwner() !== $user && $friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
         $em->remove($friend);
         $em->flush();
         $this->addFlash('success', 'Ami supprimé.');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
     #[Route('/friend/cancel/{id}', name: 'app_friend_cancel', methods: ['POST'])]
     public function cancelFriendRequest(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getOwner() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -209,7 +216,7 @@ class ProfileController extends AbstractController
     #[Route('/friend/accept/{id}', name: 'app_friend_accept', methods: ['POST'])]
     public function acceptFriend(Friend $friend, EntityManagerInterface $em, NotificationDispatcher $notifier): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -227,13 +234,14 @@ class ProfileController extends AbstractController
         );
 
         $this->addFlash('success', 'Ami ajouté !');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
     #[Route('/friend/refuse/{id}', name: 'app_friend_refuse', methods: ['POST'])]
     public function refuseFriend(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -242,6 +250,7 @@ class ProfileController extends AbstractController
         $friend->setStatus('refused')->setCreatedAt(new \DateTimeImmutable());
         $em->flush();
         $this->addFlash('info', 'Demande refusée.');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
@@ -252,15 +261,17 @@ class ProfileController extends AbstractController
 
         if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
             $this->addFlash('error', 'Adresse email invalide.');
+
             return $this->redirectToRoute('app_profile');
         }
 
-        $inviter = $this->getUser();
+        $inviter = $this->user();
 
         // Dix par jour et par compte : au-delà, ce n'est plus une invitation, c'est
         // un relais de courrier au nom du domaine.
         if (!$inviteLimiter->create((string) $inviter->getId())->consume()->isAccepted()) {
             $this->addFlash('error', 'Tu as atteint la limite d\'invitations pour aujourd\'hui. Réessaie demain.');
+
             return $this->redirectToRoute('app_profile');
         }
         $registerUrl = $this->generateUrl('app_register', [], UrlGeneratorInterface::ABSOLUTE_URL);
@@ -301,7 +312,7 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friendUser === $user || !$friendRepo->areFriends($user, $friendUser)) {
             throw $this->createAccessDeniedException();
         }
@@ -406,7 +417,7 @@ class ProfileController extends AbstractController
         }
 
         // L'amitié suffit : un compte privé ne l'est pas vis-à-vis de ses amis.
-        $user = $this->getUser();
+        $user = $this->user();
         if ($profileUser === $user || !$friendRepo->areFriends($user, $profileUser)) {
             throw $this->createAccessDeniedException();
         }
@@ -430,7 +441,7 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        $currentUser = $this->getUser();
+        $currentUser = $this->user();
         $isSelf = $profileUser === $currentUser;
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
 
@@ -481,7 +492,7 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        $currentUser = $this->getUser();
+        $currentUser = $this->user();
         $isSelf = $profileUser === $currentUser;
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
         $relationship = $friendRepo->findRelationship($currentUser, $profileUser);

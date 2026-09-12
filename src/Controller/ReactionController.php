@@ -7,7 +7,6 @@ namespace App\Controller;
 use App\Entity\EventParticipation;
 use App\Reaction\ReactionEmoji;
 use App\Reaction\ReactionService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
-class ReactionController extends AbstractController
+class ReactionController extends AppController
 {
     /**
      * Bascule une réaction. Appelé en fetch par le contrôleur Stimulus `reaction`,
@@ -39,7 +38,7 @@ class ReactionController extends AbstractController
             return $this->json(['ok' => false, 'error' => 'emoji'], Response::HTTP_BAD_REQUEST);
         }
 
-        $user = $this->getUser();
+        $user = $this->user();
         if (!$reactions->canReact($user, $participation)) {
             throw $this->createAccessDeniedException();
         }

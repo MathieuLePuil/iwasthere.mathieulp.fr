@@ -51,7 +51,7 @@ final class FestivalEditions
 
         $editions = [];
         foreach ($parLieu as $lieuParts) {
-            usort($lieuParts, fn(EventParticipation $a, EventParticipation $b) => $a->getEvent()->getDate() <=> $b->getEvent()->getDate());
+            usort($lieuParts, fn (EventParticipation $a, EventParticipation $b) => $a->getEvent()->getDate() <=> $b->getEvent()->getDate());
 
             $edition = [];
             $veille = null;

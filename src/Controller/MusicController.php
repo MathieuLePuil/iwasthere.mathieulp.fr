@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Repository\EventParticipationRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -13,7 +12,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/music')]
-class MusicController extends AbstractController
+class MusicController extends AppController
 {
     /** Une page à la fois ; les compteurs d'onglets viennent de COUNT, pas de listes chargées pour rien. */
     private const PER_PAGE = 30;
@@ -21,7 +20,7 @@ class MusicController extends AbstractController
     #[Route('', name: 'app_music')]
     public function index(Request $request, EventParticipationRepository $repo): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $tab = $request->query->get('tab', 'past') === 'upcoming' ? 'upcoming' : 'past';
         $filterType = (string) $request->query->get('type', '');
         $filterYear = preg_match('/^\d{4}$/', (string) $request->query->get('year', '')) ? (string) $request->query->get('year') : '';

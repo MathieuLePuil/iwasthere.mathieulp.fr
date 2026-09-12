@@ -359,7 +359,7 @@ class Event
     public function getSetlistNormalized(): array
     {
         return array_map(
-            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            fn ($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
             $this->setlist ?? []
         );
     }
@@ -367,7 +367,7 @@ class Event
     public function getSetlistEncoresNormalized(): array
     {
         return array_map(
-            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            fn ($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
             $this->setlistEncores ?? []
         );
     }
