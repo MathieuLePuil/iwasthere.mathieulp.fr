@@ -63,9 +63,9 @@ class EventController extends AbstractController
         EventRepository $eventRepo,
         FriendRepository $friendRepo,
         UserRepository $userRepo,
-        NotificationDispatcher $notifier,
         ActivityNotifier $activity,
         MessageBusInterface $bus,
+        ParticipationService $participations,
     ): Response {
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
@@ -216,36 +216,8 @@ class EventController extends AbstractController
                 $em->flush();
 
                 // Notify tagged app friends
-                $me = $this->getUser();
-                foreach ($friendsData as $friend) {
-                    if (($friend['type'] ?? '') !== 'app') {
-                        continue;
-                    }
-                    $taggedUser = $userRepo->find($friend['userId']);
-                    if (!$taggedUser) {
-                        continue;
-                    }
-                    // Événement déjà commun (on a rejoint un événement existant où l'ami
-                    // participe déjà) : pas d'invitation pour un événement qu'il vit déjà.
-                    if ($em->getRepository(EventParticipation::class)->findOneBy(['event' => $event, 'user' => $taggedUser]) !== null) {
-                        continue;
-                    }
-                    $notifier->dispatch(
-                        $taggedUser,
-                        NotificationType::FriendTaggedInEvent,
-                        $me->getDisplayName() . ' t\'a ajouté à un événement',
-                        $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                        $this->generateUrl('app_notifications'),
-                        [
-                            'eventId'         => (string) $event->getId(),
-                            'participationId' => (string) $participation->getId(),
-                            'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                        ],
-                    );
-                }
-                if (!empty($friendsData)) {
-                    $em->flush();
-                }
+                $participations->notifyNewTags($participation);
+                $em->flush();
 
                 // Annonce aux autres amis : « X ira à », ou « X y sera aussi »
                 // pour ceux qui ont déjà cet événement
@@ -431,6 +403,7 @@ class EventController extends AbstractController
         NotificationDispatcher $notifier,
         ActivityNotifier $activity,
         MessageBusInterface $bus,
+        ParticipationService $participations,
     ): Response {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
@@ -564,12 +537,8 @@ class EventController extends AbstractController
                 $participation->setDuration(Input::int($data['duration'], 1, 1440));
             }
             // Friends
-            $oldAppFriendIds = array_column(
-                array_filter($participation->getFriends() ?? [], fn($f) => ($f['type'] ?? '') === 'app'),
-                'userId'
-            );
-            $friendsData = $this->buildFriends($data, $userRepo);
-            $participation->setFriends($friendsData);
+            $oldAppFriendIds = $participations->appFriendIds($participation);
+            $participation->setFriends($this->buildFriends($data, $userRepo));
 
             $em->flush();
             $this->enrichLater($event, $bus);
@@ -581,36 +550,7 @@ class EventController extends AbstractController
             }
 
             // Notify newly added app friends
-            $me = $this->getUser();
-            foreach ($friendsData as $friend) {
-                if (($friend['type'] ?? '') !== 'app') {
-                    continue;
-                }
-                if (in_array($friend['userId'], $oldAppFriendIds, true)) {
-                    continue;
-                }
-                $taggedUser = $userRepo->find($friend['userId']);
-                if (!$taggedUser) {
-                    continue;
-                }
-                // Événement déjà commun : l'ami y a sa propre participation, l'inviter
-                // à un événement qu'il vit déjà n'aurait pas de sens.
-                if ($participationRepo->findByUserAndEvent($taggedUser, $event) !== null) {
-                    continue;
-                }
-                $notifier->dispatch(
-                    $taggedUser,
-                    NotificationType::FriendTaggedInEvent,
-                    $me->getDisplayName() . ' t\'a ajouté à un événement',
-                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                    $this->generateUrl('app_notifications'),
-                    [
-                        'eventId'         => (string) $event->getId(),
-                        'participationId' => (string) $participation->getId(),
-                        'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                    ],
-                );
-            }
+            $participations->notifyNewTags($participation, $oldAppFriendIds);
             $em->flush();
 
             // Le souvenir n'est annoncé qu'une fois : `announceMemory` se
@@ -647,10 +587,10 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         FriendRepository $friendRepo,
         UserRepository $userRepo,
-        NotificationDispatcher $notifier,
         ActivityNotifier $activity,
         EventImageService $images,
         MessageBusInterface $bus,
+        ParticipationService $participations,
     ): Response {
         $user = $this->getUser();
 
@@ -667,14 +607,12 @@ class EventController extends AbstractController
             $em->persist($participation);
             $event->setParticipantCount($event->getParticipantCount() + 1);
             // Les amis qui m'ont tagué se retrouvent d'office dans mon « Avec qui »
-            $this->linkWithTaggers($participation, $participationRepo);
+            $participations->linkWithTaggers($participation);
             $em->flush();
         }
 
         if ($request->isMethod('POST')) {
-            return $this->handleCompletion(
-                $event, $participation, $request, $em, $images, $userRepo, $participationRepo, $notifier, $activity
-            );
+            return $this->handleCompletion($event, $participation, $request, $em, $images, $userRepo, $participations, $activity);
         }
 
         // Le lendemain, la setlist est souvent disponible : on relance l'import (par le
@@ -702,8 +640,7 @@ class EventController extends AbstractController
         EntityManagerInterface $em,
         EventImageService $images,
         UserRepository $userRepo,
-        EventParticipationRepository $participationRepo,
-        NotificationDispatcher $notifier,
+        ParticipationService $participations,
         ActivityNotifier $activity,
     ): JsonResponse {
         $data = $request->request->all();
@@ -747,12 +684,8 @@ class EventController extends AbstractController
         }
 
         // ── Avec qui ──
-        $oldAppFriendIds = array_column(
-            array_filter($participation->getFriends() ?? [], fn ($f) => ($f['type'] ?? '') === 'app'),
-            'userId'
-        );
-        $friendsData = $this->buildFriends($data, $userRepo);
-        $participation->setFriends($friendsData);
+        $oldAppFriendIds = $participations->appFriendIds($participation);
+        $participation->setFriends($this->buildFriends($data, $userRepo));
 
         // ── Photo (facultative) ──
         $file = $request->files->get('image');
@@ -766,33 +699,7 @@ class EventController extends AbstractController
         $em->flush();
 
         // Prévient les amis nouvellement tagués (mêmes règles que edit())
-        $me = $participation->getUser();
-        foreach ($friendsData as $friend) {
-            if (($friend['type'] ?? '') !== 'app' || in_array($friend['userId'], $oldAppFriendIds, true)) {
-                continue;
-            }
-            $taggedUser = $userRepo->find($friend['userId']);
-            if (!$taggedUser) {
-                continue;
-            }
-            // Événement déjà commun : l'ami y a sa propre participation, l'inviter
-            // à un événement qu'il vit déjà n'aurait pas de sens.
-            if ($participationRepo->findByUserAndEvent($taggedUser, $event) !== null) {
-                continue;
-            }
-            $notifier->dispatch(
-                $taggedUser,
-                NotificationType::FriendTaggedInEvent,
-                $me->getDisplayName() . ' t\'a ajouté à un événement',
-                $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                $this->generateUrl('app_notifications'),
-                [
-                    'eventId'         => (string) $event->getId(),
-                    'participationId' => (string) $participation->getId(),
-                    'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
-                ],
-            );
-        }
+        $participations->notifyNewTags($participation, $oldAppFriendIds);
         $em->flush();
 
         // Le souvenir n'est annoncé qu'une fois (dédoublonné sur la participation)
@@ -873,6 +780,7 @@ class EventController extends AbstractController
         EntityManagerInterface $em,
         EventRepository $eventRepo,
         EventParticipationRepository $participationRepo,
+        ParticipationService $participations,
     ): Response {
         $user = $this->getUser();
         if ($notification->getRecipient() !== $user || $notification->getType() !== 'friend_tagged_in_event') {
@@ -902,7 +810,7 @@ class EventController extends AbstractController
         }
         // Celui qui m'a invité m'a déjà dans son « Avec qui » : il doit
         // apparaître dans le mien aussi, dès l'acceptation et jusqu'au souvenir.
-        $this->linkWithTaggers($mine, $participationRepo);
+        $participations->linkWithTaggers($mine);
 
         $em->remove($notification);
         $em->flush();
@@ -942,6 +850,7 @@ class EventController extends AbstractController
         EventParticipationRepository $participationRepo,
         NotificationRepository $notifRepo,
         NotificationDispatcher $notifier,
+        ParticipationService $participations,
     ): Response {
         $user = $this->getUser();
         [$event, $other] = $this->resolveTogether($notification, $user, $eventRepo, $userRepo);
@@ -971,7 +880,7 @@ class EventController extends AbstractController
             return $this->redirectToRoute('app_notifications');
         }
 
-        $this->linkCompanions($mine, $theirs);
+        $participations->linkCompanions($mine, $theirs);
         $em->remove($notification);
         $em->remove($theirQuestion);
         $em->flush();
@@ -1045,51 +954,6 @@ class EventController extends AbstractController
         }
 
         return [$event, $other];
-    }
-
-    /**
-     * Rattache mutuellement cette participation à celles, sur le même événement,
-     * qui taguent déjà son utilisateur dans leur « Avec qui ». Un ami qui invite
-     * (ou est invité) reste ainsi associé à l'événement de bout en bout.
-     */
-    private function linkWithTaggers(EventParticipation $mine, EventParticipationRepository $participationRepo): void
-    {
-        $userId = (string) $mine->getUser()->getId();
-
-        foreach ($participationRepo->findByEvent($mine->getEvent()) as $other) {
-            if ($other === $mine || $other->getUser() === $mine->getUser()) {
-                continue;
-            }
-            foreach ($other->getFriends() ?? [] as $f) {
-                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $userId) {
-                    $this->linkCompanions($mine, $other);
-                    break;
-                }
-            }
-        }
-    }
-
-    /** Inscrit chacun comme accompagnant de l'autre — la relation est symétrique. */
-    private function linkCompanions(EventParticipation $a, EventParticipation $b): void
-    {
-        foreach ([[$a, $b], [$b, $a]] as [$participation, $companion]) {
-            $user = $companion->getUser();
-            $friends = $participation->getFriends();
-
-            foreach ($friends as $f) {
-                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === (string) $user->getId()) {
-                    continue 2;
-                }
-            }
-
-            $friends[] = [
-                'type' => 'app',
-                'userId' => (string) $user->getId(),
-                'username' => $user->getUsername(),
-                'displayName' => $user->getDisplayName(),
-            ];
-            $participation->setFriends($friends);
-        }
     }
 
     /** Prévient les autres participants qu'un des leurs vient de corriger l'événement. */
