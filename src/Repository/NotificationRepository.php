@@ -20,46 +20,6 @@ class NotificationRepository extends ServiceEntityRepository
         parent::__construct($registry, Notification::class);
     }
 
-    /**
-     * @return Notification[]
-     */
-    public function findByRecipient(User $recipient): array
-    {
-        return $this->createQueryBuilder('n')
-            ->andWhere('n.recipient = :recipient')
-            ->setParameter('recipient', $recipient->getId()->toBinary(), ParameterType::BINARY)
-            ->orderBy('n.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Notification[]
-     */
-    public function findUnreadByRecipient(User $recipient): array
-    {
-        return $this->createQueryBuilder('n')
-            ->andWhere('n.recipient = :recipient')
-            ->andWhere('n.isRead = :isRead')
-            ->setParameter('recipient', $recipient->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('isRead', false)
-            ->orderBy('n.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    public function countUnreadByRecipient(User $recipient): int
-    {
-        return (int) $this->createQueryBuilder('n')
-            ->select('COUNT(n.id)')
-            ->andWhere('n.recipient = :recipient')
-            ->andWhere('n.isRead = :isRead')
-            ->setParameter('recipient', $recipient->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('isRead', false)
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
     public function countUnread(User $user): int
     {
         return (int) $this->createQueryBuilder('n')

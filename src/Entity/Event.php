@@ -35,9 +35,6 @@ class Event
     #[ORM\Column(type: 'time_immutable', nullable: true)]
     private ?\DateTimeImmutable $startTime = null;
 
-    #[ORM\Column(type: 'uuid', nullable: true)]
-    private ?Uuid $venueId = null;
-
     #[ORM\ManyToOne(targetEntity: Venue::class)]
     #[ORM\JoinColumn(name: 'venue_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Venue $venue = null;
@@ -59,9 +56,6 @@ class Event
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $finalScore = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $intermediateScores = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $winner = null;
@@ -186,18 +180,6 @@ class Event
         return new \DateTimeImmutable($this->date->format('Y-m-d') . ' ' . $time);
     }
 
-    public function getVenueId(): ?Uuid
-    {
-        return $this->venueId;
-    }
-
-    public function setVenueId(?Uuid $venueId): static
-    {
-        $this->venueId = $venueId;
-
-        return $this;
-    }
-
     public function getVenue(): ?Venue
     {
         return $this->venue;
@@ -206,7 +188,6 @@ class Event
     public function setVenue(?Venue $venue): static
     {
         $this->venue = $venue;
-        $this->venueId = $venue?->getId();
 
         return $this;
     }
@@ -280,18 +261,6 @@ class Event
     public function setFinalScore(?string $finalScore): static
     {
         $this->finalScore = $finalScore;
-
-        return $this;
-    }
-
-    public function getIntermediateScores(): ?array
-    {
-        return $this->intermediateScores;
-    }
-
-    public function setIntermediateScores(?array $intermediateScores): static
-    {
-        $this->intermediateScores = $intermediateScores;
 
         return $this;
     }

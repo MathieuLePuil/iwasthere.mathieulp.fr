@@ -27,11 +27,6 @@ class EventParticipationRepository extends ServiceEntityRepository
         parent::__construct($registry, EventParticipation::class);
     }
 
-    public function findOneByEventAndUser(Event $event, User $user): ?EventParticipation
-    {
-        return $this->findOneBy(['event' => $event, 'user' => $user]);
-    }
-
     public function findByUserAndEvent(User $user, Event $event): ?EventParticipation
     {
         return $this->findOneBy(['user' => $user, 'event' => $event]);

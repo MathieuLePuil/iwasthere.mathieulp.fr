@@ -63,49 +63,6 @@ class EventRepository extends ServiceEntityRepository
     /**
      * @return Event[]
      */
-    public function findByCategory(string $category): array
-    {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.category = :category')
-            ->setParameter('category', $category)
-            ->orderBy('e.date', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Event[]
-     */
-    public function findByArtistName(string $artistName): array
-    {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.artistName = :artistName')
-            ->setParameter('artistName', $artistName)
-            ->orderBy('e.date', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Event[]
-     */
-    public function findPendingSetlistImports(): array
-    {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.category = :category')
-            ->andWhere('e.setlistSource IS NULL OR e.setlistSource = :source')
-            ->andWhere('e.setlistRetryCount < :maxRetry')
-            ->setParameter('category', 'music')
-            ->setParameter('source', 'setlist_fm')
-            ->setParameter('maxRetry', 3)
-            ->orderBy('e.date', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Event[]
-     */
     public function findPendingSetlistImport(): array
     {
         $threshold = new \DateTimeImmutable('-1 hour');

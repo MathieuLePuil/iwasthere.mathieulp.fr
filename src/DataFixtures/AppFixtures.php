@@ -176,17 +176,6 @@ class AppFixtures extends Fixture
             $manager->persist($this->makeFriend($this->users[$from], 'inApp', 'pending', $this->users[$to]));
         }
 
-        // Amis « manuels » / externes : pas de compte lié, juste un nom saisi à la main.
-        $manual = [
-            ['lucas', 'Papa'],
-            ['emma', 'Sarah (du boulot)'],
-            ['tom', 'Kevin'],
-        ];
-        foreach ($manual as [$owner, $name]) {
-            $friend = $this->makeFriend($this->users[$owner], 'manual', null, null);
-            $friend->setDisplayName($name);
-            $manager->persist($friend);
-        }
     }
 
     private function makeFriend(User $owner, string $type, ?string $status, ?User $friendUser): Friend
@@ -265,22 +254,20 @@ class AppFixtures extends Fixture
 
         // --- Sport ---
         $this->events[] = $this->makeSportEvent($manager, 'football', 'velodrome', '-7 months',
-            'Olympique de Marseille vs Paris Saint-Germain', '3 - 1', '1', 'Ligue 1', 'tom', '21:00',
-            [['label' => 'Mi-temps', 'score' => '1 - 0']]);
+            'Olympique de Marseille vs Paris Saint-Germain', '3 - 1', '1', 'Ligue 1', 'tom', '21:00');
 
         $this->events[] = $this->makeSportEvent($manager, 'football', 'groupama', '-4 months',
-            'Olympique Lyonnais vs AS Monaco', '2 - 2', null, 'Ligue 1', 'nathan', '17:00',
-            [['label' => 'Mi-temps', 'score' => '1 - 1']]);
+            'Olympique Lyonnais vs AS Monaco', '2 - 2', null, 'Ligue 1', 'nathan', '17:00');
 
         $this->events[] = $this->makeSportEvent($manager, 'rugby', 'sdf', '-6 months',
-            'Stade Toulousain vs Stade Français', '27 - 18', '1', 'Top 14', 'hugo', '16:45', null);
+            'Stade Toulousain vs Stade Français', '27 - 18', '1', 'Top 14', 'hugo', '16:45');
 
         $this->events[] = $this->makeSportEvent($manager, 'tennis', 'roland', '-2 months',
-            'Novak Djokovic vs Carlos Alcaraz', '6/4 6/2 7/5', '2', 'Roland-Garros', 'nathan', '15:00', null);
+            'Novak Djokovic vs Carlos Alcaraz', '6/4 6/2 7/5', '2', 'Roland-Garros', 'nathan', '15:00');
 
         // Match à venir
         $this->events[] = $this->makeSportEvent($manager, 'football', 'velodrome', '+1 month',
-            'Olympique de Marseille vs AS Monaco', null, null, 'Ligue 1', 'tom', '21:00', null);
+            'Olympique de Marseille vs AS Monaco', null, null, 'Ligue 1', 'tom', '21:00');
     }
 
     private function makeMusicEvent(
@@ -311,7 +298,6 @@ class AppFixtures extends Fixture
     private function makeSportEvent(
         ObjectManager $manager, string $type, string $venue, string $dateExpr,
         string $teams, ?string $finalScore, ?string $winner, string $tournament, string $creator, string $startTime,
-        ?array $intermediate,
     ): Event {
         $event = new Event();
         $event->setCategory('sport');
@@ -323,7 +309,6 @@ class AppFixtures extends Fixture
         $event->setTournamentName($tournament);
         $event->setFinalScore($finalScore);
         $event->setWinner($winner);
-        $event->setIntermediateScores($intermediate);
         $this->stampEvent($event, $creator, $dateExpr);
         $manager->persist($event);
 
@@ -407,7 +392,6 @@ class AppFixtures extends Fixture
                     $friendsData[] = ['type' => 'external', 'name' => 'Alex'];
                 }
                 $participation->setFriends($friendsData);
-                $participation->setPhotos([]);
                 $participation->setCreatedAt($event->getDate());
                 $participation->setUpdatedAt(\DateTime::createFromInterface($event->getDate()));
 

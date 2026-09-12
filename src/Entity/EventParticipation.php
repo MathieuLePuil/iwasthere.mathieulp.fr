@@ -38,9 +38,6 @@ class EventParticipation
     #[ORM\Column(type: 'json')]
     private array $friends = [];
 
-    #[ORM\Column(type: 'json')]
-    private array $photos = [];
-
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $imageUrl = null;
 
@@ -136,18 +133,6 @@ class EventParticipation
     public function setFriends(array $friends): static
     {
         $this->friends = $friends;
-
-        return $this;
-    }
-
-    public function getPhotos(): array
-    {
-        return $this->photos;
-    }
-
-    public function setPhotos(array $photos): static
-    {
-        $this->photos = $photos;
 
         return $this;
     }
