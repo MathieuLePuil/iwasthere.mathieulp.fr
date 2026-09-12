@@ -32,4 +32,3 @@ services:
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
-            $projectDir: '%kernel.project_dir%'

@@ -59,7 +59,7 @@ class AccountDeletionService
             $this->deleteAll('App\Entity\Notification n', 'n.recipient = :id', $id);
             // Les deux sens : la liste d'amis du compte, et les entrées des autres qui pointent vers lui.
             $this->deleteAll('App\Entity\Friend f', 'f.owner = :id OR f.friendUser = :id', $id);
-            // push_subscription n'a pas d'entité, mais sa FK est déjà en ON DELETE CASCADE.
+            // push_subscription : clé étrangère en ON DELETE CASCADE, la base s'en charge.
 
             $this->em->remove($user);
             $this->em->flush();

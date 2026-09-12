@@ -4,41 +4,38 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Repository\PushSubscriptionRepository;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
 
+/** L'envoi Web Push proprement dit. Appelé par le worker (SendPushNotificationHandler), jamais dans une requête. */
 class NotificationService
 {
     private WebPush $webPush;
-    private string $subscriptionsFile;
 
     public function __construct(
+        private readonly PushSubscriptionRepository $subscriptions,
         string $vapidPublicKey,
         string $vapidPrivateKey,
         string $vapidSubject,
-        string $projectDir,
     ) {
-        $auth = [
+        $this->webPush = new WebPush([
             'VAPID' => [
                 'subject' => $vapidSubject,
                 'publicKey' => $vapidPublicKey,
                 'privateKey' => $vapidPrivateKey,
             ],
-        ];
-
-        $this->webPush = new WebPush($auth);
-        $this->subscriptionsFile = $projectDir . '/var/subscriptions.json';
+        ]);
     }
 
+    /** @return array{sent: int, failed: int, message?: string} */
     public function sendNotification(string $title, string $body, ?string $userId = null, ?string $url = null): array
     {
-        $all = $this->getSubscriptions();
-
         $subscriptions = $userId === null
-            ? $all
-            : array_values(array_filter($all, fn ($sub) => ($sub['userId'] ?? null) === $userId));
+            ? $this->subscriptions->findAll()
+            : $this->subscriptions->findForUserId($userId);
 
-        if (empty($subscriptions)) {
+        if ($subscriptions === []) {
             return ['sent' => 0, 'failed' => 0, 'message' => 'No subscriptions found'];
         }
 
@@ -49,49 +46,27 @@ class NotificationService
             'url' => $url ?? '/home',
         ]);
 
-        $sent = 0;
-        $failed = 0;
-        $expiredEndpoints = [];
-
         foreach ($subscriptions as $sub) {
-            $this->webPush->queueNotification(Subscription::create($sub), $payload);
+            $this->webPush->queueNotification(Subscription::create($sub->toArray()), $payload);
         }
 
+        $sent = 0;
+        $failed = 0;
+        $expired = [];
         foreach ($this->webPush->flush() as $report) {
-            $endpoint = $report->getEndpoint();
             if ($report->isSuccess()) {
                 $sent++;
-            } else {
-                $failed++;
-                if (method_exists($report, 'isSubscriptionExpired') && $report->isSubscriptionExpired()) {
-                    $expiredEndpoints[] = $endpoint;
-                }
+                continue;
+            }
+            $failed++;
+            if ($report->isSubscriptionExpired()) {
+                $expired[] = $report->getEndpoint();
             }
         }
 
-        // On repart de la liste complète, pas de celle filtrée par utilisateur :
-        // n'y réécrire que les abonnements d'un seul effacerait ceux des autres
-        if (!empty($expiredEndpoints)) {
-            $this->saveSubscriptions(array_values(array_filter(
-                $all,
-                fn ($sub) => !in_array($sub['endpoint'] ?? '', $expiredEndpoints, true),
-            )));
-        }
+        // Un endpoint que le serveur de push ne connaît plus (410/404) ne reviendra pas
+        $this->subscriptions->deleteByEndpoints($expired);
 
         return ['sent' => $sent, 'failed' => $failed];
-    }
-
-    private function getSubscriptions(): array
-    {
-        if (!file_exists($this->subscriptionsFile)) {
-            return [];
-        }
-        $content = file_get_contents($this->subscriptionsFile);
-        return json_decode($content, true) ?? [];
-    }
-
-    private function saveSubscriptions(array $subscriptions): void
-    {
-        file_put_contents($this->subscriptionsFile, json_encode($subscriptions));
     }
 }
