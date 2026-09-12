@@ -10,6 +10,9 @@ use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Regex;
@@ -32,7 +35,9 @@ class RegistrationFormType extends AbstractType
                 'attr' => ['placeholder' => 'ex: mathieulpl', 'class' => 'input-field'],
                 'constraints' => [
                     new NotBlank(message: "L'identifiant est requis"),
-                    new Length(min: 3, max: 50),
+                    // 3–30 : la borne de la page publique /p/{pseudo}, sinon un pseudo
+                    // accepté ici n'aurait pas de page partageable.
+                    new Length(min: 3, max: 30),
                     new Regex(
                         pattern: '/^[a-z0-9_]+$/',
                         message: 'Lettres minuscules, chiffres et _ uniquement',
@@ -44,6 +49,8 @@ class RegistrationFormType extends AbstractType
                 'attr' => ['placeholder' => 'votre@email.com', 'class' => 'input-field'],
                 'constraints' => [
                     new NotBlank(message: "L'email est requis"),
+                    new Email(message: 'Cette adresse email n\'est pas valide.'),
+                    new Length(max: 180),
                 ],
             ])
             ->add('plainPassword', RepeatedType::class, [
@@ -60,9 +67,25 @@ class RegistrationFormType extends AbstractType
                 'mapped' => false,
                 'constraints' => [
                     new NotBlank(message: 'Le mot de passe est requis'),
-                    new Length(min: 8, minMessage: 'Minimum 8 caractères'),
+                    new Length(min: 8, max: 4096, minMessage: 'Minimum 8 caractères'),
                 ],
             ]);
+
+        // Normalisé avant validation : « Mathieu@Mail.fr » et « mathieu@mail.fr » sont le
+        // même compte, et l'unicité en base ne tolère qu'une graphie.
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, static function (FormEvent $event): void {
+            $data = $event->getData();
+            if (!is_array($data)) {
+                return;
+            }
+            if (isset($data['email']) && is_string($data['email'])) {
+                $data['email'] = mb_strtolower(trim($data['email']));
+            }
+            if (isset($data['username']) && is_string($data['username'])) {
+                $data['username'] = mb_strtolower(trim($data['username']));
+            }
+            $event->setData($data);
+        });
     }
 
     public function configureOptions(OptionsResolver $resolver): void

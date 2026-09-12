@@ -84,7 +84,7 @@ class SecurityController extends AbstractController
     #[Route('/register/check-username', name: 'app_register_check_username')]
     public function checkUsername(Request $request, UserRepository $userRepo): JsonResponse
     {
-        $username = trim($request->query->get('username', ''));
+        $username = mb_strtolower(trim($request->query->get('username', '')));
         if (strlen($username) < 3) {
             return $this->json(['available' => null]);
         }
