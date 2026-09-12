@@ -13,10 +13,10 @@
     <div class="flex items-center gap-3 mt-4 mb-4">
         {{ m.avatar(profile_user, 'md') }}
         <div class="flex-1 min-w-0">
-            <h1 class="text-xl font-semibold tracking-tight truncate" style="color: var(--fg-1); letter-spacing: -0.01em">
+            <h1 class="text-xl font-semibold tracking-tight truncate fg-1 tracking-title">
                 {{ is_self ? 'Mes événements' : 'Événements de ' ~ profile_user.displayName }}
             </h1>
-            <p class="text-xs" style="color: var(--fg-4)">@{{ profile_user.username }}</p>
+            <p class="text-xs fg-4">@{{ profile_user.username }}</p>
         </div>
     </div>
 
@@ -75,7 +75,7 @@
                 {% if loop.last %}</div>{% endif %}
             {% endfor %}
         {% else %}
-            <div class="card" style="padding: 0; overflow: hidden">
+            <div class="card card-flush">
                 {% for p in participations %}
                     {{ m.event_row(p) }}
                 {% endfor %}

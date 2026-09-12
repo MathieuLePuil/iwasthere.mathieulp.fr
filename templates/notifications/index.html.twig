@@ -5,10 +5,10 @@
 {% block body %}
 <div class="px-4 py-5">
     <div class="flex items-center justify-between mb-5">
-        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Notifications</h1>
+        <h1 class="text-xl font-semibold fg-1">Notifications</h1>
         {% if notifications|length > 0 %}
         <form method="post" action="{{ path('app_notification_delete_all') }}">
-            <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg" style="color: var(--fg-3); background: var(--bg-3)">
+            <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg fg-3 sf-3">
                 Tout supprimer
             </button>
         </form>
@@ -28,10 +28,10 @@
             </svg>
         </div>
         <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium" style="color: var(--fg-1)">Notifications push</p>
-            <p class="text-xs" style="color: var(--fg-3)">Active-les depuis les Paramètres.</p>
+            <p class="text-sm font-medium fg-1">Notifications push</p>
+            <p class="text-xs fg-3">Active-les depuis les Paramètres.</p>
         </div>
-        <span class="text-xs font-medium" style="color: var(--positive)">Paramètres →</span>
+        <span class="text-xs font-medium fg-accent">Paramètres →</span>
     </a>
 
     {% endif %}
@@ -39,8 +39,8 @@
     {% if notifications|length == 0 %}
         <div class="flex flex-col items-center justify-center py-16 text-center">
             <div class="text-6xl mb-4">🔔</div>
-            <h3 class="text-base font-semibold mb-2" style="color: var(--fg-1)">Tout est à jour</h3>
-            <p class="text-sm" style="color: var(--fg-3)">Tu n'as aucune notification pour l'instant</p>
+            <h3 class="text-base font-semibold mb-2 fg-1">Tout est à jour</h3>
+            <p class="text-sm fg-3">Tu n'as aucune notification pour l'instant</p>
         </div>
     {% else %}
         <div class="space-y-2">
@@ -63,13 +63,13 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                            <p class="font-semibold text-sm" style="color: var(--fg-1)">{{ notif.title }}</p>
+                            <p class="font-semibold text-sm fg-1">{{ notif.title }}</p>
                             {% if not notif.isRead %}
                             <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: var(--positive)"></span>
                             {% endif %}
                         </div>
-                        <p class="text-xs mt-0.5" style="color: var(--fg-3)">{{ notif.body }}</p>
-                        <p class="text-xs mt-1" style="color: var(--fg-4)">{{ notif.createdAt|date('d/m/Y à H:i') }}</p>
+                        <p class="text-xs mt-0.5 fg-3">{{ notif.body }}</p>
+                        <p class="text-xs mt-1 fg-4">{{ notif.createdAt|date('d/m/Y à H:i') }}</p>
 
                         {% if notif.type == 'friend_request' and notif.data and notif.data.friendId is defined %}
                         <div class="flex gap-2 mt-2 notif-actions">
@@ -88,7 +88,7 @@
                            tant que l'autre n'a pas répondu la question reste en attente #}
                         {% if notif.type == 'friend_same_event' and notif.data and notif.data.otherUserId is defined %}
                             {% if notif.data.answer is defined %}
-                            <p class="text-xs mt-2 font-medium" style="color: var(--fg-4)">⏳ Tu as répondu oui — en attente de sa réponse</p>
+                            <p class="text-xs mt-2 font-medium fg-4">⏳ Tu as répondu oui — en attente de sa réponse</p>
                             {% else %}
                             <div class="flex gap-2 mt-2 notif-actions">
                                 <form method="post" action="{{ path('app_event_together_yes', {id: notif.id}) }}">

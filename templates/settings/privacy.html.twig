@@ -9,14 +9,14 @@
     {{ m.back_button(path('app_settings'), 'Paramètres') }}
 
     <div>
-        <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Confidentialité</h1>
-        <p class="text-sm mt-1" style="color: var(--fg-3)">
+        <h1 class="text-2xl font-semibold fg-1 tracking-title">Confidentialité</h1>
+        <p class="text-sm mt-1 fg-3">
             Choisis, pour chaque partie de ton profil, qui peut la voir.
         </p>
     </div>
 
     <div class="card">
-        <p class="text-xs mb-4" style="color: var(--fg-4)">
+        <p class="text-xs mb-4 fg-4">
             Privé = toi seul · Amis = tes amis · Public = tout le monde.
             Tes amis te voient toujours dans le feed et le classement, quel que soit ce réglage.
         </p>
@@ -32,8 +32,8 @@
 
                 {% for cat, meta in categories %}
                 <div>
-                    <label class="block text-sm font-medium" style="color: var(--fg-2)">{{ meta.label }}</label>
-                    <p class="text-xs mb-2" style="color: var(--fg-4)">{{ meta.help }}</p>
+                    <label class="block text-sm font-medium fg-2">{{ meta.label }}</label>
+                    <p class="text-xs mb-2 fg-4">{{ meta.help }}</p>
                     <div class="iwt-segmented">
                         {% set current = app.user.getPrivacyLevel(cat) %}
                         {% for value, label in levels %}

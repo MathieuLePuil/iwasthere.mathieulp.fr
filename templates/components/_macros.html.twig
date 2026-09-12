@@ -26,8 +26,8 @@
     {% if user.avatarUrl is defined and user.avatarUrl %}
         <img src="{{ user.avatarUrl }}" loading="lazy" class="{{ sz }} rounded-full object-cover" alt="{{ user.displayName }}">
     {% else %}
-        <div class="{{ sz }} rounded-full flex items-center justify-center flex-shrink-0 font-bold"
-             style="background: var(--positive-soft); color: var(--positive)">
+        <div class="{{ sz }} rounded-full flex items-center justify-center flex-shrink-0 font-bold chip-accent"
+            >
             {{ user.displayName|first|upper }}
         </div>
     {% endif %}
@@ -36,8 +36,8 @@
 {% macro empty_state(icon, title, description, action_url, action_label) %}
     <div class="flex flex-col items-center justify-center py-16 px-8 text-center">
         <div class="text-5xl mb-4">{{ icon }}</div>
-        <h3 class="text-base font-semibold mb-2" style="color: var(--fg-1)">{{ title }}</h3>
-        <p class="text-sm mb-6" style="color: var(--fg-3)">{{ description }}</p>
+        <h3 class="text-base font-semibold mb-2 fg-1">{{ title }}</h3>
+        <p class="text-sm mb-6 fg-3">{{ description }}</p>
         {% if action_url and action_label %}
             <a href="{{ action_url }}" class="btn-primary">{{ action_label }}</a>
         {% endif %}
@@ -48,7 +48,7 @@
    `size` : 'md' (défaut, 44px) ou 'lg' (48px, coins plus arrondis) pour les cartes. #}
 {% macro event_thumb(event, size) %}
     {% set box = {'md': 'w-11 h-11 rounded-lg', 'lg': 'w-12 h-12 rounded-xl'}[size ?? 'md'] ?? 'w-11 h-11 rounded-lg' %}
-    <div class="{{ box }} flex-shrink-0 overflow-hidden relative" style="background: var(--bg-2)">
+    <div class="{{ box }} flex-shrink-0 overflow-hidden relative sf-2">
         <div class="w-full h-full flex items-center justify-center{% if not event.artistImageUrl %} poster-{{ event.type ?? 'default' }}{% endif %}"
              style="{% if event.artistImageUrl %}background: linear-gradient(rgba(11,13,16,0.45), rgba(11,13,16,0.45)), url('{{ event.artistImageUrl }}') center/cover{% else %}--evt-hue: {{ event_hue(event) }}{% endif %}">
             <span class="text-xs font-semibold text-center leading-tight" style="color: rgba(255,255,255,0.9); font-family: var(--font-mono)">
@@ -61,14 +61,14 @@
 {% macro event_row(p) %}
     {% import _self as m %}
     <a href="{{ path('app_event_show', {id: p.event.id}) }}"
-       class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
-       style="border-bottom: 1px solid var(--border-subtle)">
+       class="flex items-center gap-3 px-4 py-3 no-underline transition-colors bb-subtle"
+      >
         {{ m.event_thumb(p.event) }}
         <div class="flex-1 min-w-0">
-            <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+            <p class="font-medium text-sm truncate fg-1">
                 {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
             </p>
-            <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+            <p class="text-xs mt-0.5 fg-3">
                 {% if p.event.venue %}{{ p.event.venue.name }}{% endif %}
             </p>
         </div>
@@ -104,7 +104,7 @@
 {% endmacro %}
 
 {% macro back_button(url, label) %}
-    <a href="{{ url }}" class="flex items-center gap-1.5 text-sm font-medium" style="color: var(--positive)">
+    <a href="{{ url }}" class="flex items-center gap-1.5 text-sm font-medium fg-accent">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="m15 6-6 6 6 6"/>
         </svg>

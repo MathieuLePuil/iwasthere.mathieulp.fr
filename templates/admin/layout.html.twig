@@ -13,7 +13,7 @@
 <body class="min-h-screen" style="background: var(--bg-0); height: auto; overflow: auto; display: block">
 
     <nav style="background: var(--bg-1); border-bottom: 1px solid var(--border-subtle)" class="px-6 py-3 flex items-center gap-1 sticky top-0 z-50">
-        <a href="{{ path('app_admin_dashboard') }}" class="font-black mr-4" style="color: var(--fg-1)">IW <span style="color: var(--positive)">Admin</span></a>
+        <a href="{{ path('app_admin_dashboard') }}" class="font-black mr-4 fg-1">IW <span class="fg-accent">Admin</span></a>
         <a href="{{ path('app_admin_dashboard') }}"
            class="px-3 py-1.5 rounded-lg text-sm transition-colors {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'font-medium' : '' }}"
            style="color: {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'var(--fg-1)' : 'var(--fg-4)' }}; background: {{ app.request.attributes.get('_route') == 'app_admin_dashboard' ? 'var(--bg-2)' : 'transparent' }}">
@@ -40,9 +40,9 @@
             Journal d'audit
         </a>
         <div class="ml-auto flex items-center gap-3">
-            <span class="text-xs" style="color: var(--fg-3)">{{ app.user.displayName }}</span>
-            <a href="{{ path('app_logout') }}" class="text-sm px-3 py-1.5 rounded-lg transition-colors"
-               style="color: var(--fg-3)">
+            <span class="text-xs fg-3">{{ app.user.displayName }}</span>
+            <a href="{{ path('app_logout') }}" class="text-sm px-3 py-1.5 rounded-lg transition-colors fg-3"
+              >
                 Déconnexion
             </a>
         </div>

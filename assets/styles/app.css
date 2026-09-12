@@ -170,6 +170,34 @@
   body { touch-action: manipulation; }
 }
 
+/* L'attribut hidden l'emporte sur les utilitaires d'affichage (.flex, .block…) :
+   sans ça, un élément « hidden » qui porte .flex reste visible. */
+[hidden] { display: none !important; }
+
+/* ── Utilitaires de thème ──
+   Couleurs et surfaces des templates, en classes : huit cents styles inline
+   (`style="color: var(--fg-3)"`) répétaient les mêmes cinq combinaisons, que le
+   thème clair ne pouvait pas réécrire et qu'une CSP ne peut pas admettre. */
+.fg-1 { color: var(--fg-1); }
+.fg-2 { color: var(--fg-2); }
+.fg-3 { color: var(--fg-3); }
+.fg-4 { color: var(--fg-4); }
+.fg-accent { color: var(--positive); }
+.fg-negative { color: var(--negative); }
+.fg-warning { color: #FBBF24; }
+.fg-info { color: #60A5FA; }
+.sf-2 { background: var(--bg-2); }
+.sf-3 { background: var(--bg-3); }
+.sf-1-bordered { background: var(--bg-1); border: 1px solid var(--border-subtle); }
+.chip-accent { background: var(--positive-soft); color: var(--positive); }
+.card-flush { padding: 0; overflow: hidden; }
+.bt-subtle { border-top: 1px solid var(--border-subtle); }
+.bb-subtle { border-bottom: 1px solid var(--border-subtle); }
+.tracking-title { letter-spacing: -0.01em; }
+.font-mono-iwt { font-family: var(--font-mono); }
+:root[data-theme="light"] .fg-warning { color: #92400E; }
+:root[data-theme="light"] .fg-info { color: #1D4ED8; }
+
 /* ── Choix de type (formulaire d'événement) ──
    L'état sélectionné est une classe, posée au rendu et par le contrôleur event-form,
    plutôt que des couleurs inline que le thème clair ne pouvait pas réécrire. */

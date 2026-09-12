@@ -12,12 +12,12 @@
         {% else %}
             {{ m.back_button(path('app_home')) }}
         {% endif %}
-        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Ajouter un événement</h1>
+        <h1 class="text-xl font-semibold fg-1">Ajouter un événement</h1>
     </div>
 
     {# Search existing event #}
     <div class="card mb-5">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Cet événement existe déjà ?</h2>
+        <h2 class="font-medium mb-3 fg-1">Cet événement existe déjà ?</h2>
         <input type="text"
                placeholder="Recherche par artiste, tournoi, lieu..."
                class="input-field"
@@ -41,9 +41,9 @@
     </div>
 
     <div class="relative flex items-center mb-5" id="new-event-separator">
-        <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
-        <span class="px-3 text-xs" style="color: var(--fg-4)">ou crée un nouvel événement</span>
-        <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
+        <div class="flex-1 bt-subtle"></div>
+        <span class="px-3 text-xs fg-4">ou crée un nouvel événement</span>
+        <div class="flex-1 bt-subtle"></div>
     </div>
 
     <div id="new-event-area" data-controller="event-type">
@@ -59,7 +59,7 @@
                     data-event-type-target="musicBtn">
                 <span class="text-3xl">🎵</span>
                 <span class="font-semibold text-sm">Musique</span>
-                <span class="text-xs" style="color: var(--fg-4)">Concert / Festival</span>
+                <span class="text-xs fg-4">Concert / Festival</span>
             </button>
             <button type="button"
                     class="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all category-btn"
@@ -68,7 +68,7 @@
                     data-event-type-target="sportBtn">
                 <span class="text-3xl">🏟️</span>
                 <span class="font-semibold text-sm">Sport</span>
-                <span class="text-xs" style="color: var(--fg-4)">Football / Rugby / Tennis</span>
+                <span class="text-xs fg-4">Football / Rugby / Tennis</span>
             </button>
         </div>
     </div>
@@ -83,14 +83,14 @@
             <div class="flex gap-2">
                 <label class="flex-1">
                     <input type="radio" name="type" value="concert" class="sr-only peer" {% if type == 'concert' or (category == 'music' and type == '') %}checked{% endif %}>
-                    <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-xl">🎤</span>
                         <p class="text-xs font-medium mt-1">Concert</p>
                     </div>
                 </label>
                 <label class="flex-1">
                     <input type="radio" name="type" value="festival" class="sr-only peer" {% if type == 'festival' %}checked{% endif %}>
-                    <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-xl">🎪</span>
                         <p class="text-xs font-medium mt-1">Festival</p>
                     </div>
@@ -103,28 +103,28 @@
             <div class="grid grid-cols-2 gap-2">
                 <label>
                     <input type="radio" name="type" value="football" class="sr-only peer" {% if type == 'football' %}checked{% endif %}>
-                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-lg">⚽</span>
                         <p class="text-sm font-medium">Football</p>
                     </div>
                 </label>
                 <label>
                     <input type="radio" name="type" value="rugby" class="sr-only peer" {% if type == 'rugby' %}checked{% endif %}>
-                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-lg">🏉</span>
                         <p class="text-sm font-medium">Rugby</p>
                     </div>
                 </label>
                 <label>
                     <input type="radio" name="type" value="tennis" class="sr-only peer" {% if type == 'tennis' %}checked{% endif %}>
-                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-lg">🎾</span>
                         <p class="text-sm font-medium">Tennis</p>
                     </div>
                 </label>
                 <label>
                     <input type="radio" name="type" value="basket" class="sr-only peer" {% if type == 'basket' %}checked{% endif %}>
-                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" style="border-color: var(--border-default); background: var(--bg-2)" data-type-btn>
+                    <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer iwt-type-btn" data-type-btn>
                         <span class="text-lg">🏀</span>
                         <p class="text-sm font-medium">Basket</p>
                     </div>
@@ -136,7 +136,7 @@
         <div id="music-fields" class="{% if category != 'music' %}hidden{% endif %} space-y-4">
             <div data-controller="autocomplete"
                  data-autocomplete-url-value="{{ path('app_artists_search') }}">
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Artiste *</label>
+                <label class="block text-sm font-medium mb-1.5 fg-3">Artiste *</label>
                 <input type="text" name="artist_name" class="input-field"
                        placeholder="Nom de l'artiste ou du groupe"
                        data-autocomplete-target="input"
@@ -150,7 +150,7 @@
         <div id="sport-fields" class="{% if category != 'sport' %}hidden{% endif %} space-y-4">
             <div data-controller="autocomplete"
                  data-autocomplete-url-value="{{ path('app_tournaments_search') }}">
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Tournoi / Compétition</label>
+                <label class="block text-sm font-medium mb-1.5 fg-3">Tournoi / Compétition</label>
                 <input type="text" name="tournament_name" class="input-field"
                        placeholder="ex : Ligue 1, Roland Garros..."
                        data-autocomplete-target="input"
@@ -161,7 +161,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div data-controller="autocomplete"
                      data-autocomplete-url-value="{{ path('app_teams_search') }}">
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 1 / Joueur 1</label>
+                    <label class="block text-sm font-medium mb-1.5 fg-3">Équipe 1 / Joueur 1</label>
                     <input type="text" name="team1" class="input-field"
                            placeholder="ex : PSG"
                            data-autocomplete-target="input"
@@ -172,7 +172,7 @@
                 </div>
                 <div data-controller="autocomplete"
                      data-autocomplete-url-value="{{ path('app_teams_search') }}">
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 2 / Joueur 2</label>
+                    <label class="block text-sm font-medium mb-1.5 fg-3">Équipe 2 / Joueur 2</label>
                     <input type="text" name="team2" class="input-field"
                            placeholder="ex : OM"
                            data-autocomplete-target="input"
@@ -187,7 +187,7 @@
         {# Common fields #}
         <div class="grid grid-cols-2 gap-3">
             <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date *</label>
+                <label class="block text-sm font-medium mb-1.5 fg-3">Date *</label>
                 <input type="date" name="date" id="input-date" class="input-field" required
                        value="{{ 'now'|date('Y-m-d') }}"
                        data-souvenir-gate-target="date"
@@ -195,14 +195,14 @@
                        data-action="change->event-form#dateChanged">
             </div>
             <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Heure de début</label>
+                <label class="block text-sm font-medium mb-1.5 fg-3">Heure de début</label>
                 <input type="time" name="start_time" class="input-field">
             </div>
         </div>
 
         {# Venue search #}
         <div data-controller="venue-search">
-            <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Lieu</label>
+            <label class="block text-sm font-medium mb-1.5 fg-3">Lieu</label>
             <input type="hidden" name="venue_id" data-venue-search-target="venueId">
             <input type="text"
                    name="venue_name"
@@ -219,7 +219,7 @@
 
             {# Durée — music only #}
             <div id="duration-field-past" class="{% if category != 'music' %}hidden{% endif %}">
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Durée du concert (minutes)</label>
+                <label class="block text-sm font-medium mb-1.5 fg-3">Durée du concert (minutes)</label>
                 <input type="number" name="duration" class="input-field" placeholder="ex : 120" min="1" max="600">
             </div>
 
@@ -230,11 +230,11 @@
                     <p class="section-title mb-2">Score final</p>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label id="score-label-team1" class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 1</label>
+                            <label id="score-label-team1" class="block text-sm font-medium mb-1.5 fg-3">Équipe 1</label>
                             <input type="number" name="score_team1" id="input-score-team1" class="input-field" placeholder="0" min="0">
                         </div>
                         <div>
-                            <label id="score-label-team2" class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Équipe 2</label>
+                            <label id="score-label-team2" class="block text-sm font-medium mb-1.5 fg-3">Équipe 2</label>
                             <input type="number" name="score_team2" id="input-score-team2" class="input-field" placeholder="0" min="0">
                         </div>
                     </div>
@@ -243,23 +243,23 @@
                    from the winner's side), so it is asked for, and required once a score is
                    entered. Sets are split on spaces: "6/4 7/5". #}
                 <div id="score-tennis" class="hidden">
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Score (sets)</label>
+                    <label class="block text-sm font-medium mb-1.5 fg-3">Score (sets)</label>
                     <input type="text" name="final_score" id="input-final-score" class="input-field"
                            placeholder="ex : 6/4 7/5" data-action="input->event-form#syncWinnerRequired">
                     <div class="mt-3">
-                        <p class="text-sm font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</p>
+                        <p class="text-sm font-medium mb-1.5 fg-3">Vainqueur</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
-                                   style="border-color: var(--border-default); background: var(--bg-2)">
+                            <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all iwt-type-btn"
+                                  >
                                 <input type="checkbox" name="winner" value="1"
                                        style="accent-color: var(--positive)" data-action="change->event-form#exclusiveWinner">
-                                <span id="winner-label-team1" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Joueur 1</span>
+                                <span id="winner-label-team1" class="text-sm font-medium truncate fg-2">🏆 Joueur 1</span>
                             </label>
-                            <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
-                                   style="border-color: var(--border-default); background: var(--bg-2)">
+                            <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all iwt-type-btn"
+                                  >
                                 <input type="checkbox" name="winner" value="2"
                                        style="accent-color: var(--positive)" data-action="change->event-form#exclusiveWinner">
-                                <span id="winner-label-team2" class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 Joueur 2</span>
+                                <span id="winner-label-team2" class="text-sm font-medium truncate fg-2">🏆 Joueur 2</span>
                             </label>
                         </div>
                     </div>
@@ -293,10 +293,10 @@
                     aria-expanded="false"
                     class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all"
                     style="border-color: var(--border-default); background: var(--bg-2)">
-                <span class="flex items-center gap-2 text-sm font-medium" style="color: var(--fg-2)">
+                <span class="flex items-center gap-2 text-sm font-medium fg-2">
                     <span class="text-lg">👥</span> <span>J'y <span id="friends-toggle-verb">serai</span> avec des amis</span>
                 </span>
-                <svg class="w-4 h-4 transition-transform" style="color: var(--fg-4)"
+                <svg class="w-4 h-4 transition-transform fg-4"
                      fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
                 </svg>
@@ -307,7 +307,7 @@
                 {# App friends #}
                 {% if confirmed_friends|length > 0 %}
                 <div>
-                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Amis sur IWasThere</p>
+                    <p class="text-xs font-medium mb-2 fg-3">Amis sur IWasThere</p>
                     <div class="flex flex-wrap gap-2">
                         {% for rel in confirmed_friends %}
                         {% set f = rel.owner == app.user ? rel.friendUser : rel.owner %}
@@ -321,8 +321,8 @@
                                 {% if f.avatarUrl %}
                                     <img src="{{ f.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt="">
                                 {% else %}
-                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                                         style="background: var(--positive-soft); color: var(--positive)">{{ f.displayName|first|upper }}</div>
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold chip-accent"
+                                        >{{ f.displayName|first|upper }}</div>
                                 {% endif %}
                                 <span>{{ f.displayName }}</span>
                             </div>
@@ -335,7 +335,7 @@
 
                 {# External friends #}
                 <div>
-                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Autres personnes (non inscrites)</p>
+                    <p class="text-xs font-medium mb-2 fg-3">Autres personnes (non inscrites)</p>
                     <div class="flex gap-2">
                         <input type="text"
                                data-event-friends-target="nameInput"

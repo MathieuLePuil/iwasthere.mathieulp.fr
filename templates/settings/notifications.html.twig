@@ -8,13 +8,13 @@
 
     {{ m.back_button(path('app_settings'), 'Paramètres') }}
 
-    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Notifications</h1>
+    <h1 class="text-2xl font-semibold fg-1 tracking-title">Notifications</h1>
 
     {# ── Notifications push ── #}
     {% if vapid_public_key %}
     <div class="card">
-        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Notifications push</h2>
-        <p class="text-xs mb-3" style="color: var(--fg-3)">
+        <h2 class="font-medium mb-1 fg-1">Notifications push</h2>
+        <p class="text-xs mb-3 fg-3">
             Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
         </p>
 
@@ -22,7 +22,7 @@
              data-controller="push-toggle"
              data-push-toggle-public-key-value="{{ vapid_public_key|default('') }}"
              data-push-toggle-url-value="{{ path('app_subscribe') }}">
-            <label for="notif-toggle" class="flex-1 min-w-0 text-sm font-medium" style="color: var(--fg-1)">Activer les notifications</label>
+            <label for="notif-toggle" class="flex-1 min-w-0 text-sm font-medium fg-1">Activer les notifications</label>
             <label class="iwt-switch">
                 <input type="checkbox" id="notif-toggle" data-push-toggle-target="toggle" data-action="change->push-toggle#change">
                 <span class="iwt-switch-track"><span class="iwt-switch-thumb"></span></span>
@@ -36,20 +36,20 @@
 
     {# ── Préférences : une ligne par type de notification, groupées ── #}
     <div class="card">
-        <h2 class="font-medium mb-1" style="color: var(--fg-1)">Préférences de notifications</h2>
-        <p class="text-xs mb-4" style="color: var(--fg-3)">
+        <h2 class="font-medium mb-1 fg-1">Préférences de notifications</h2>
+        <p class="text-xs mb-4 fg-3">
             Ces réglages ne concernent que les push. Tout reste consultable dans tes notifications.
         </p>
         <form method="post" action="{{ path('app_settings_notifications') }}" data-controller="form-loader">
             {% for group, types in notif_groups %}
-            <p class="text-[11px] font-bold uppercase tracking-wider mt-4 mb-2" style="color: var(--fg-4); font-family: var(--font-mono)">{{ group }}</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider mt-4 mb-2 fg-4 font-mono-iwt">{{ group }}</p>
             <div class="space-y-3">
                 {% for type in types %}
                 {# Une clé absente vaut « activé » : un type ajouté après coup est reçu par défaut #}
                 <label class="flex items-start justify-between gap-3 cursor-pointer">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm" style="color: var(--fg-2)">{{ type.icon }} {{ type.label }}</p>
-                        <p class="text-xs mt-0.5" style="color: var(--fg-4)">{{ type.description }}</p>
+                        <p class="text-sm fg-2">{{ type.icon }} {{ type.label }}</p>
+                        <p class="text-xs mt-0.5 fg-4">{{ type.description }}</p>
                     </div>
                     <input type="checkbox" name="notif_{{ type.value }}" value="1"
                            class="w-5 h-5 rounded accent-[#3DDC97] flex-shrink-0 mt-0.5"
@@ -59,9 +59,9 @@
             </div>
             {% endfor %}
 
-            <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle)">
-                <label class="block text-sm mb-1" style="color: var(--fg-2)">Heure des rappels</label>
-                <p class="text-xs mb-2" style="color: var(--fg-4)">Quand partent le rappel du jour J et celui de complétion.</p>
+            <div class="mt-4 pt-4 bt-subtle">
+                <label class="block text-sm mb-1 fg-2">Heure des rappels</label>
+                <p class="text-xs mb-2 fg-4">Quand partent le rappel du jour J et celui de complétion.</p>
                 <input type="time" name="notif_completion_time"
                        value="{{ app.user.notifCompletionTime ?? '08:00' }}"
                        class="input-field w-auto">

@@ -13,10 +13,10 @@
     <div class="flex items-center gap-4 mt-4 mb-5">
         {{ m.avatar(profile_user, 'lg') }}
         <div class="flex-1">
-            <h1 class="text-xl font-semibold" style="color: var(--fg-1)">{{ profile_user.displayName }}</h1>
-            <p class="text-sm" style="color: var(--fg-3)">@{{ profile_user.username }}</p>
+            <h1 class="text-xl font-semibold fg-1">{{ profile_user.displayName }}</h1>
+            <p class="text-sm fg-3">@{{ profile_user.username }}</p>
             {% if profile_user.bio %}
-                <p class="text-sm mt-1" style="color: var(--fg-2)">{{ profile_user.bio }}</p>
+                <p class="text-sm mt-1 fg-2">{{ profile_user.bio }}</p>
             {% endif %}
         </div>
     </div>
@@ -27,7 +27,7 @@
         {% set relStatus = relationship ? relationship.status : null %}
         {% set isSentByMe = relationship and relationship.owner == app.user %}
         {% if relStatus == 'confirmed' %}
-            <span class="flex w-full items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-medium" style="background: var(--positive-soft); color: var(--positive)">
+            <span class="flex w-full items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-medium chip-accent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 Amis
             </span>
@@ -70,15 +70,15 @@
     {% if can_see_stats and total_events is not null %}
     <a href="{{ path('app_profile_view_events', {username: profile_user.username}) }}"
        class="card mb-5 text-center py-4 block no-underline">
-        <p class="text-3xl font-black" style="color: var(--positive)">{{ total_events }}</p>
-        <p class="text-sm mt-0.5" style="color: var(--fg-4)">événement{{ total_events > 1 ? 's' : '' }} vécu{{ total_events > 1 ? 's' : '' }}</p>
+        <p class="text-3xl font-black fg-accent">{{ total_events }}</p>
+        <p class="text-sm mt-0.5 fg-4">événement{{ total_events > 1 ? 's' : '' }} vécu{{ total_events > 1 ? 's' : '' }}</p>
     </a>
     {% endif %}
 
     {# Liste d'amis — pilotée par l'audience « friends » #}
     {% if can_see_friends and friends|length > 0 %}
     <div class="flex items-center justify-between mb-3">
-        <h2 class="font-medium" style="color: var(--fg-1)">Amis ({{ friends|length }})</h2>
+        <h2 class="font-medium fg-1">Amis ({{ friends|length }})</h2>
     </div>
     <div class="card mb-5">
         <div class="flex flex-wrap gap-4 justify-center">
@@ -88,14 +88,14 @@
             <a href="{{ path('app_profile_view', {username: fu.username}) }}"
                class="flex flex-col items-center no-underline" style="width: 60px">
                 {{ m.avatar(fu, 'md') }}
-                <p class="text-[11px] text-center mt-1 truncate w-full" style="color: var(--fg-3)">{{ fu.displayName }}</p>
+                <p class="text-[11px] text-center mt-1 truncate w-full fg-3">{{ fu.displayName }}</p>
             </a>
             {% endif %}
             {% endfor %}
             {% if friends|length > 8 %}
             <div class="flex flex-col items-center justify-center" style="width: 60px">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
-                     style="background: var(--bg-2); color: var(--fg-3)">+{{ friends|length - 8 }}</div>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold sf-2 fg-3"
+                    >+{{ friends|length - 8 }}</div>
             </div>
             {% endif %}
         </div>
@@ -108,13 +108,13 @@
         {% if events|length == 0 %}
             <div class="text-center py-12">
                 <p class="text-4xl mb-2">🎵</p>
-                <p class="font-medium" style="color: var(--fg-2)">Aucun événement pour l'instant</p>
+                <p class="font-medium fg-2">Aucun événement pour l'instant</p>
             </div>
         {% else %}
             <div class="flex items-center justify-between mb-3">
-                <h2 class="font-medium" style="color: var(--fg-1)">Derniers événements</h2>
+                <h2 class="font-medium fg-1">Derniers événements</h2>
                 <a href="{{ path('app_profile_view_events', {username: profile_user.username}) }}"
-                   class="flex items-center gap-1 text-sm font-medium" style="color: var(--positive)">
+                   class="flex items-center gap-1 text-sm font-medium fg-accent">
                     Voir tout
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
                 </a>
@@ -124,10 +124,10 @@
                 <div class="card flex items-center gap-3">
                     {{ m.event_thumb(p.event, 'lg') }}
                     <div class="flex-1 min-w-0">
-                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                        <p class="font-medium text-sm truncate fg-1">
                             {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
                         </p>
-                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}</p>
+                        <p class="text-xs fg-4">{{ p.event.date|date('d/m/Y') }}</p>
                     </div>
                     {% if p.rating %}{{ m.star_rating(p.rating) }}{% else %}{{ m.event_badge(p.event.type) }}{% endif %}
                 </div>
@@ -140,8 +140,8 @@
     {% if not can_see_anything and not is_self %}
         <div class="card text-center py-10">
             <p class="text-4xl mb-3">🔒</p>
-            <p class="font-medium" style="color: var(--fg-1)">Compte privé</p>
-            <p class="text-sm mt-1" style="color: var(--fg-3)">
+            <p class="font-medium fg-1">Compte privé</p>
+            <p class="text-sm mt-1 fg-3">
                 Ajoute {{ profile_user.displayName }} en ami pour voir son profil
             </p>
         </div>

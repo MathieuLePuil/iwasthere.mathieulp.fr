@@ -8,7 +8,7 @@
 
     <div class="flex items-center gap-3 mb-6">
         {{ m.back_button(path('app_stats')) }}
-        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Mes festivals</h1>
+        <h1 class="text-xl font-semibold fg-1">Mes festivals</h1>
     </div>
 
     {% if data.groups|length == 0 %}
@@ -17,16 +17,16 @@
 
     <div class="grid grid-cols-3 gap-3 mb-5">
         <div class="card text-center py-4">
-            <p class="text-3xl font-black" style="color: var(--positive)">{{ data.distinct_count }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Festival{{ data.distinct_count > 1 ? 's' : '' }}</p>
+            <p class="text-3xl font-black fg-accent">{{ data.distinct_count }}</p>
+            <p class="text-xs mt-1 fg-4">Festival{{ data.distinct_count > 1 ? 's' : '' }}</p>
         </div>
         <div class="card text-center py-4">
-            <p class="text-3xl font-black" style="color: var(--negative)">{{ data.editions_count }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Édition{{ data.editions_count > 1 ? 's' : '' }}</p>
+            <p class="text-3xl font-black fg-negative">{{ data.editions_count }}</p>
+            <p class="text-xs mt-1 fg-4">Édition{{ data.editions_count > 1 ? 's' : '' }}</p>
         </div>
         <div class="card text-center py-4">
-            <p class="text-3xl font-black" style="color: #FBBF24">{{ data.total_concerts }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Concert{{ data.total_concerts > 1 ? 's' : '' }}</p>
+            <p class="text-3xl font-black fg-warning">{{ data.total_concerts }}</p>
+            <p class="text-xs mt-1 fg-4">Concert{{ data.total_concerts > 1 ? 's' : '' }}</p>
         </div>
     </div>
 
@@ -35,14 +35,14 @@
         <div class="card">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-baseline gap-1.5 min-w-0">
-                    <span class="font-semibold truncate" style="color: var(--fg-1)">{{ g.name }}</span>
-                    <span class="text-xs flex-shrink-0" style="color: var(--fg-4)">{{ g.year }}</span>
+                    <span class="font-semibold truncate fg-1">{{ g.name }}</span>
+                    <span class="text-xs flex-shrink-0 fg-4">{{ g.year }}</span>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                     {% if g.avg_rating %}
-                    <span class="text-xs" style="color: #FBBF24">★ {{ g.avg_rating }}</span>
+                    <span class="text-xs fg-warning">★ {{ g.avg_rating }}</span>
                     {% endif %}
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="color: var(--fg-3); background: var(--bg-3)">{{ g.count }} concert{{ g.count > 1 ? 's' : '' }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full fg-3 sf-3">{{ g.count }} concert{{ g.count > 1 ? 's' : '' }}</span>
                 </div>
             </div>
             {% if g.artists|length > 0 %}

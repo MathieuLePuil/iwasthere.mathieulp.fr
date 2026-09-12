@@ -18,11 +18,11 @@
     {# Logo #}
     <div class="text-center mb-8">
         <img src="{{ asset('images/logo.png') }}" alt="IWasThere" class="w-16 h-16 mx-auto mb-3" style="object-fit: contain;">
-        <h1 class="text-2xl font-black" style="color: var(--fg-1)">Créer un compte</h1>
+        <h1 class="text-2xl font-black fg-1">Créer un compte</h1>
     </div>
 
     {# Card #}
-    <div class="w-full max-w-sm rounded-3xl p-6" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+    <div class="w-full max-w-sm rounded-3xl p-6 sf-1-bordered">
 
         {# Google OAuth #}
         <a href="{{ path('app_google_connect') }}"
@@ -38,9 +38,9 @@
         </a>
 
         <div class="relative flex items-center mb-4">
-            <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
-            <span class="px-3 text-xs" style="color: var(--fg-4)">ou</span>
-            <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
+            <div class="flex-1 bt-subtle"></div>
+            <span class="px-3 text-xs fg-4">ou</span>
+            <div class="flex-1 bt-subtle"></div>
         </div>
 
         {{ form_start(form, {'attr': {'class': 'space-y-4', 'novalidate': true}}) }}
@@ -50,7 +50,7 @@
                 {{ form_label(form[field], null, {'label_attr': {'class': 'block text-sm font-medium mb-1.5', 'style': 'color: var(--fg-2)'}}) }}
                 {% if field == 'username' %}
                     <div class="relative">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm" style="color: var(--fg-4)">@</span>
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm fg-4">@</span>
                         {{ form_widget(form[field], {'attr': {'class': 'input-field pl-7', 'data-username-check-target': 'input', 'data-action': 'input->username-check#check'}}) }}
                     </div>
                     <div data-username-check-target="feedback"></div>
@@ -79,9 +79,9 @@
 
         {{ form_end(form) }}
 
-        <p class="text-center text-sm mt-4" style="color: var(--fg-3)">
+        <p class="text-center text-sm mt-4 fg-3">
             Déjà un compte ?
-            <a href="{{ path('app_login') }}" class="font-medium" style="color: var(--positive)">Se connecter</a>
+            <a href="{{ path('app_login') }}" class="font-medium fg-accent">Se connecter</a>
         </p>
 
     </div>

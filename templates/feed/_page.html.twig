@@ -11,18 +11,18 @@
     {% if sep_at is not null and loop.index0 == sep_at %}
     <div class="flex items-center gap-3 pt-2 pb-1">
         <div class="flex-1 h-px" style="background: var(--border-subtle)"></div>
-        <span class="text-[11px] font-medium flex-shrink-0" style="color: var(--fg-4)">✓ Tu as déjà vu la suite</span>
+        <span class="text-[11px] font-medium flex-shrink-0 fg-4">✓ Tu as déjà vu la suite</span>
         <div class="flex-1 h-px" style="background: var(--border-subtle)"></div>
     </div>
     {% endif %}
 
-    <div class="card" style="padding: 0; overflow: hidden">
+    <div class="card card-flush">
 
         {# Day header #}
         <div class="flex items-center justify-between px-4 pt-3">
-            <p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--fg-4); font-family: var(--font-mono)">{{ day.date_label }}</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider fg-4 font-mono-iwt">{{ day.date_label }}</p>
             {% if day.badge_new %}
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style="background: var(--positive-soft); color: var(--positive)">Nouveau</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md chip-accent">Nouveau</span>
             {% endif %}
         </div>
 
@@ -39,7 +39,7 @@
             {% set noun = 'à ' ~ t.plural(count) %}
         {% endif %}
 
-        <div{% if not loop.first %} class="mt-3" style="border-top: 1px solid var(--border-subtle)"{% endif %}>
+        <div{% if not loop.first %} class="mt-3 bt-subtle"{% endif %}>
 
             {# Annoncé une seule fois pour tout le groupe : qui, quoi, où #}
             <div class="flex items-start gap-3 px-4 pt-3 pb-2.5">
@@ -51,18 +51,18 @@
                     {% endfor %}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm leading-snug" style="color: var(--fg-2)">
+                    <p class="text-sm leading-snug fg-2">
                         {%- set shown = grp.users|slice(0, 2) -%}
                         {%- set extra = n - shown|length -%}
                         {%- for u in shown -%}
                             {%- if not loop.first %}{{ loop.last and extra == 0 ? ' et ' : ', ' }}{% endif -%}
-                            <a href="{{ path('app_profile_view', {username: u.username}) }}" class="font-semibold no-underline" style="color: var(--fg-1)">{{ u.displayName }}</a>
+                            <a href="{{ path('app_profile_view', {username: u.username}) }}" class="font-semibold no-underline fg-1">{{ u.displayName }}</a>
                         {%- endfor -%}
                         {%- if extra > 0 %} et {{ extra }} autre{{ extra > 1 ? 's' }}{% endif %}
                         {{ n > 1 ? 'étaient' : 'était' }} {{ noun }}
                     </p>
                     {% if grp.venue %}
-                    <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">📍 {{ grp.venue.name }}</p>
+                    <p class="text-xs mt-0.5 truncate fg-3">📍 {{ grp.venue.name }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -71,7 +71,7 @@
                autonome : titre + note sur la même ligne, puis souvenirs et réactions
                dessous, pour que plusieurs concerts d'un même jour restent compacts. #}
             {% for g in grp.events %}
-            <div class="mx-3 mb-2 rounded-xl overflow-hidden" style="background: var(--bg-2)">
+            <div class="mx-3 mb-2 rounded-xl overflow-hidden sf-2">
 
                 {# En-tête de l'événement : vignette + titre (la note descend sur la
                    ligne des réactions, car le « + » ne peut pas vivre dans ce lien). #}
@@ -79,10 +79,10 @@
                    class="flex items-center gap-3 px-3 py-2.5 no-underline">
                     {{ m.event_thumb(g.event) }}
                     <div class="flex-1 min-w-0">
-                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
+                        <p class="font-medium text-sm truncate fg-1">{{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}</p>
                     </div>
                     {% if g.my_participation %}
-                    <span class="text-[10px] font-medium flex-shrink-0" style="color: var(--positive)">✓ Toi aussi</span>
+                    <span class="text-[10px] font-medium flex-shrink-0 fg-accent">✓ Toi aussi</span>
                     {% endif %}
                 </a>
 
@@ -99,14 +99,14 @@
                     <div class="px-3 pb-2.5{% if not loop.first or has_body %} pt-0.5{% endif %}">
                         {% if inline %}
                             <div class="flex items-center gap-2 flex-wrap">
-                                {% if n > 1 %}<span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>{% endif %}
+                                {% if n > 1 %}<span class="text-xs font-semibold fg-1">{{ p.user.displayName }}</span>{% endif %}
                                 {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
                                 {{ m.reaction_bar(p, rstate) }}
                             </div>
                         {% else %}
                             {% if has_meta %}
                             <div class="flex items-center gap-2">
-                                {% if n > 1 %}<span class="text-xs font-semibold" style="color: var(--fg-1)">{{ p.user.displayName }}</span>{% endif %}
+                                {% if n > 1 %}<span class="text-xs font-semibold fg-1">{{ p.user.displayName }}</span>{% endif %}
                                 {% if p.rating %}{{ m.star_rating(p.rating) }}{% endif %}
                             </div>
                             {% endif %}
@@ -125,7 +125,7 @@
 
                 {# Accompagnants tagués (« avec qui »), hors ceux déjà nommés plus haut #}
                 {% if g.companions %}
-                <p class="text-xs px-3 pb-2.5 -mt-1" style="color: var(--fg-3)">avec {{ g.companions|join(', ') }}</p>
+                <p class="text-xs px-3 pb-2.5 -mt-1 fg-3">avec {{ g.companions|join(', ') }}</p>
                 {% endif %}
             </div>
             {% endfor %}

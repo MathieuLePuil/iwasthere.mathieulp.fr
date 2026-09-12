@@ -8,12 +8,12 @@
     {# Logo #}
     <div class="text-center mb-10">
         <img src="{{ asset('images/logo.png') }}" alt="IWasThere" class="w-20 h-20 mx-auto mb-4" style="object-fit: contain;">
-        <h1 class="text-3xl font-black" style="color: var(--fg-1)">IWasThere</h1>
-        <p class="text-sm mt-1" style="color: var(--fg-3)">Ton journal d'expériences live</p>
+        <h1 class="text-3xl font-black fg-1">IWasThere</h1>
+        <p class="text-sm mt-1 fg-3">Ton journal d'expériences live</p>
     </div>
 
     {# Card #}
-    <div class="w-full max-w-sm rounded-3xl p-6" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+    <div class="w-full max-w-sm rounded-3xl p-6 sf-1-bordered">
 
         {% if error %}
             <div class="rounded-xl p-3 mb-4 text-sm" style="background: var(--negative-soft); color: var(--negative); border: 1px solid rgba(232,155,142,0.2)">
@@ -35,9 +35,9 @@
         </a>
 
         <div class="relative flex items-center mb-4">
-            <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
-            <span class="px-3 text-xs" style="color: var(--fg-4)">ou</span>
-            <div class="flex-1" style="border-top: 1px solid var(--border-subtle)"></div>
+            <div class="flex-1 bt-subtle"></div>
+            <span class="px-3 text-xs fg-4">ou</span>
+            <div class="flex-1 bt-subtle"></div>
         </div>
 
         {# Email/password form #}
@@ -45,7 +45,7 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
             <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-2)">Email</label>
+                <label class="block text-sm font-medium mb-1.5 fg-2">Email</label>
                 <input type="email" name="email" value="{{ last_username }}"
                        autocomplete="email"
                        class="input-field"
@@ -53,7 +53,7 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-2)">Mot de passe</label>
+                <label class="block text-sm font-medium mb-1.5 fg-2">Mot de passe</label>
                 <input type="password" name="password"
                        autocomplete="current-password"
                        class="input-field"
@@ -61,11 +61,11 @@
             </div>
 
             <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2 text-sm" style="color: var(--fg-3)">
+                <label class="flex items-center gap-2 text-sm fg-3">
                     <input type="checkbox" name="_remember_me" class="rounded">
                     Se souvenir de moi
                 </label>
-                <a href="{{ path('app_forgot_password') }}" class="text-sm font-medium" style="color: var(--positive)">
+                <a href="{{ path('app_forgot_password') }}" class="text-sm font-medium fg-accent">
                     Mot de passe oublié ?
                 </a>
             </div>
@@ -75,9 +75,9 @@
             </button>
         </form>
 
-        <p class="text-center text-sm mt-4" style="color: var(--fg-3)">
+        <p class="text-center text-sm mt-4 fg-3">
             Pas encore de compte ?
-            <a href="{{ path('app_register') }}" class="font-medium" style="color: var(--positive)">S'inscrire</a>
+            <a href="{{ path('app_register') }}" class="font-medium fg-accent">S'inscrire</a>
         </p>
 
     </div>

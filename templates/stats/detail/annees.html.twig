@@ -8,14 +8,14 @@
 
     <div class="flex items-center gap-3 mb-6">
         {{ m.back_button(path('app_stats')) }}
-        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Par année</h1>
+        <h1 class="text-xl font-semibold fg-1">Par année</h1>
     </div>
 
     {# ── Comparaison de deux années ── #}
     {% if data.compare %}
     {% set cmp = data.compare %}
     <div class="card mb-5">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Comparer deux années</h2>
+        <h2 class="font-medium mb-3 fg-1">Comparer deux années</h2>
 
         <form method="get" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4" data-controller="auto-submit">
             <select name="a" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
@@ -24,7 +24,7 @@
                 <option value="{{ y }}" {{ y == cmp.a.year ? 'selected' : '' }}>{{ y }}</option>
                 {% endfor %}
             </select>
-            <span class="text-xs font-medium" style="color: var(--fg-4)">vs</span>
+            <span class="text-xs font-medium fg-4">vs</span>
             <select name="b" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
                     data-action="change->auto-submit#submit">
                 {% for y in cmp.available %}
@@ -44,10 +44,10 @@
             {% set va = cmp.a[row.key] %}
             {% set vb = cmp.b[row.key] %}
             {% set delta = va - vb %}
-            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5" style="border-bottom: 1px solid var(--border-subtle)">
-                <span class="text-lg font-bold text-center" style="color: var(--fg-1)">{{ va }}</span>
-                <span class="text-xs text-center px-1" style="color: var(--fg-4)">{{ row.label }}</span>
-                <span class="text-lg font-bold text-center" style="color: var(--fg-1)">{{ vb }}
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5 bb-subtle">
+                <span class="text-lg font-bold text-center fg-1">{{ va }}</span>
+                <span class="text-xs text-center px-1 fg-4">{{ row.label }}</span>
+                <span class="text-lg font-bold text-center fg-1">{{ vb }}
                     {%- if delta != 0 %}<span class="text-xs font-medium ml-0.5" style="color: {{ delta > 0 ? 'var(--positive)' : 'var(--negative)' }}">{{ delta > 0 ? '+' : '' }}{{ delta }}</span>{% endif -%}
                 </span>
             </div>
@@ -55,12 +55,12 @@
 
             {# Note moyenne : peut manquer une année sans notes #}
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5">
-                <span class="text-lg font-bold text-center" style="color: #FBBF24">{{ cmp.a.avg_rating ? '★ ' ~ cmp.a.avg_rating : '—' }}</span>
-                <span class="text-xs text-center px-1" style="color: var(--fg-4)">Note moy.</span>
-                <span class="text-lg font-bold text-center" style="color: #FBBF24">{{ cmp.b.avg_rating ? '★ ' ~ cmp.b.avg_rating : '—' }}</span>
+                <span class="text-lg font-bold text-center fg-warning">{{ cmp.a.avg_rating ? '★ ' ~ cmp.a.avg_rating : '—' }}</span>
+                <span class="text-xs text-center px-1 fg-4">Note moy.</span>
+                <span class="text-lg font-bold text-center fg-warning">{{ cmp.b.avg_rating ? '★ ' ~ cmp.b.avg_rating : '—' }}</span>
             </div>
         </div>
-        <p class="text-[11px] mt-2 text-center" style="color: var(--fg-4)">L'écart affiché est celui de {{ cmp.a.year }} par rapport à {{ cmp.b.year }}.</p>
+        <p class="text-[11px] mt-2 text-center fg-4">L'écart affiché est celui de {{ cmp.a.year }} par rapport à {{ cmp.b.year }}.</p>
     </div>
     {% endif %}
 
@@ -68,18 +68,18 @@
         {% for y in data.years %}
         <div class="card">
             <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-lg" style="color: var(--fg-1)">{{ y.year }}</span>
+                <span class="font-semibold text-lg fg-1">{{ y.year }}</span>
                 <div class="flex items-center gap-2">
                     {% if y.avg_rating %}
-                    <span class="text-xs" style="color: #FBBF24">★ {{ y.avg_rating }}</span>
+                    <span class="text-xs fg-warning">★ {{ y.avg_rating }}</span>
                     {% endif %}
-                    <span class="text-xs px-2 py-0.5 rounded-full" style="color: var(--fg-3); background: var(--bg-3)">{{ y.total }} événement{{ y.total > 1 ? 's' : '' }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full fg-3 sf-3">{{ y.total }} événement{{ y.total > 1 ? 's' : '' }}</span>
                 </div>
             </div>
-            <div class="h-2 rounded-full overflow-hidden mb-2" style="background: var(--bg-3)">
+            <div class="h-2 rounded-full overflow-hidden mb-2 sf-3">
                 <div class="h-full rounded-full" style="width: {{ (y.total / data.max * 100)|round }}%; background: var(--positive)"></div>
             </div>
-            <div class="flex gap-3 text-xs" style="color: var(--fg-4)">
+            <div class="flex gap-3 text-xs fg-4">
                 {% if y.concerts > 0 %}<span>🎤 {{ y.concerts }} concert{{ y.concerts > 1 ? 's' : '' }}</span>{% endif %}
                 {% if y.festivals > 0 %}<span>🎪 {{ y.festivals }} en festival</span>{% endif %}
                 {% if y.sports > 0 %}<span>⚽ {{ y.sports }} sport{{ y.sports > 1 ? 's' : '' }}</span>{% endif %}

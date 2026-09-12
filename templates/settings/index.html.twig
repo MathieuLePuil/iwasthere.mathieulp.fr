@@ -6,10 +6,10 @@
 {% block body %}
 <div class="px-4 py-5 space-y-5">
 
-    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Paramètres</h1>
+    <h1 class="text-2xl font-semibold fg-1 tracking-title">Paramètres</h1>
 
     {# ── Sommaire : chaque ligne mène à sa propre page ── #}
-    <div class="card" style="padding: 0; overflow: hidden">
+    <div class="card card-flush">
         {% set rubriques = [
             {'route': 'app_settings_profile_page',       'icon': '👤', 'title': 'Profil',          'desc': 'Nom, pseudo, bio, lien'},
             {'route': 'app_settings_appearance_page',    'icon': '🎨', 'title': 'Apparence',       'desc': 'Thème clair, sombre ou auto'},
@@ -21,13 +21,13 @@
         <a href="{{ path(r.route) }}"
            class="flex items-center gap-3 px-4 py-3.5 no-underline"
            style="{{ not loop.first ? 'border-top: 1px solid var(--border-subtle)' : '' }}">
-            <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-                 style="background: var(--bg-2)">{{ r.icon }}</div>
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0 sf-2"
+                >{{ r.icon }}</div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium" style="color: var(--fg-1)">{{ r.title }}</p>
-                <p class="text-xs truncate" style="color: var(--fg-4)">{{ r.desc }}</p>
+                <p class="text-sm font-medium fg-1">{{ r.title }}</p>
+                <p class="text-xs truncate fg-4">{{ r.desc }}</p>
             </div>
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-4)"><path d="m9 6 6 6-6 6"/></svg>
+            <svg class="w-4 h-4 flex-shrink-0 fg-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
         </a>
         {% endfor %}
     </div>
@@ -40,10 +40,10 @@
     </a>
 
     {# ── Liens légaux ── #}
-    <div class="pb-4 text-center text-xs space-x-3" style="color: var(--fg-4)">
-        <a href="{{ path('app_legal_notice') }}" style="color: var(--fg-3)">Mentions légales</a>
+    <div class="pb-4 text-center text-xs space-x-3 fg-4">
+        <a href="{{ path('app_legal_notice') }}" class="fg-3">Mentions légales</a>
         <span>·</span>
-        <a href="{{ path('app_privacy') }}" style="color: var(--fg-3)">Confidentialité</a>
+        <a href="{{ path('app_privacy') }}" class="fg-3">Confidentialité</a>
     </div>
 
 </div>

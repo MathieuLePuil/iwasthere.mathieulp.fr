@@ -4,7 +4,7 @@
 
 {% block body %}
 <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">Utilisateurs</h1>
+    <h1 class="text-2xl font-semibold fg-1 tracking-title">Utilisateurs</h1>
     <form method="get" class="flex gap-2">
         <input type="search" name="q" value="{{ q }}"
                class="input-field w-64"
@@ -13,9 +13,9 @@
     </form>
 </div>
 
-<div class="rounded-2xl overflow-hidden" style="background: var(--bg-1); border: 1px solid var(--border-subtle)">
+<div class="rounded-2xl overflow-hidden sf-1-bordered">
     <table class="w-full text-sm">
-        <thead style="background: var(--bg-2); color: var(--fg-4)">
+        <thead class="sf-2 fg-4">
             <tr>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Utilisateur</th>
                 <th class="px-5 py-3 text-left text-xs uppercase tracking-wide">Email</th>
@@ -27,32 +27,32 @@
         </thead>
         <tbody>
             {% for user in users %}
-            <tr style="border-top: 1px solid var(--border-subtle)">
+            <tr class="bt-subtle">
                 <td class="px-5 py-3">
-                    <div class="font-medium" style="color: var(--fg-1)">{{ user.displayName }}</div>
-                    <div class="text-xs" style="color: var(--fg-4)">@{{ user.username }}</div>
+                    <div class="font-medium fg-1">{{ user.displayName }}</div>
+                    <div class="text-xs fg-4">@{{ user.username }}</div>
                 </td>
-                <td class="px-5 py-3" style="color: var(--fg-3)">{{ user.email }}</td>
+                <td class="px-5 py-3 fg-3">{{ user.email }}</td>
                 <td class="px-5 py-3">
                     <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium"
                           style="{% if user.role == 'superAdmin' %}background: var(--negative-soft); color: var(--negative){% else %}background: var(--bg-3); color: var(--fg-3){% endif %}">
                         {{ user.role == 'superAdmin' ? '🛡 Super Admin' : 'Utilisateur' }}
                     </span>
                 </td>
-                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">{{ user.createdAt|date('d/m/Y') }}</td>
-                <td class="px-5 py-3 text-xs" style="color: var(--fg-4)">
+                <td class="px-5 py-3 text-xs fg-4">{{ user.createdAt|date('d/m/Y') }}</td>
+                <td class="px-5 py-3 text-xs fg-4">
                     {{ user.googleId ? '🔗 Google' : '✉️ Email' }}
                 </td>
                 <td class="px-5 py-3 text-right">
                     <div class="flex items-center justify-end gap-3">
                         <a href="{{ path('app_admin_user_show', {id: user.id}) }}"
-                           class="text-xs font-medium" style="color: var(--positive)">Voir</a>
+                           class="text-xs font-medium fg-accent">Voir</a>
                         <a href="{{ path('app_admin_user_edit', {id: user.id}) }}"
-                           class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
+                           class="text-xs font-medium fg-info">Éditer</a>
                         {% if user != app.user %}
                         <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}"
                               data-controller="confirm" data-action="submit->confirm#check" data-confirm-title-value="Supprimer définitivement @{{ user.username }} ?" data-confirm-label-value="Supprimer">
-                            <button class="text-xs" style="color: var(--negative)">Supprimer</button>
+                            <button class="text-xs fg-negative">Supprimer</button>
                         </form>
                         {% endif %}
                     </div>
@@ -60,7 +60,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="px-5 py-10 text-center" style="color: var(--fg-4)">
+                <td colspan="6" class="px-5 py-10 text-center fg-4">
                     {% if q %}Aucun utilisateur trouvé pour "{{ q }}"{% else %}Aucun utilisateur{% endif %}
                 </td>
             </tr>

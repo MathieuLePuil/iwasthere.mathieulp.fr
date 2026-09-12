@@ -178,10 +178,10 @@
                         <img src="{{ app.user.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt=""
                              style="{{ current_route starts with 'app_profile' ? 'box-shadow: 0 0 0 2px var(--positive)' : '' }}"
                              data-controller="img-fallback" data-action="error->img-fallback#swap">
-                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" hidden style="background: var(--positive-soft); color: var(--positive)">{{ app.user.displayName|first|upper }}</div>
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold chip-accent" hidden>{{ app.user.displayName|first|upper }}</div>
                     {% else %}
-                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                             style="background: var(--positive-soft); color: var(--positive)">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold chip-accent"
+                            >
                             {{ app.user.displayName|first|upper }}
                         </div>
                     {% endif %}

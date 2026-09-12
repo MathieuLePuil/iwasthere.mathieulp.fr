@@ -38,7 +38,7 @@
             <h1 class="cmpl-title">C'était comment&nbsp;?</h1>
             <p class="cmpl-lead">
                 Deux minutes pour garder une trace de
-                <b style="color: var(--fg-1)">{{ name }}</b>
+                <b class="fg-1">{{ name }}</b>
                 — {{ event.date|date('d/m/Y') }}{% if event.venue %} · {{ event.venue.name }}{% endif %}.
             </p>
             <div class="cmpl-nav">
@@ -175,8 +175,8 @@
                                 {% if f.avatarUrl %}
                                     <img src="{{ f.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt="">
                                 {% else %}
-                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                                         style="background: var(--positive-soft); color: var(--positive)">{{ f.displayName|first|upper }}</div>
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold chip-accent"
+                                        >{{ f.displayName|first|upper }}</div>
                                 {% endif %}
                                 <span>{{ f.displayName }}</span>
                             </div>
@@ -250,7 +250,7 @@
             </div>
             <div class="cmpl-done-badge">🎉</div>
             <h2 class="cmpl-title">Fiche complétée&nbsp;!</h2>
-            <p class="cmpl-lead">Ton souvenir de <b style="color: var(--fg-1)">{{ name }}</b> est bien rangé dans ton journal.</p>
+            <p class="cmpl-lead">Ton souvenir de <b class="fg-1">{{ name }}</b> est bien rangé dans ton journal.</p>
             <div class="cmpl-nav">
                 <a href="{{ path('app_event_show', {id: event.id}) }}" class="btn-primary cmpl-cta" data-turbo="false">Voir ma fiche</a>
                 <a href="{{ path('app_home') }}" class="btn-secondary cmpl-skip" data-turbo="false">Retour à l'accueil</a>

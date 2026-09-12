@@ -5,13 +5,13 @@
 {% block body %}
 <div class="px-4 py-5">
 
-    <h1 class="text-2xl font-semibold mb-5" style="color: var(--fg-1); letter-spacing: -0.01em">Mes statistiques</h1>
+    <h1 class="text-2xl font-semibold mb-5 fg-1 tracking-title">Mes statistiques</h1>
 
     {% if not stats.has_data %}
     <div class="flex flex-col items-center justify-center py-16 text-center">
         <div class="text-6xl mb-4">📊</div>
-        <h3 class="text-base font-semibold mb-2" style="color: var(--fg-1)">Pas encore de données</h3>
-        <p class="text-sm mb-6" style="color: var(--fg-3)">Commence à enregistrer des événements pour voir tes statistiques</p>
+        <h3 class="text-base font-semibold mb-2 fg-1">Pas encore de données</h3>
+        <p class="text-sm mb-6 fg-3">Commence à enregistrer des événements pour voir tes statistiques</p>
         <a href="{{ path('app_event_new') }}" class="btn-primary">+ Ajouter un événement</a>
     </div>
     {% else %}
@@ -19,21 +19,21 @@
     {# Hero stats #}
     <div class="grid grid-cols-2 gap-3 mb-5">
         <a href="{{ path('app_stats_detail', {topic: 'evenements'}) }}" class="card block text-center py-5 no-underline">
-            <p class="text-4xl font-black" style="color: var(--positive)">{{ stats.total }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Événements</p>
+            <p class="text-4xl font-black fg-accent">{{ stats.total }}</p>
+            <p class="text-xs mt-1 fg-4">Événements</p>
         </a>
         <a href="{{ path('app_stats_detail', {topic: 'lieux'}) }}" class="card block text-center py-5 no-underline">
             <p class="text-2xl mb-1">🏟️</p>
-            <p class="text-xs" style="color: var(--fg-4)">Lieu préféré</p>
-            <p class="font-semibold text-sm leading-tight mt-1" style="color: var(--fg-1)">{{ stats.top_venue ?? '—' }}</p>
+            <p class="text-xs fg-4">Lieu préféré</p>
+            <p class="font-semibold text-sm leading-tight mt-1 fg-1">{{ stats.top_venue ?? '—' }}</p>
         </a>
         <a href="{{ path('app_stats_detail', {topic: 'notes'}) }}" class="card block text-center py-5 no-underline">
-            <p class="text-4xl font-black" style="color: #FBBF24">{{ stats.avg_rating ? stats.avg_rating ~ '/5' : '—' }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Note moyenne</p>
+            <p class="text-4xl font-black fg-warning">{{ stats.avg_rating ? stats.avg_rating ~ '/5' : '—' }}</p>
+            <p class="text-xs mt-1 fg-4">Note moyenne</p>
         </a>
         <a href="{{ path('app_stats_detail', {topic: 'lieux'}) }}" class="card block text-center py-5 no-underline">
-            <p class="text-4xl font-black" style="color: var(--positive)">{{ stats.venues_count }}</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Lieux visités</p>
+            <p class="text-4xl font-black fg-accent">{{ stats.venues_count }}</p>
+            <p class="text-xs mt-1 fg-4">Lieux visités</p>
         </a>
     </div>
 
@@ -43,7 +43,7 @@
     <a href="{{ path('app_stats_detail', {topic: 'portebonheur'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🍀</span>
-            <h2 class="font-medium" style="color: var(--fg-1)">Porte-bonheur</h2>
+            <h2 class="font-medium fg-1">Porte-bonheur</h2>
         </div>
         <div class="space-y-3">
             {% for t in stats.lucky_teams.teams %}
@@ -51,19 +51,19 @@
                 <div class="flex justify-between items-baseline mb-1">
                     <div class="flex items-baseline gap-1.5 min-w-0">
                         <span>{{ sport_emoji[t.sport] ?? '🏟️' }}</span>
-                        <span class="font-medium truncate" style="color: var(--fg-1)">{{ t.team }}</span>
+                        <span class="font-medium truncate fg-1">{{ t.team }}</span>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                         {% if t.win_rate is not null %}
-                        <span class="font-bold" style="color: var(--positive)">{{ t.win_rate }}%</span>
+                        <span class="font-bold fg-accent">{{ t.win_rate }}%</span>
                         {% else %}
-                        <span style="color: var(--fg-4)">—</span>
+                        <span class="fg-4">—</span>
                         {% endif %}
-                        <span class="text-xs" style="color: var(--fg-4)">{{ t.wins }}V·{{ t.draws }}N·{{ t.losses }}D</span>
+                        <span class="text-xs fg-4">{{ t.wins }}V·{{ t.draws }}N·{{ t.losses }}D</span>
                     </div>
                 </div>
                 {% if t.win_rate is not null %}
-                <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                <div class="h-1.5 rounded-full overflow-hidden sf-3">
                     <div class="h-full rounded-full" style="width: {{ t.win_rate }}%; background: var(--positive)"></div>
                 </div>
                 {% endif %}
@@ -76,17 +76,17 @@
     {# Music vs Sport breakdown #}
     {% if stats.concerts > 0 or stats.festivals > 0 or stats.sports > 0 %}
     <a href="{{ path('app_stats_detail', {topic: 'repartition'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Répartition</h2>
+        <h2 class="font-medium mb-3 fg-1">Répartition</h2>
         <div class="space-y-2">
             {% if stats.concerts > 0 %}
             <div class="flex items-center gap-3">
                 <span class="text-xl">🎤</span>
                 <div class="flex-1">
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium" style="color: var(--fg-1)">Concerts</span>
-                        <span style="color: var(--fg-4)">{{ stats.concerts }}</span>
+                        <span class="font-medium fg-1">Concerts</span>
+                        <span class="fg-4">{{ stats.concerts }}</span>
                     </div>
-                    <div class="h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-2 rounded-full overflow-hidden sf-3">
                         <div class="h-full rounded-full" style="width: {{ (stats.concerts / stats.total * 100)|round }}%; background: var(--positive)"></div>
                     </div>
                 </div>
@@ -99,10 +99,10 @@
                     <div class="flex justify-between text-sm mb-1">
                         {# « En festival » et pas « Festivals » : c'est un décompte d'événements,
                            donc de concerts vus en festival — les éditions se comptent ailleurs. #}
-                        <span class="font-medium" style="color: var(--fg-1)">En festival</span>
-                        <span style="color: var(--fg-4)">{{ stats.festivals }}</span>
+                        <span class="font-medium fg-1">En festival</span>
+                        <span class="fg-4">{{ stats.festivals }}</span>
                     </div>
-                    <div class="h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-2 rounded-full overflow-hidden sf-3">
                         <div class="h-full rounded-full" style="width: {{ (stats.festivals / stats.total * 100)|round }}%; background: var(--negative)"></div>
                     </div>
                 </div>
@@ -113,10 +113,10 @@
                 <span class="text-xl">⚽</span>
                 <div class="flex-1">
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="font-medium" style="color: var(--fg-1)">Sport</span>
-                        <span style="color: var(--fg-4)">{{ stats.sports }}</span>
+                        <span class="font-medium fg-1">Sport</span>
+                        <span class="fg-4">{{ stats.sports }}</span>
                     </div>
-                    <div class="h-2 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-2 rounded-full overflow-hidden sf-3">
                         <div class="h-full rounded-full" style="width: {{ (stats.sports / stats.total * 100)|round }}%; background: #60A5FA"></div>
                     </div>
                 </div>
@@ -132,9 +132,9 @@
         <div class="flex items-center gap-3">
             <span class="text-4xl">🏆</span>
             <div>
-                <p class="text-xs" style="color: var(--fg-4)">Artiste le plus vu</p>
-                <p class="font-semibold text-lg" style="color: var(--fg-1)">{{ stats.top_artist }}</p>
-                <p class="text-sm" style="color: var(--fg-3)">{{ stats.top_artist_count }} fois</p>
+                <p class="text-xs fg-4">Artiste le plus vu</p>
+                <p class="font-semibold text-lg fg-1">{{ stats.top_artist }}</p>
+                <p class="text-sm fg-3">{{ stats.top_artist_count }} fois</p>
             </div>
         </div>
     </a>
@@ -145,18 +145,18 @@
     <a href="{{ path('app_stats_detail', {topic: 'festivals'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🎪</span>
-            <h2 class="font-medium" style="color: var(--fg-1)">Festivals</h2>
+            <h2 class="font-medium fg-1">Festivals</h2>
         </div>
         <div class="grid grid-cols-2 gap-2 mb-4">
-            <div class="rounded-xl p-3 text-center" style="background: var(--bg-2)">
-                <p class="text-2xl font-black" style="color: var(--positive)">{{ stats.festival_count }}</p>
+            <div class="rounded-xl p-3 text-center sf-2">
+                <p class="text-2xl font-black fg-accent">{{ stats.festival_count }}</p>
                 {# Des éditions, pas des noms : deux Hellfest à deux ans d'écart en font deux.
                    Le décompte des festivals distincts vit sur la page détail. #}
-                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Édition{{ stats.festival_count > 1 ? 's' : '' }}</p>
+                <p class="text-xs mt-0.5 fg-4">Édition{{ stats.festival_count > 1 ? 's' : '' }}</p>
             </div>
-            <div class="rounded-xl p-3 text-center" style="background: var(--bg-2)">
-                <p class="text-2xl font-black" style="color: var(--negative)">{{ stats.top_festival.count }}</p>
-                <p class="text-xs mt-0.5" style="color: var(--fg-4)">Record de concerts</p>
+            <div class="rounded-xl p-3 text-center sf-2">
+                <p class="text-2xl font-black fg-negative">{{ stats.top_festival.count }}</p>
+                <p class="text-xs mt-0.5 fg-4">Record de concerts</p>
             </div>
         </div>
         {% if stats.festival_groups|length > 0 %}
@@ -166,17 +166,17 @@
             <div>
                 <div class="flex justify-between text-sm mb-1">
                     <div class="flex items-baseline gap-1.5 min-w-0">
-                        <span class="font-medium truncate" style="color: var(--fg-1)">{{ fest.name }}</span>
-                        <span class="text-xs flex-shrink-0" style="color: var(--fg-4)">{{ fest.year }}</span>
+                        <span class="font-medium truncate fg-1">{{ fest.name }}</span>
+                        <span class="text-xs flex-shrink-0 fg-4">{{ fest.year }}</span>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                         {% if fest.avg_rating %}
-                        <span class="text-xs" style="color: #FBBF24">★ {{ fest.avg_rating }}</span>
+                        <span class="text-xs fg-warning">★ {{ fest.avg_rating }}</span>
                         {% endif %}
-                        <span style="color: var(--fg-4)">{{ fest.count }} concert{{ fest.count > 1 ? 's' : '' }}</span>
+                        <span class="fg-4">{{ fest.count }} concert{{ fest.count > 1 ? 's' : '' }}</span>
                     </div>
                 </div>
-                <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-3)">
+                <div class="h-1.5 rounded-full overflow-hidden sf-3">
                     <div class="h-full rounded-full" style="width: {{ (fest.count / top_count * 100)|round }}%; background: var(--negative)"></div>
                 </div>
             </div>
@@ -189,7 +189,7 @@
     {# Top artists list #}
     {% if stats.artists|length > 1 %}
     <a href="{{ path('app_stats_detail', {topic: 'artistes'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Top Artistes</h2>
+        <h2 class="font-medium mb-3 fg-1">Top Artistes</h2>
         <div class="space-y-2">
             {% set prev_count = null %}
             {% set rank = 0 %}
@@ -199,13 +199,13 @@
             {% set shown = shown + 1 %}
             {% set prev_count = count %}
             <div class="flex items-center gap-3">
-                <span class="text-sm font-bold w-5" style="color: var(--fg-4)">{{ rank }}</span>
+                <span class="text-sm font-bold w-5 fg-4">{{ rank }}</span>
                 <div class="flex-1">
                     <div class="flex justify-between text-sm">
-                        <span class="font-medium" style="color: var(--fg-1)">{{ artist }}</span>
-                        <span style="color: var(--fg-4)">{{ count }}x</span>
+                        <span class="font-medium fg-1">{{ artist }}</span>
+                        <span class="fg-4">{{ count }}x</span>
                     </div>
-                    <div class="h-1.5 rounded-full mt-1 overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-1.5 rounded-full mt-1 overflow-hidden sf-3">
                         <div class="h-full rounded-full" style="width: {{ (count / stats.top_artist_count * 100)|round }}%; background: var(--positive)"></div>
                     </div>
                 </div>
@@ -220,7 +220,7 @@
     <a href="{{ path('app_stats_detail', {topic: 'morceaux'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center gap-2 mb-3">
             <span class="text-xl">🎵</span>
-            <h2 class="font-medium" style="color: var(--fg-1)">Morceaux les plus entendus</h2>
+            <h2 class="font-medium fg-1">Morceaux les plus entendus</h2>
         </div>
         {% set top_song_count = stats.songs[0].count %}
         <div class="space-y-2">
@@ -232,18 +232,18 @@
             {% set shown = shown + 1 %}
             {% set prev_count = song.count %}
             <div class="flex items-center gap-3">
-                <span class="text-sm font-bold w-5" style="color: var(--fg-4)">{{ rank }}</span>
+                <span class="text-sm font-bold w-5 fg-4">{{ rank }}</span>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between text-sm">
                         <div class="flex items-baseline gap-1.5 min-w-0">
-                            <span class="font-medium truncate" style="color: var(--fg-1)">{{ song.name }}</span>
+                            <span class="font-medium truncate fg-1">{{ song.name }}</span>
                             {% if song.artist %}
-                            <span class="text-xs truncate flex-shrink-0" style="color: var(--fg-4)">{{ song.artist }}</span>
+                            <span class="text-xs truncate flex-shrink-0 fg-4">{{ song.artist }}</span>
                             {% endif %}
                         </div>
-                        <span class="flex-shrink-0 ml-2" style="color: var(--fg-4)">{{ song.count }}x</span>
+                        <span class="flex-shrink-0 ml-2 fg-4">{{ song.count }}x</span>
                     </div>
-                    <div class="h-1.5 rounded-full mt-1 overflow-hidden" style="background: var(--bg-3)">
+                    <div class="h-1.5 rounded-full mt-1 overflow-hidden sf-3">
                         <div class="h-full rounded-full" style="width: {{ (song.count / top_song_count * 100)|round }}%; background: var(--positive)"></div>
                     </div>
                 </div>
@@ -256,14 +256,14 @@
     {# Events per year #}
     {% if stats.by_year|length > 1 %}
     <a href="{{ path('app_stats_detail', {topic: 'annees'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par année</h2>
+        <h2 class="font-medium mb-3 fg-1">Par année</h2>
         {% set max_year = max(stats.by_year) %}
         <div class="space-y-2">
             {% for year in stats.by_year|keys|sort|reverse %}
             {% set count = stats.by_year[year] %}
             <div class="flex items-center gap-3">
-                <span class="text-sm font-medium w-12" style="color: var(--fg-3)">{{ year }}</span>
-                <div class="flex-1 h-6 rounded-lg overflow-hidden" style="background: var(--bg-3)">
+                <span class="text-sm font-medium w-12 fg-3">{{ year }}</span>
+                <div class="flex-1 h-6 rounded-lg overflow-hidden sf-3">
                     <div class="h-full rounded-lg flex items-center px-2"
                          style="width: max({{ (count / max_year * 100)|round }}%, 30px); background: var(--positive)">
                         <span class="text-xs font-bold" style="color: var(--on-positive)">{{ count }}</span>
@@ -278,7 +278,7 @@
     {# By month #}
     {% if stats.by_month|length > 0 %}
     <a href="{{ path('app_stats_detail', {topic: 'mois'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par mois</h2>
+        <h2 class="font-medium mb-3 fg-1">Par mois</h2>
         {% set month_names = {1: 'Jan', 2: 'Fév', 3: 'Mar', 4: 'Avr', 5: 'Mai', 6: 'Jun', 7: 'Jul', 8: 'Aoû', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Déc'} %}
         {% set max_month = max(stats.by_month) %}
         <div class="flex items-end gap-1 h-20">
@@ -288,7 +288,7 @@
                 <div class="w-full rounded-t-sm transition-all"
                      style="height: {{ max_month > 0 ? (count / max_month * 56)|round : 0 }}px; min-height: {{ count > 0 ? 4 : 0 }}px; background: var(--positive)">
                 </div>
-                <span class="text-[8px]" style="color: var(--fg-4)">{{ month_names[mo] }}</span>
+                <span class="text-[8px] fg-4">{{ month_names[mo] }}</span>
             </div>
             {% endfor %}
         </div>
@@ -300,13 +300,13 @@
     <a href="{{ path('app_stats_detail', {topic: 'series'}) }}" class="card block mb-4 no-underline">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-xs" style="color: var(--fg-4)">Meilleure série</p>
-                <p class="text-2xl font-black" style="color: var(--positive)">{{ stats.max_streak }} jours consécutifs</p>
+                <p class="text-xs fg-4">Meilleure série</p>
+                <p class="text-2xl font-black fg-accent">{{ stats.max_streak }} jours consécutifs</p>
             </div>
             <span class="text-4xl">🔥</span>
         </div>
         {% if stats.streak > 0 %}
-        <p class="text-sm mt-1" style="color: var(--fg-3)">Série actuelle : <span class="font-bold" style="color: var(--positive)">{{ stats.streak }} jour{{ stats.streak > 1 ? 's' : '' }}</span></p>
+        <p class="text-sm mt-1 fg-3">Série actuelle : <span class="font-bold fg-accent">{{ stats.streak }} jour{{ stats.streak > 1 ? 's' : '' }}</span></p>
         {% endif %}
     </a>
     {% endif %}
@@ -314,15 +314,15 @@
     {# First & last event #}
     {% if stats.first_date %}
     <a href="{{ path('app_stats_detail', {topic: 'periode'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Période</h2>
+        <h2 class="font-medium mb-3 fg-1">Période</h2>
         <div class="flex justify-between">
             <div>
-                <p class="text-xs" style="color: var(--fg-4)">Premier événement</p>
-                <p class="font-semibold" style="color: var(--fg-1)">{{ stats.first_date|date('d/m/Y') }}</p>
+                <p class="text-xs fg-4">Premier événement</p>
+                <p class="font-semibold fg-1">{{ stats.first_date|date('d/m/Y') }}</p>
             </div>
             <div class="text-right">
-                <p class="text-xs" style="color: var(--fg-4)">Dernier événement</p>
-                <p class="font-semibold" style="color: var(--fg-1)">{{ stats.last_date|date('d/m/Y') }}</p>
+                <p class="text-xs fg-4">Dernier événement</p>
+                <p class="font-semibold fg-1">{{ stats.last_date|date('d/m/Y') }}</p>
             </div>
         </div>
     </a>
@@ -331,12 +331,12 @@
     {# Friends at events #}
     {% if stats.friends_stats|length > 0 %}
     <a href="{{ path('app_stats_detail', {topic: 'compagnons'}) }}" class="card block mb-4 no-underline">
-        <h2 class="font-medium mb-3" style="color: var(--fg-1)">Meilleurs compagnons</h2>
+        <h2 class="font-medium mb-3 fg-1">Meilleurs compagnons</h2>
         <div class="space-y-2">
             {% for name, count in stats.friends_stats %}
             <div class="flex items-center justify-between">
-                <span class="font-medium text-sm" style="color: var(--fg-1)">{{ name }}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full" style="color: var(--fg-3); background: var(--bg-3)">{{ count }} événement{{ count > 1 ? 's' : '' }}</span>
+                <span class="font-medium text-sm fg-1">{{ name }}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full fg-3 sf-3">{{ count }} événement{{ count > 1 ? 's' : '' }}</span>
             </div>
             {% endfor %}
         </div>

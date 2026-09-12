@@ -13,16 +13,16 @@
     <div class="flex items-center gap-4 mt-4 mb-5">
         {{ m.avatar(friend_user, 'lg') }}
         <div class="flex-1">
-            <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Inviter {{ friend_user.displayName }}</h1>
-            <p class="text-sm" style="color: var(--fg-3)">Coche les événements que vous avez vécus ensemble</p>
+            <h1 class="text-xl font-semibold fg-1">Inviter {{ friend_user.displayName }}</h1>
+            <p class="text-sm fg-3">Coche les événements que vous avez vécus ensemble</p>
         </div>
     </div>
 
     {% if participations|length == 0 %}
         <div class="card text-center py-12">
             <p class="text-4xl mb-2">🎉</p>
-            <p class="font-medium" style="color: var(--fg-1)">Rien à inviter</p>
-            <p class="text-sm mt-1" style="color: var(--fg-3)">
+            <p class="font-medium fg-1">Rien à inviter</p>
+            <p class="text-sm mt-1 fg-3">
                 {{ friend_user.displayName }} est déjà associé à tous tes événements.
             </p>
         </div>
@@ -32,8 +32,8 @@
             {# Select all #}
             <label class="card flex items-center gap-3 mb-3 cursor-pointer select-none">
                 <input type="checkbox" id="invite-select-all" data-invite-select-target="all" data-action="change->invite-select#toggleAll" class="w-5 h-5 rounded accent-[var(--positive)]">
-                <span class="font-medium text-sm" style="color: var(--fg-1)">Tout sélectionner</span>
-                <span class="ml-auto text-xs" style="color: var(--fg-4)" id="invite-count" data-invite-select-target="count">0 / {{ participations|length }}</span>
+                <span class="font-medium text-sm fg-1">Tout sélectionner</span>
+                <span class="ml-auto text-xs fg-4" id="invite-count" data-invite-select-target="count">0 / {{ participations|length }}</span>
             </label>
 
             <div class="space-y-3 mb-40">
@@ -43,10 +43,10 @@
                            class="invite-event-checkbox w-5 h-5 rounded flex-shrink-0 accent-[var(--positive)]">
                     {{ m.event_thumb(p.event, 'lg') }}
                     <div class="flex-1 min-w-0">
-                        <p class="font-medium text-sm truncate" style="color: var(--fg-1)">
+                        <p class="font-medium text-sm truncate fg-1">
                             {{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}
                         </p>
-                        <p class="text-xs" style="color: var(--fg-4)">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.name }}{% endif %}</p>
+                        <p class="text-xs fg-4">{{ p.event.date|date('d/m/Y') }}{% if p.event.venue %} · {{ p.event.venue.name }}{% endif %}</p>
                     </div>
                 </label>
                 {% endfor %}

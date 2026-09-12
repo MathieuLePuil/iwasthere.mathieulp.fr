@@ -8,7 +8,7 @@
 
     <div class="flex items-center gap-3 mb-6">
         {{ m.back_button(path('app_event_show', {id: event.id})) }}
-        <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Modifier la fiche</h1>
+        <h1 class="text-xl font-semibold fg-1">Modifier la fiche</h1>
     </div>
 
     <form method="post" class="space-y-5" data-controller="form-loader souvenir-gate event-form">
@@ -18,21 +18,21 @@
             <p class="section-title">Événement</p>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Date</label>
+                    <label class="block text-sm font-medium mb-1.5 fg-3">Date</label>
                     <input type="date" name="date" class="input-field"
                            value="{{ event.date|date('Y-m-d') }}" required
                            data-souvenir-gate-target="date"
                            data-action="change->souvenir-gate#update">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Heure de début</label>
+                    <label class="block text-sm font-medium mb-1.5 fg-3">Heure de début</label>
                     <input type="time" name="start_time" class="input-field"
                            value="{{ event.startTime ? event.startTime|date('H:i') : '' }}">
                 </div>
             </div>
             {% if event.category == 'music' %}
             <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--fg-3)">Type</p>
+                <p class="text-sm font-medium mb-2 fg-3">Type</p>
                 <div class="flex gap-2">
                     <label class="flex-1">
                         <input type="radio" name="type" value="concert" class="sr-only"
@@ -56,7 +56,7 @@
             </div>
             {% elseif event.category == 'sport' %}
             <div>
-                <p class="text-sm font-medium mb-2" style="color: var(--fg-3)">Sport</p>
+                <p class="text-sm font-medium mb-2 fg-3">Sport</p>
                 <div class="grid grid-cols-2 gap-2">
                     {% for t in event_types('sport') %}{% set sport = [t.value, t.label, t.emoji] %}
                     <label>
@@ -79,8 +79,8 @@
         {% if not event.isPast %}
         <div class="card text-center py-5">
             <p class="text-2xl mb-1">📅</p>
-            <p class="text-sm font-medium" style="color: var(--fg-2)">Événement à venir</p>
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Note, setlist, photo et souvenirs seront disponibles une fois l'événement passé.</p>
+            <p class="text-sm font-medium fg-2">Événement à venir</p>
+            <p class="text-xs mt-1 fg-4">Note, setlist, photo et souvenirs seront disponibles une fois l'événement passé.</p>
         </div>
         {% else %}
         {# Enveloppe observée : si la date repasse dans le futur, tout le souvenir est
@@ -117,31 +117,31 @@
                 {% endif %}
             </div>
             {% if event.setlistSource == 'setlist_fm' %}
-            <p class="text-xs mb-3" style="color: var(--fg-4)">Importée automatiquement. Tu peux la modifier.</p>
+            <p class="text-xs mb-3 fg-4">Importée automatiquement. Tu peux la modifier.</p>
             {% endif %}
             <div data-setlist-editor-target="list" class="space-y-2 mb-3">
                 {% for song in event.setlistNormalized %}
                 <div class="flex items-center gap-2">
                     <input type="text" name="setlist[]" value="{{ song.name }}" class="input-field text-sm" placeholder="Titre">
-                    <button type="button" data-action="setlist-editor#remove" class="p-1" style="color: var(--fg-4)">×</button>
+                    <button type="button" data-action="setlist-editor#remove" class="p-1 fg-4">×</button>
                 </div>
                 {% endfor %}
             </div>
             <button type="button" data-action="setlist-editor#add"
-                    class="text-sm font-medium" style="color: var(--positive)">+ Ajouter un titre</button>
+                    class="text-sm font-medium fg-accent">+ Ajouter un titre</button>
             {% if event.setlistEncoresNormalized|length > 0 %}
-            <div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle)">
+            <div class="mt-4 pt-4 bt-subtle">
                 <p class="section-title mb-2">Rappels</p>
                 <div class="space-y-2" data-setlist-editor-target="encoreList">
                     {% for song in event.setlistEncoresNormalized %}
                     <div class="flex items-center gap-2">
                         <input type="text" name="setlist_encores[]" value="{{ song.name }}" class="input-field text-sm" placeholder="Titre">
-                        <button type="button" data-action="setlist-editor#removeEncore" class="p-1" style="color: var(--fg-4)">×</button>
+                        <button type="button" data-action="setlist-editor#removeEncore" class="p-1 fg-4">×</button>
                     </div>
                     {% endfor %}
                 </div>
                 <button type="button" data-action="setlist-editor#addEncore"
-                        class="text-sm font-medium mt-2 block" style="color: var(--positive)">+ Ajouter un rappel</button>
+                        class="text-sm font-medium mt-2 block fg-accent">+ Ajouter un rappel</button>
             </div>
             {% endif %}
         </div>
@@ -152,7 +152,7 @@
         <div class="card space-y-4">
             <p class="section-title">Résultats</p>
             <div>
-                <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Score final</label>
+                <label class="block text-xs font-medium mb-1.5 fg-3">Score final</label>
                 {# Tennis is scored from the winner's side, sets split on spaces ("6/4 7/5") —
                    the convention every row in the database follows. The placeholder used to
                    suggest a format no actual data uses, which is what misled the parser. #}
@@ -162,19 +162,19 @@
             {# Tennis only — for the other sports the winner is derived from the score #}
             {% if event.type == 'tennis' %}
             <div>
-                <label class="block text-xs font-medium mb-1.5" style="color: var(--fg-3)">Vainqueur</label>
+                <label class="block text-xs font-medium mb-1.5 fg-3">Vainqueur</label>
                 {% set winnerParts = event.teams and ' vs ' in event.teams
                     ? event.teams|split(' vs ', 2)|map(t => t|trim)
                     : ['Joueur 1', 'Joueur 2'] %}
                 <div class="grid grid-cols-2 gap-2">
                     {% for i in [1, 2] %}
-                    <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
-                           style="border-color: var(--border-default); background: var(--bg-2)">
+                    <label class="flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all iwt-type-btn"
+                          >
                         <input type="checkbox" name="winner" value="{{ i }}"
                                style="accent-color: var(--positive)"
                                data-action="change->event-form#exclusiveWinner"
                                {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winnerParts[i-1]|lower) %}checked{% endif %}>
-                        <span class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 {{ winnerParts[i-1] }}</span>
+                        <span class="text-sm font-medium truncate fg-2">🏆 {{ winnerParts[i-1] }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -189,7 +189,7 @@
 
         {# Duration #}
         <div>
-            <label class="block text-sm font-medium mb-1.5" style="color: var(--fg-3)">Durée (min)</label>
+            <label class="block text-sm font-medium mb-1.5 fg-3">Durée (min)</label>
             <input type="number" name="duration" class="input-field"
                    placeholder="120" min="0" value="{{ participation.duration }}">
         </div>
@@ -200,18 +200,18 @@
         {# Factual event data #}
         {% if event.category == 'music' or event.category == 'sport' or event.tournamentName %}
         <details class="card cursor-pointer" {% if event.category == 'music' and not event.artistName %}open{% endif %}>
-            <summary class="font-medium text-sm list-none flex items-center justify-between" style="color: var(--fg-2)">
+            <summary class="font-medium text-sm list-none flex items-center justify-between fg-2">
                 Données factuelles de l'événement
-                <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 fg-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
             </summary>
             <div class="mt-4 space-y-3">
-                <p class="text-xs" style="color: var(--fg-4)">Ces modifications s'appliquent à tous les participants.</p>
+                <p class="text-xs fg-4">Ces modifications s'appliquent à tous les participants.</p>
                 {% if event.category == 'music' %}
                 <div data-controller="autocomplete"
                      data-autocomplete-url-value="{{ path('app_artists_search') }}">
-                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Artiste *</label>
+                    <label class="block text-xs font-medium mb-1 fg-3">Artiste *</label>
                     <input type="text" name="artist_name" class="input-field text-sm"
                            value="{{ event.artistName }}"
                            placeholder="Nom de l'artiste ou du groupe"
@@ -224,7 +224,7 @@
                 {% if event.category == 'sport' %}
                 <div data-controller="autocomplete"
                      data-autocomplete-url-value="{{ path('app_tournaments_search') }}">
-                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Tournoi</label>
+                    <label class="block text-xs font-medium mb-1 fg-3">Tournoi</label>
                     <input type="text" name="tournament_name" class="input-field text-sm"
                            value="{{ event.tournamentName }}"
                            data-autocomplete-target="input"
@@ -233,7 +233,7 @@
                     <div data-autocomplete-target="results" class="mt-1 hidden"></div>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium mb-1" style="color: var(--fg-3)">Équipes</label>
+                    <label class="block text-xs font-medium mb-1 fg-3">Équipes</label>
                     <input type="text" name="teams" class="input-field text-sm" value="{{ event.teams }}">
                 </div>
                 {% endif %}
@@ -251,14 +251,14 @@
                     aria-expanded="false"
                     class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all"
                     style="border-color: var(--border-default); background: var(--bg-2)">
-                <span class="flex items-center gap-2 text-sm font-medium" style="color: var(--fg-2)">
+                <span class="flex items-center gap-2 text-sm font-medium fg-2">
                     <span class="text-lg">👥</span>
                     J'y {{ event.isPast ? 'étais' : 'serai' }} avec des amis
                     {% if savedFriends|length > 0 %}
-                        <span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--positive-soft); color: var(--positive)">{{ savedFriends|length }}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full chip-accent">{{ savedFriends|length }}</span>
                     {% endif %}
                 </span>
-                <svg class="w-4 h-4" style="color: var(--fg-4)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 fg-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
                 </svg>
             </button>
@@ -266,7 +266,7 @@
             <div data-event-friends-target="panel" class="hidden mt-3 space-y-4">
                 {% if confirmed_friends|length > 0 %}
                 <div>
-                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Amis sur IWasThere</p>
+                    <p class="text-xs font-medium mb-2 fg-3">Amis sur IWasThere</p>
                     <div class="flex flex-wrap gap-2">
                         {% for rel in confirmed_friends %}
                         {% set f = rel.owner == app.user ? rel.friendUser : rel.owner %}
@@ -281,8 +281,8 @@
                                 {% if f.avatarUrl %}
                                     <img src="{{ f.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt="">
                                 {% else %}
-                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
-                                         style="background: var(--positive-soft); color: var(--positive)">{{ f.displayName|first|upper }}</div>
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold chip-accent"
+                                        >{{ f.displayName|first|upper }}</div>
                                 {% endif %}
                                 <span>{{ f.displayName }}</span>
                             </div>
@@ -298,7 +298,7 @@
                 {% endfor %}
 
                 <div>
-                    <p class="text-xs font-medium mb-2" style="color: var(--fg-3)">Autres personnes (non inscrites)</p>
+                    <p class="text-xs font-medium mb-2 fg-3">Autres personnes (non inscrites)</p>
                     <div class="flex gap-2">
                         <input type="text"
                                data-event-friends-target="nameInput"

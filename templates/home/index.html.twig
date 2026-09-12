@@ -10,9 +10,9 @@
     <div class="flex items-center justify-between">
         <div>
             <p class="section-title">{{ greeting() }}</p>
-            <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">{{ app.user.displayName }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight fg-1 tracking-title">{{ app.user.displayName }}</h1>
             {% if year_count > 0 %}
-            <p class="text-xs mt-1" style="color: var(--fg-3)">
+            <p class="text-xs mt-1 fg-3">
                 {{ year_count }} événement{{ year_count > 1 ? 's' : '' }} en {{ current_year }}
             </p>
             {% endif %}
@@ -20,12 +20,12 @@
         {% if app.user.avatarUrl %}
             <img src="{{ app.user.avatarUrl }}" class="w-11 h-11 rounded-2xl object-cover" alt=""
                  data-controller="img-fallback" data-action="error->img-fallback#swap">
-            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg" hidden style="background: var(--positive-soft); color: var(--positive)">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg chip-accent" hidden>
                 {{ app.user.displayName|first|upper }}
             </div>
         {% else %}
-            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg"
-                 style="background: var(--positive-soft); color: var(--positive)">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg chip-accent"
+                >
                 {{ app.user.displayName|first|upper }}
             </div>
         {% endif %}
@@ -76,7 +76,7 @@
     {% if anniversaries|length > 0 %}
     <div>
         <p class="section-title mb-2">Ce jour-là</p>
-        <div class="card" style="padding: 0; overflow: hidden">
+        <div class="card card-flush">
             {% for a in anniversaries %}
             {% set e = a.participation.event %}
             <a href="{{ path('app_event_show', {id: e.id}) }}"
@@ -92,15 +92,15 @@
                     </div>
                 {% endif %}
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold leading-snug truncate" style="color: var(--fg-1)">
+                    <p class="text-sm font-semibold leading-snug truncate fg-1">
                         {{ a.years == 1 ? 'Il y a un an' : 'Il y a ' ~ a.years ~ ' ans' }}
                     </p>
-                    <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">
+                    <p class="text-xs mt-0.5 truncate fg-3">
                         {{ e.artistName ?? e.tournamentName ?? e.teams ?? 'Événement' }}
                         {%- if e.venue %} · {{ e.venue.name }}{% endif %}
                     </p>
                 </div>
-                <span class="text-[11px] flex-shrink-0" style="color: var(--fg-4)">{{ e.date|date('Y') }}</span>
+                <span class="text-[11px] flex-shrink-0 fg-4">{{ e.date|date('Y') }}</span>
             </a>
             {% endfor %}
         </div>
@@ -135,7 +135,7 @@
                     <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="seconds">--</span><span class="iwt-countdown-lbl">sec</span></div>
                 </div>
                 <a href="{{ path('app_event_show', {id: next_event.event.id}) }}"
-                   class="text-sm font-medium text-right block" style="color: var(--positive)">
+                   class="text-sm font-medium text-right block fg-accent">
                     Voir la fiche →
                 </a>
             </div>
@@ -154,10 +154,10 @@
     <div>
         <div class="flex items-center justify-between mb-2">
             <p class="section-title">Activité des amis</p>
-            <a href="{{ path('app_feed') }}" class="text-xs font-medium" style="color: var(--fg-2)">Tout voir →</a>
+            <a href="{{ path('app_feed') }}" class="text-xs font-medium fg-2">Tout voir →</a>
         </div>
         {% if feed_preview|length > 0 %}
-        <div class="card" style="padding: 0; overflow: hidden">
+        <div class="card card-flush">
             {% for g in feed_preview %}
             {% set n = g.participations|length %}
             {% set firstUser = (g.participations|first).user %}
@@ -170,14 +170,14 @@
                     {% endfor %}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold leading-snug truncate" style="color: var(--fg-1)">
+                    <p class="text-sm font-semibold leading-snug truncate fg-1">
                         {{ g.event.artistName ?? g.event.tournamentName ?? g.event.teams ?? 'Événement' }}
                     </p>
-                    <p class="text-xs mt-0.5 truncate" style="color: var(--fg-3)">
-                        <span class="font-medium" style="color: var(--fg-2)">{{ firstUser.displayName }}</span>{% if n > 1 %} et {{ n - 1 }} autre{{ n > 2 ? 's' }}{% endif %} {{ n > 1 ? 'y étaient' : 'y était' }}
+                    <p class="text-xs mt-0.5 truncate fg-3">
+                        <span class="font-medium fg-2">{{ firstUser.displayName }}</span>{% if n > 1 %} et {{ n - 1 }} autre{{ n > 2 ? 's' }}{% endif %} {{ n > 1 ? 'y étaient' : 'y était' }}
                     </p>
                 </div>
-                <span class="text-[11px] flex-shrink-0" style="color: var(--fg-4)">{{ g.date_label }}</span>
+                <span class="text-[11px] flex-shrink-0 fg-4">{{ g.date_label }}</span>
             </a>
             {% endfor %}
         </div>
@@ -185,14 +185,14 @@
         <a href="{{ path('app_profile_search') }}" class="card flex items-center gap-3 no-underline">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: var(--positive-soft)">👋</div>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium" style="color: var(--fg-1)">Ajoute des amis</p>
-                <p class="text-xs" style="color: var(--fg-3)">Retrouve leurs concerts et matchs ici</p>
+                <p class="text-sm font-medium fg-1">Ajoute des amis</p>
+                <p class="text-xs fg-3">Retrouve leurs concerts et matchs ici</p>
             </div>
-            <span class="text-xs font-medium flex-shrink-0" style="color: var(--positive)">Chercher →</span>
+            <span class="text-xs font-medium flex-shrink-0 fg-accent">Chercher →</span>
         </a>
         {% else %}
         <a href="{{ path('app_feed') }}" class="card block no-underline text-center py-5">
-            <p class="text-sm" style="color: var(--fg-3)">Aucune activité récente de tes amis</p>
+            <p class="text-sm fg-3">Aucune activité récente de tes amis</p>
         </a>
         {% endif %}
     </div>
@@ -202,9 +202,9 @@
     <div>
         <div class="flex items-center justify-between mb-2">
             <p class="section-title">Derniers souvenirs</p>
-            <a href="{{ path('app_music') }}" class="text-xs font-medium" style="color: var(--fg-2)">Tout voir →</a>
+            <a href="{{ path('app_music') }}" class="text-xs font-medium fg-2">Tout voir →</a>
         </div>
-        <div class="card" style="padding: 0; overflow: hidden">
+        <div class="card card-flush">
             {% for p in recent_past %}
             <a href="{{ path('app_event_show', {id: p.event.id}) }}"
                class="flex items-center gap-3 px-4 py-3 no-underline transition-colors"
@@ -212,8 +212,8 @@
 >
                 {{ m.event_thumb(p.event) }}
                 <div class="flex-1 min-w-0">
-                    <p class="font-medium text-sm truncate" style="color: var(--fg-1)">{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}</p>
-                    <p class="text-xs mt-0.5" style="color: var(--fg-3)">
+                    <p class="font-medium text-sm truncate fg-1">{{ p.event.artistName ?? p.event.tournamentName ?? 'Événement' }}</p>
+                    <p class="text-xs mt-0.5 fg-3">
                         {% if p.event.venue %}{{ p.event.venue.name }}{% endif %}
                     </p>
                 </div>
@@ -231,8 +231,8 @@
     {% else %}
     <div class="card text-center py-10">
         <p class="text-4xl mb-3">🎤</p>
-        <p class="font-semibold text-sm" style="color: var(--fg-1)">Ton journal est vide</p>
-        <p class="text-xs mt-1 mb-4" style="color: var(--fg-3)">Commence par ajouter ton premier événement</p>
+        <p class="font-semibold text-sm fg-1">Ton journal est vide</p>
+        <p class="text-xs mt-1 mb-4 fg-3">Commence par ajouter ton premier événement</p>
         <a href="{{ path('app_event_new') }}" class="btn-primary">+ Ajouter un événement</a>
     </div>
     {% endif %}
