@@ -7,7 +7,7 @@
 //      visitées, pour rouvrir ses souvenirs sans réseau (typiquement en festival, là
 //      où le réseau est saturé). Stratégies :
 //        · pages (navigations + visites Turbo) → réseau d'abord, cache en repli ;
-//        · assets générés + polices Google      → cache d'abord, revalidation en fond.
+//        · assets générés (CSS, JS, polices)     → cache d'abord, revalidation en fond.
 //
 // Bump VERSION à chaque changement de logique de cache : l'activation purge alors
 // les anciens caches « iwt-* ».
@@ -92,8 +92,7 @@ async function networkFirstPage(request) {
 }
 
 // Cache d'abord, revalidation en fond : réponse instantanée depuis le cache, mise à
-// jour silencieuse pour la prochaine fois. Accepte les réponses opaques (type
-// 'opaque', status 0) des polices Google, qui n'exposent pas leur statut.
+// jour silencieuse pour la prochaine fois.
 async function staleWhileRevalidate(request, cacheName) {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
@@ -125,11 +124,6 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Polices Google — pour que le shell garde sa typo hors-ligne.
-    if (url.host === 'fonts.googleapis.com' || url.host === 'fonts.gstatic.com') {
-        event.respondWith(staleWhileRevalidate(request, ASSETS_CACHE));
-        return;
-    }
 });
 
 // ── Push (notifications) ─────────────────────────────────────────────────────────

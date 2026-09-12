@@ -69,11 +69,22 @@
             <ul>
                 <li>l'<strong>hébergeur</strong> du site (voir les
                     <a href="{{ path('app_legal_notice') }}">mentions légales</a>) ;</li>
+                <li><strong>Cloudflare</strong>, qui relaie l'ensemble des requêtes vers le site (protection
+                    et mise en cache) et voit à ce titre ton adresse IP ;</li>
                 <li><strong>Google</strong>, uniquement si tu choisis la connexion Google, pour authentifier
-                    ton compte ;</li>
+                    ton compte et récupérer ta photo de profil ;</li>
+                <li><strong>Deezer</strong> et <strong>setlist.fm</strong>, interrogés par nos serveurs (jamais
+                    par ton navigateur) pour illustrer un artiste et retrouver la setlist d'un concert : seuls
+                    le nom de l'artiste, la date et le lieu leur sont transmis, jamais ton identité ;</li>
                 <li>le service d'<strong>envoi d'emails</strong> utilisé pour les messages transactionnels
-                    (réinitialisation de mot de passe, rappels).</li>
+                    (réinitialisation de mot de passe, invitations) ;</li>
+                <li>les services de <strong>notifications push</strong> de ton navigateur (Apple, Google,
+                    Mozilla), si tu les as activées : ils reçoivent le texte de la notification, chiffré.</li>
             </ul>
+            <p>
+                Les polices de caractères sont servies depuis nos propres serveurs : aucune ressource n'est
+                chargée depuis un domaine tiers lors de la consultation du site.
+            </p>
             <p>
                 Les données publiques d'un profil que tu as rendu public sont, par définition, visibles par
                 toute personne disposant du lien.
