@@ -65,7 +65,7 @@
             {value: 'rating', label: 'Mieux notés'}
         ],
         active_sort: sort_by,
-        count:       participations|length
+        count:       total
     ) }}
 
     {# Events list #}
@@ -98,6 +98,7 @@
             {% for p in participations %}{{ _self.match_row(p) }}{% endfor %}
         </div>
     {% endif %}
+    {{ m.pagination('app_sport', {}, page, total_pages) }}
 
 </div>
 

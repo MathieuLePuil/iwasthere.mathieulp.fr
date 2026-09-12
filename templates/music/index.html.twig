@@ -33,7 +33,7 @@
             {value: 'duration', label: 'Plus longs'}
         ],
         active_sort: sort_by,
-        count:       participations|length
+        count:       total
     ) }}
 
     {# Events list #}
@@ -81,6 +81,7 @@
                 {% endfor %}
             </div>
         {% endif %}
+        {{ m.pagination('app_music', {}, page, total_pages) }}
     {% endif %}
 
 </div>

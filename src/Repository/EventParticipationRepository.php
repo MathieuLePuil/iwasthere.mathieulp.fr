@@ -64,7 +64,8 @@ class EventParticipationRepository extends ServiceEntityRepository
     public function findAllByUser(User $user): array
     {
         return $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
             ->orderBy('e.date', 'DESC')
@@ -78,6 +79,7 @@ class EventParticipationRepository extends ServiceEntityRepository
     public function findByEvent(Event $event): array
     {
         return $this->createQueryBuilder('ep')
+            ->join('ep.user', 'u')->addSelect('u')
             ->andWhere('ep.event = :event')
             ->setParameter('event', $event->getId()->toBinary(), ParameterType::BINARY)
             ->orderBy('ep.createdAt', 'DESC')
@@ -317,13 +319,23 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
-    private function buildHistoryQb(User $user, string $tab, string $type, string $year): QueryBuilder
+    /**
+     * Le socle des listes d'un journal : passé ou à venir, par catégorie ('music',
+     * 'sport' ou '' pour tout), par type et par année. Événement et lieu sont
+     * chargés avec la participation — les listes les affichent toujours.
+     */
+    private function buildHistoryQb(User $user, string $tab, string $type, string $year, string $category = ''): QueryBuilder
     {
         $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
             ->setParameter('today', new \DateTimeImmutable('today'));
+
+        if ($category !== '') {
+            $qb->andWhere('e.category = :category')->setParameter('category', $category);
+        }
 
         if ($tab === 'upcoming') {
             $qb->andWhere('e.date >= :today');
@@ -343,27 +355,29 @@ class EventParticipationRepository extends ServiceEntityRepository
         return $qb;
     }
 
-    public function countHistory(User $user, string $tab, string $type = '', string $year = ''): int
+    public function countHistory(User $user, string $tab, string $type = '', string $year = '', string $category = ''): int
     {
-        return (int) $this->buildHistoryQb($user, $tab, $type, $year)
+        return (int) $this->buildHistoryQb($user, $tab, $type, $year, $category)
             ->select('COUNT(p.id)')
             ->getQuery()
             ->getSingleScalarResult();
     }
 
     /** @return EventParticipation[] */
-    public function findHistoryPage(User $user, string $tab, string $type = '', string $year = '', int $page = 1, int $perPage = 20, string $sortBy = 'date'): array
+    public function findHistoryPage(User $user, string $tab, string $type = '', string $year = '', int $page = 1, int $perPage = 20, string $sortBy = 'date', string $category = ''): array
     {
-        $qb = $this->buildHistoryQb($user, $tab, $type, $year);
+        $qb = $this->buildHistoryQb($user, $tab, $type, $year, $category);
 
         // « À venir » se lit toujours du plus proche au plus lointain ; le tri choisi
-        // ne s'applique qu'au passé. « Mieux notés » renvoie les sans-note en fin.
+        // ne s'applique qu'au passé. « Mieux notés » et « Plus longs » renvoient les
+        // sans-valeur en fin.
         if ($tab === 'upcoming') {
             $qb->orderBy('e.date', 'ASC');
         } else {
             match ($sortBy) {
-                'rating' => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
-                default  => $qb->orderBy('e.date', 'DESC'),
+                'rating'   => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
+                'duration' => $qb->orderBy('p.duration', 'DESC')->addOrderBy('e.date', 'DESC'),
+                default    => $qb->orderBy('e.date', 'DESC'),
             };
         }
 
@@ -374,145 +388,22 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /** @return int[] */
-    public function findHistoryYears(User $user): array
+    /** @return int[] les années où l'utilisateur a vécu un événement (de la catégorie), la plus récente en tête */
+    public function findHistoryYears(User $user, string $category = ''): array
     {
-        $result = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('DISTINCT YEAR(e.date) as year')
             ->join('p.event', 'e')
             ->where('p.user = :user')
             ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
             ->setParameter('today', new \DateTimeImmutable('today'))
-            ->orderBy('year', 'DESC')
-            ->getQuery()
-            ->getResult();
-        return array_column($result, 'year');
-    }
-
-    /** @return EventParticipation[] */
-    public function findMusicUpcoming(User $user, string $type = ''): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
-            ->leftJoin('e.venue', 'v')
-            ->where('p.user = :user')
-            ->andWhere('e.date >= :today')
-            ->andWhere('e.category = :cat')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('cat', 'music')
-            ->orderBy('e.date', 'ASC');
-        if ($type) {
-            $qb->andWhere('e.type = :type')->setParameter('type', $type);
+            ->orderBy('year', 'DESC');
+        if ($category !== '') {
+            $qb->andWhere('e.category = :category')->setParameter('category', $category);
         }
-        return $qb->getQuery()->getResult();
-    }
 
-    /** @return EventParticipation[] */
-    public function findMusicPast(User $user, string $type = '', string $year = '', string $sortBy = 'date'): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
-            ->leftJoin('e.venue', 'v')
-            ->where('p.user = :user')
-            ->andWhere('e.date < :today')
-            ->andWhere('e.category = :cat')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('cat', 'music');
-        if ($type) {
-            $qb->andWhere('e.type = :type')->setParameter('type', $type);
-        }
-        if ($year) {
-            $qb->andWhere('YEAR(e.date) = :year')->setParameter('year', (int) $year);
-        }
-        match ($sortBy) {
-            'rating'   => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
-            'duration' => $qb->orderBy('p.duration', 'DESC')->addOrderBy('e.date', 'DESC'),
-            default    => $qb->orderBy('e.date', 'DESC'),
-        };
-        return $qb->getQuery()->getResult();
-    }
-
-    public function findMusicYears(User $user): array
-    {
-        $result = $this->createQueryBuilder('p')
-            ->select('DISTINCT YEAR(e.date) as year')
-            ->join('p.event', 'e')
-            ->where('p.user = :user')
-            ->andWhere('e.category = :cat')
-            ->andWhere('e.date < :today')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('cat', 'music')
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->orderBy('year', 'DESC')
-            ->getQuery()
-            ->getResult();
-        return array_column($result, 'year');
-    }
-
-    /** @return EventParticipation[] */
-    public function findSportUpcoming(User $user, string $sport = ''): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
-            ->leftJoin('e.venue', 'v')
-            ->where('p.user = :user')
-            ->andWhere('e.date >= :today')
-            ->andWhere('e.category = :cat')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('cat', 'sport')
-            ->orderBy('e.date', 'ASC');
-        if ($sport) {
-            $qb->andWhere('e.type = :sport')->setParameter('sport', $sport);
-        }
-        return $qb->getQuery()->getResult();
-    }
-
-    /** @return EventParticipation[] */
-    public function findSportPast(User $user, string $sport = '', string $year = '', string $sortBy = 'date'): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
-            ->leftJoin('e.venue', 'v')
-            ->where('p.user = :user')
-            ->andWhere('e.date < :today')
-            ->andWhere('e.category = :cat')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('cat', 'sport');
-        if ($sport) {
-            $qb->andWhere('e.type = :sport')->setParameter('sport', $sport);
-        }
-        if ($year) {
-            $qb->andWhere('YEAR(e.date) = :year')->setParameter('year', (int) $year);
-        }
-        // « Mieux notés » place les matchs sans note en fin de liste, la date départageant
-        // à note égale ; le tri par défaut reste l'antéchronologique.
-        match ($sortBy) {
-            'rating' => $qb->orderBy('p.rating', 'DESC')->addOrderBy('e.date', 'DESC'),
-            default  => $qb->orderBy('e.date', 'DESC'),
-        };
-        return $qb->getQuery()->getResult();
-    }
-
-    public function findSportYears(User $user): array
-    {
-        $result = $this->createQueryBuilder('p')
-            ->select('DISTINCT YEAR(e.date) as year')
-            ->join('p.event', 'e')
-            ->where('p.user = :user')
-            ->andWhere('e.category = :cat')
-            ->andWhere('e.date < :today')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('cat', 'sport')
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->orderBy('year', 'DESC')
-            ->getQuery()
-            ->getResult();
-        return array_column($result, 'year');
+        return array_map('intval', array_column($qb->getQuery()->getResult(), 'year'));
     }
 
     /**

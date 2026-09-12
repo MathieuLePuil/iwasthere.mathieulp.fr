@@ -111,3 +111,40 @@
         {{ label ?? 'Retour' }}
     </a>
 {% endmacro %}
+
+{% macro pagination(route, params, page, total_pages) %}
+{# Précédent / n sur N / Suivant — la requête courante (filtres, onglet) est conservée #}
+{% if total_pages > 1 %}
+    <div class="flex items-center justify-between gap-3 mt-5">
+        {% if page > 1 %}
+            <a href="{{ path(route, app.request.query.all|merge(params)|merge({page: page - 1})) }}"
+               class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+                Précédent
+            </a>
+        {% else %}
+            <span class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm" style="opacity: 0.35; pointer-events: none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+                Précédent
+            </span>
+        {% endif %}
+
+        <span class="text-xs font-medium flex-shrink-0" style="color: var(--fg-3); font-family: var(--font-mono)">
+            {{ page }} / {{ total_pages }}
+        </span>
+
+        {% if page < total_pages %}
+            <a href="{{ path(route, app.request.query.all|merge(params)|merge({page: page + 1})) }}"
+               class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm">
+                Suivant
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </a>
+        {% else %}
+            <span class="btn-secondary flex items-center gap-1.5 px-4 py-2.5 text-sm" style="opacity: 0.35; pointer-events: none">
+                Suivant
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+        {% endif %}
+    </div>
+    {% endif %}
+{% endmacro %}
