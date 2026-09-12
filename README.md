@@ -138,7 +138,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    php bin/console doctrine:migrations:migrate --no-interaction
    ```
 
-4. **Service worker.** Le fichier `public/sw.js` doit être servi avec :
+4. **Service worker.** `/sw.js` est rendu par `PwaController` depuis `templates/pwa/sw.js.twig` (sa version est l'empreinte du fichier) et servi avec :
    - `Content-Type: application/javascript`
    - **scope `/`** (déjà géré par défaut puisque le fichier est à la racine de `public/`)
    - pas de `Cache-Control: no-store` agressif côté CDN — sinon les nouvelles versions du SW ne sont pas récupérées.

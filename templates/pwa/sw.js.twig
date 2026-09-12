@@ -9,11 +9,15 @@
 //        · pages (navigations + visites Turbo) → réseau d'abord, cache en repli ;
 //        · assets générés (CSS, JS, polices)     → cache d'abord, revalidation en fond.
 //
-// Bump VERSION à chaque changement de logique de cache : l'activation purge alors
-// les anciens caches « iwt-* ».
+// VERSION est l'empreinte de ce fichier, posée par PwaController : toute
+// modification de la logique de cache purge les anciens caches « iwt-* » à
+// l'activation, sans rien avoir à bumper à la main.
+//
+// Ce fichier est un template Twig (la seule expression Twig est VERSION) ;
+// il est servi sur /sw.js avec le bon Content-Type.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VERSION = 'v1';
+const VERSION = '{{ version }}';
 const PAGES_CACHE = 'iwt-pages-' + VERSION;
 const ASSETS_CACHE = 'iwt-assets-' + VERSION;
 const SHELL_CACHE = 'iwt-shell-' + VERSION;
@@ -71,6 +75,17 @@ async function trimPages() {
     }
 }
 
+// Pages qui ne doivent jamais rester lisibles hors-ligne sur un appareil partagé :
+// le fil de notifications, les réglages, l'admin, et les écrans de connexion.
+// Le serveur les envoie aussi en Cache-Control: no-store, respecté ci-dessous.
+const NEVER_CACHE = ['/notifications', '/settings', '/admin', '/login', '/register', '/forgot-password', '/reset-password'];
+
+function isCacheablePage(url, response) {
+    if (NEVER_CACHE.some((prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + '/'))) return false;
+    const cc = response.headers.get('cache-control') || '';
+    return !/no-store/i.test(cc);
+}
+
 // Réseau d'abord : on veut toujours la version fraîche quand il y a du réseau, et on
 // ne bascule sur le cache que hors-ligne. On ne mémorise que les pages complètes et
 // propres (200, same-origin) — jamais les redirections d'auth (302 vers /login).
@@ -78,7 +93,8 @@ async function networkFirstPage(request) {
     const cache = await caches.open(PAGES_CACHE);
     try {
         const response = await fetch(request);
-        if (response && response.status === 200 && response.type === 'basic') {
+        if (response && response.status === 200 && response.type === 'basic'
+            && isCacheablePage(new URL(request.url), response)) {
             cache.put(request, response.clone());
             trimPages();
         }
@@ -124,6 +140,14 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+});
+
+// À la déconnexion, la page de login envoie ce message : les pages du compte qui
+// vient de partir ne doivent pas rester consultables hors-ligne par le suivant.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'clear-pages') {
+        event.waitUntil(caches.delete(PAGES_CACHE));
+    }
 });
 
 // ── Push (notifications) ─────────────────────────────────────────────────────────

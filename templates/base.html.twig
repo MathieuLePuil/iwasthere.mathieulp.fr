@@ -197,6 +197,13 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
+            {% if not app.user %}
+            // Personne n'est connecté : les pages du compte précédent quittent le cache
+            // hors-ligne (voir le gestionnaire « clear-pages » du service worker).
+            navigator.serviceWorker.ready.then(function (reg) {
+                reg.active && reg.active.postMessage({ type: 'clear-pages' });
+            }).catch(() => {});
+            {% endif %}
         }
     </script>
     {% if app.user and vapid_public_key is defined and vapid_public_key %}
@@ -207,6 +214,11 @@
             return reg.pushManager.getSubscription();
         }).then(function(sub) {
             if (!sub) return;
+            // Renvoyé seulement si l'abonnement a changé : le poster à chaque page
+            // réécrivait la liste des abonnements pour rien.
+            var key = 'iwt-push-sent';
+            var fingerprint = sub.endpoint + '|' + '{{ app.user.id }}';
+            try { if (localStorage.getItem(key) === fingerprint) return; } catch (e) {}
             fetch('{{ path('app_subscribe') }}', {
                 method: 'POST',
                 headers: {
@@ -214,6 +226,8 @@
                     'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 },
                 body: JSON.stringify(sub),
+            }).then(function (res) {
+                if (res.ok) { try { localStorage.setItem(key, fingerprint); } catch (e) {} }
             }).catch(() => {});
         }).catch(() => {});
     })();

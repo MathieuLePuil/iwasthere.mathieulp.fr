@@ -9,6 +9,7 @@ use Symfony\Component\Asset\Packages;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Twig\Environment;
 
 class PwaController extends AbstractController
 {
@@ -22,6 +23,26 @@ class PwaController extends AbstractController
     public function offline(): Response
     {
         return $this->render('pwa/offline.html.twig');
+    }
+
+    /**
+     * Le service worker, servi depuis un template pour y injecter sa version :
+     * l'empreinte du fichier source. Un changement de logique de cache change la
+     * version, et l'activation purge les anciens caches sans intervention.
+     * Cache-Control court : le navigateur revérifie le SW à chaque navigation, il
+     * doit trouver la nouvelle version vite après un déploiement.
+     */
+    #[Route('/sw.js', name: 'app_service_worker')]
+    public function serviceWorker(Environment $twig): Response
+    {
+        $source = $twig->getLoader()->getSourceContext('pwa/sw.js.twig')->getCode();
+
+        $response = $this->render('pwa/sw.js.twig', ['version' => substr(sha1($source), 0, 12)]);
+        $response->headers->set('Content-Type', 'application/javascript; charset=utf-8');
+        $response->headers->set('Cache-Control', 'public, max-age=300, must-revalidate');
+        $response->headers->set('Service-Worker-Allowed', '/');
+
+        return $response;
     }
 
     #[Route('/manifest.json', name: 'app_manifest')]

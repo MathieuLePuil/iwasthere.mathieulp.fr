@@ -16,8 +16,10 @@ export default class extends Controller {
         document.removeEventListener('visibilitychange', this._onVisibility);
     }
 
+    // Toutes les 60 s, et seulement quand l'onglet est visible : un onglet oublié
+    // en arrière-plan n'a pas à interroger le serveur toute la journée.
     _startPolling() {
-        this._timer = setInterval(() => this._fetch(), 30_000);
+        this._timer = setInterval(() => { if (!document.hidden) this._fetch(); }, 60_000);
     }
 
     _stopPolling() {

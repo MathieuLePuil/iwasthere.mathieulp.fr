@@ -48,6 +48,7 @@ security:
         - { path: ^/oauth, roles: PUBLIC_ACCESS }
         - { path: ^/subscribe, roles: PUBLIC_ACCESS }
         - { path: ^/manifest\.json, roles: PUBLIC_ACCESS }
+        - { path: ^/sw\.js$, roles: PUBLIC_ACCESS }
         # Repli hors-ligne précaché par le service worker : doit rester servable
         # sans session (le SW peut le récupérer avant toute connexion).
         - { path: ^/offline$, roles: PUBLIC_ACCESS }

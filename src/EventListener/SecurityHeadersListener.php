@@ -37,5 +37,18 @@ final class SecurityHeadersListener
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         // Ce que l'app n'utilise pas est coupé, y compris pour les scripts tiers.
         $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+
+        // Ces pages ne doivent survivre ni dans le cache du navigateur ni dans celui
+        // du service worker (qui lit ce même en-tête) : fil de notifications,
+        // réglages, admin, écrans de connexion.
+        foreach (self::NO_STORE_PREFIXES as $prefix) {
+            $path = $request->getPathInfo();
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                $headers->set('Cache-Control', 'private, no-store');
+                break;
+            }
+        }
     }
+
+    private const NO_STORE_PREFIXES = ['/notifications', '/settings', '/admin', '/login', '/register', '/forgot-password', '/reset-password'];
 }
