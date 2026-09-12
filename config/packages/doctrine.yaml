@@ -18,6 +18,7 @@ doctrine:
                 YEAR: DoctrineExtensions\Query\Mysql\Year
                 MONTH: DoctrineExtensions\Query\Mysql\Month
                 DAY: DoctrineExtensions\Query\Mysql\Day
+                JSON_VALUE: App\Doctrine\JsonValueFunction
         mappings:
             App:
                 type: attribute

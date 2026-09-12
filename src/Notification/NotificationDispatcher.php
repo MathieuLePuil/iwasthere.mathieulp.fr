@@ -78,9 +78,6 @@ final class NotificationDispatcher
             return false;
         }
 
-        if ($dedupeKey !== null) {
-            $data['dedupeKey'] = $dedupeKey;
-        }
         if ($url !== null) {
             $data['url'] = $url;
         }
@@ -90,6 +87,7 @@ final class NotificationDispatcher
             ->setType($type->value)
             ->setTitle($title)
             ->setBody($body)
+            ->setDedupeKey($dedupeKey)
             ->setData($data === [] ? null : $data);
         $this->em->persist($notif);
         $this->em->flush();

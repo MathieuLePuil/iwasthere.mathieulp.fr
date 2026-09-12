@@ -168,7 +168,12 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    ```cron
    * * * * * /usr/bin/flock -n /chemin/var/messenger-worker.lock /usr/bin/php /chemin/bin/console messenger:consume async --env=prod --time-limit=3600 --memory-limit=128M --quiet >> /chemin/var/log/messenger-worker.log 2>&1
    * * * * * /usr/bin/flock -n /chemin/var/reminders.lock /usr/bin/php /chemin/bin/console app:notifications:send-reminders --env=prod --quiet >> /chemin/var/log/reminders.log 2>&1
+   30 4 * * * /usr/bin/php /chemin/bin/console app:notifications:purge --env=prod --quiet >> /chemin/var/log/purge.log 2>&1
    ```
+
+   La troisième ligne, chaque nuit, efface les notifications lues depuis plus de
+   90 jours : le fil n'est pas une archive, et chaque recherche par destinataire
+   grossirait sinon avec l'historique.
 
    Le premier consomme la file `async` : c'est lui qui envoie réellement les pushes,
    toutes catégories confondues. Le second produit les rappels programmés. Les deux

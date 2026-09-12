@@ -60,12 +60,7 @@ class NotificationsController extends AbstractController
     #[Route('/delete-all', name: 'app_notification_delete_all', methods: ['POST'])]
     public function deleteAll(NotificationRepository $notifRepo, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
-        $notifications = $notifRepo->findForUser($user, 200);
-        foreach ($notifications as $notif) {
-            $em->remove($notif);
-        }
-        $em->flush();
+        $notifRepo->deleteAllForUser($this->getUser());
 
         return $this->redirectToRoute('app_notifications');
     }
