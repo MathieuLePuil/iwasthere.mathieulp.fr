@@ -30,8 +30,7 @@ class FeedController extends AbstractController
         $user = $this->getUser();
         $seenBefore = $user->getFeedLastSeenAt();
 
-        $feed = $this->feedService->buildFeed($user, $seenBefore);
-        [$days, $sepAt, $hasMore] = $this->paginate($feed['days'], 1);
+        $feed = $this->feedService->buildFeed($user, $seenBefore, 1, self::DAYS_PER_PAGE);
 
         // Mémorise la visite maintenant ; les chargements suivants du scroll
         // infini gardent l'ancienne limite via `seen_epoch` transmis au JS
@@ -41,9 +40,9 @@ class FeedController extends AbstractController
         return $this->render('feed/index.html.twig', [
             'friend_count' => $feed['friend_count'],
             'upcoming' => $feed['upcoming'],
-            'days' => $days,
-            'sep_at' => $sepAt,
-            'has_more' => $hasMore,
+            'days' => $feed['days'],
+            'sep_at' => $feed['sep_at'],
+            'has_more' => $feed['has_more'],
             'seen_epoch' => $seenBefore?->getTimestamp() ?? 0,
             'pending_requests' => count($friendRepo->findPendingReceived($user)),
             'reactions' => $feed['reactions'],
@@ -59,55 +58,16 @@ class FeedController extends AbstractController
         $epoch = $request->query->getInt('seen');
         $seenBefore = $epoch > 0 ? (new \DateTimeImmutable())->setTimestamp($epoch) : null;
 
-        $feed = $this->feedService->buildFeed($user, $seenBefore);
-        [$days, $sepAt, $hasMore] = $this->paginate($feed['days'], $page);
+        // Pas de bandeau « Bientôt » sur les pages suivantes : il est déjà affiché
+        $feed = $this->feedService->buildFeed($user, $seenBefore, $page, self::DAYS_PER_PAGE, withUpcoming: false);
 
         $response = $this->render('feed/_page.html.twig', [
-            'days' => $days,
-            'sep_at' => $sepAt,
+            'days' => $feed['days'],
+            'sep_at' => $feed['sep_at'],
             'reactions' => $feed['reactions'],
         ]);
-        $response->headers->set('X-Feed-Has-More', $hasMore ? '1' : '0');
+        $response->headers->set('X-Feed-Has-More', $feed['has_more'] ? '1' : '0');
 
         return $response;
-    }
-
-    /**
-     * Découpe la liste des jours pour une page et positionne la limite
-     * « déjà vu » : juste avant le premier jour sans rien de nouveau
-     * (null si rien de nouveau du tout, ou si la limite tombe hors page).
-     * Les jours redevenus nouveaux sous la limite (ami qui ajoute un vieil
-     * événement) reçoivent `badge_new`.
-     *
-     * @param list<array> $allDays
-     * @return array{0: list<array>, 1: ?int, 2: bool}
-     */
-    private function paginate(array $allDays, int $page): array
-    {
-        $start = ($page - 1) * self::DAYS_PER_PAGE;
-        $slice = array_slice($allDays, $start, self::DAYS_PER_PAGE);
-        $hasMore = count($allDays) > $start + count($slice);
-
-        $sepIndex = null;
-        foreach ($allDays as $i => $d) {
-            if (!$d['is_new']) {
-                $sepIndex = $i;
-                break;
-            }
-        }
-        if ($sepIndex === 0) {
-            $sepIndex = null; // rien de nouveau : pas de ligne en tête de feed
-        }
-
-        $sepAt = $sepIndex !== null && $sepIndex >= $start && $sepIndex < $start + count($slice)
-            ? $sepIndex - $start
-            : null;
-
-        foreach ($slice as $j => &$d) {
-            $d['badge_new'] = $sepIndex !== null && $d['is_new'] && ($start + $j) > $sepIndex;
-        }
-        unset($d);
-
-        return [$slice, $sepAt, $hasMore];
     }
 }

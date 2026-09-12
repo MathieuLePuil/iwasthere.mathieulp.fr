@@ -232,35 +232,102 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Participations visibles des amis pour le feed, tout l'historique par
-     * défaut : le feed remonte à l'infini, la pagination se fait par jours.
+     * Les jours du feed — un par date d'événement passé chez les amis — du plus
+     * récent au plus ancien, avec pour chacun « contient-il une participation
+     * ajoutée depuis $seenBefore ? ». Une ligne par jour, pas d'entité : c'est
+     * ce qui permet de paginer sans charger l'historique.
      *
      * @param User[] $users
-     * @param \DateTimeImmutable|null $since borne basse optionnelle
-     * @return EventParticipation[]
+     *
+     * @return list<array{date: \DateTimeImmutable, is_new: bool}>
      */
-    public function findForFeed(array $users, ?\DateTimeImmutable $since = null): array
+    public function findFeedDays(array $users, ?\DateTimeImmutable $seenBefore = null): array
     {
         if ($users === []) {
             return [];
         }
 
-        $ids = array_map(fn (User $u) => $u->getId()->toBinary(), $users);
+        $rows = $this->createQueryBuilder('p')
+            ->select('e.date AS day', 'MAX(CASE WHEN p.createdAt > :seen THEN 1 ELSE 0 END) AS is_new')
+            ->join('p.event', 'e')
+            ->where('p.user IN (:users)')
+            ->andWhere('e.date < :today')
+            ->setParameter('users', array_map(fn (User $u) => $u->getId()->toBinary(), $users), ArrayParameterType::BINARY)
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            // Sans dernière visite, tout est nouveau : une borne dans le passé lointain
+            ->setParameter('seen', $seenBefore ?? new \DateTimeImmutable('1970-01-01'))
+            ->groupBy('e.date')
+            ->orderBy('e.date', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
 
-        $qb = $this->createQueryBuilder('p')
+        return array_map(fn (array $r) => [
+            'date' => $r['day'] instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($r['day']) : new \DateTimeImmutable($r['day']),
+            'is_new' => (bool) $r['is_new'],
+        ], $rows);
+    }
+
+    /**
+     * Les participations des amis dont l'événement tombe entre deux dates
+     * (bornes comprises) — la page de jours que le feed affiche.
+     *
+     * @param User[] $users
+     *
+     * @return EventParticipation[]
+     */
+    public function findForFeedBetween(array $users, \DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        if ($users === []) {
+            return [];
+        }
+
+        return $this->feedQb($users)
+            ->andWhere('e.date >= :from')
+            ->andWhere('e.date < :to')
+            ->setParameter('from', $from->setTime(0, 0))
+            ->setParameter('to', $to->setTime(0, 0)->modify('+1 day'))
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Les participations des amis à des événements à venir, du plus proche au
+     * plus lointain. $limit borne les lignes ; l'appelant regroupe par événement.
+     *
+     * @param User[] $users
+     *
+     * @return EventParticipation[]
+     */
+    public function findUpcomingForFeed(array $users, int $limit): array
+    {
+        if ($users === []) {
+            return [];
+        }
+
+        return $this->feedQb($users)
+            ->andWhere('e.date >= :today')
+            ->setParameter('today', new \DateTimeImmutable('today'))
+            ->orderBy('e.date', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Le socle du feed : utilisateur, événement et lieu chargés d'un coup. Aucun
+     * filtre de visibilité — un ami voit tout, et l'appelant ne passe ici que
+     * des amis confirmés.
+     *
+     * @param User[] $users
+     */
+    private function feedQb(array $users): QueryBuilder
+    {
+        return $this->createQueryBuilder('p')
             ->join('p.user', 'u')->addSelect('u')
             ->join('p.event', 'e')->addSelect('e')
             ->leftJoin('e.venue', 'v')->addSelect('v')
-            // Aucun filtre de visibilité : un ami voit tout. C'est l'amitié qui fait
-            // l'accès, et l'appelant ne passe ici que des amis confirmés.
             ->where('p.user IN (:users)')
-            ->setParameter('users', $ids, ArrayParameterType::BINARY);
-
-        if ($since !== null) {
-            $qb->andWhere('e.date >= :since')->setParameter('since', $since);
-        }
-
-        return $qb->getQuery()->getResult();
+            ->setParameter('users', array_map(fn (User $u) => $u->getId()->toBinary(), $users), ArrayParameterType::BINARY);
     }
 
     /**

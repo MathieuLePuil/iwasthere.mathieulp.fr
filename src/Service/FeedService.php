@@ -16,7 +16,7 @@ use App\Repository\ReactionRepository;
  * partageant les mêmes amis, le même type et le même lieu forment un groupe,
  * annoncé une fois (« X était à 3 concerts », le lieu) puis listé.
  *
- *  - days      : tout l'historique passé, du plus récent au plus ancien, avec
+ *  - days      : une page de jours passés, du plus récent au plus ancien, avec
  *                les souvenirs des amis (note, commentaire, photo)
  *  - upcoming  : bandeau « Bientôt » — événements à venir des amis, du plus
  *                proche au plus lointain
@@ -48,6 +48,15 @@ final class FeedService
     ) {}
 
     /**
+     * Une page du feed : $daysPerPage cartes-jours à partir de $page.
+     *
+     * Les jours (une ligne par date, sans entité) sont listés en une requête ;
+     * seules les participations de la page sont chargées. La limite « déjà vu /
+     * pas encore vu » se place juste avant le premier jour sans rien de nouveau
+     * (sep_at, relatif à la page, null si hors page ou rien de nouveau) ; les jours
+     * redevenus nouveaux sous cette limite (un ami qui ajoute un vieil événement)
+     * reçoivent badge_new.
+     *
      * @param \DateTimeImmutable|null $seenBefore dernière visite du feed ;
      *     null = première visite, tout est considéré comme nouveau
      *
@@ -58,24 +67,51 @@ final class FeedService
      *         date: \DateTimeImmutable,
      *         date_label: string,
      *         is_new: bool,
+     *         badge_new: bool,
      *         groups: list<array{users: User[], type: string, venue: ?Venue, events: list<array>}>,
      *     }>,
+     *     sep_at: ?int,
+     *     has_more: bool,
      *     reactions: array<string, array<string, array{count: int, mine: bool}>>,
      * }
      */
-    public function buildFeed(User $user, ?\DateTimeImmutable $seenBefore = null): array
+    public function buildFeed(User $user, ?\DateTimeImmutable $seenBefore = null, int $page = 1, int $daysPerPage = 8, bool $withUpcoming = true): array
     {
         $friends = $this->resolveVisibleFriends($user);
         if ($friends === []) {
-            return ['friend_count' => 0, 'upcoming' => [], 'days' => [], 'reactions' => []];
+            return ['friend_count' => 0, 'upcoming' => [], 'days' => [], 'sep_at' => null, 'has_more' => false, 'reactions' => []];
         }
 
-        // Tout l'historique : le feed remonte à l'infini, page par page de jours
-        $participations = $this->participationRepo->findForFeed($friends);
+        $allDays = $this->participationRepo->findFeedDays($friends, $seenBefore);
+        $start = ($page - 1) * $daysPerPage;
+        $pageDays = array_slice($allDays, $start, $daysPerPage);
+        $hasMore = count($allDays) > $start + count($pageDays);
+
+        $sepIndex = null;
+        foreach ($allDays as $i => $d) {
+            if (!$d['is_new']) {
+                $sepIndex = $i;
+                break;
+            }
+        }
+        if ($sepIndex === 0) {
+            $sepIndex = null; // rien de nouveau : pas de ligne en tête de feed
+        }
+        $sepAt = $sepIndex !== null && $sepIndex >= $start && $sepIndex < $start + count($pageDays)
+            ? $sepIndex - $start
+            : null;
+
+        // Les jours de la page sont contigus dans l'ordre des dates : une seule
+        // requête bornée par le plus ancien et le plus récent d'entre eux.
+        $participations = $pageDays === []
+            ? []
+            : $this->participationRepo->findForFeedBetween($friends, end($pageDays)['date'], $pageDays[0]['date']);
+
+        $upcomingParts = $withUpcoming ? $this->participationRepo->findUpcomingForFeed($friends, self::UPCOMING_MAX * 4) : [];
 
         // Un groupe par événement, tous les amis présents regroupés dessus
         $groups = [];
-        foreach ($participations as $p) {
+        foreach ([...$participations, ...$upcomingParts] as $p) {
             $event = $p->getEvent();
             $key = (string) $event->getId();
             $groups[$key] ??= ['event' => $event, 'participations' => []];
@@ -113,28 +149,24 @@ final class FeedService
         unset($g);
 
         // Une carte par jour : les événements d'un même jour partagent la carte.
-        // $items étant trié du plus récent au plus ancien, les jours le sont aussi.
+        // Les jours viennent de la liste paginée, dans son ordre ; is_new aussi.
         // Dans un jour, les événements qui partagent les mêmes amis, le même
         // type et le même lieu forment un groupe : « X était à 3 concerts »
         // puis la liste, au lieu de répéter la phrase pour chaque événement.
         $days = [];
-        foreach ($items as $g) {
-            $date = $g['event']->getDate();
-            $dayKey = $date->format('Y-m-d');
-            $days[$dayKey] ??= [
-                'date' => $date,
-                'date_label' => $this->dateLabel($date),
+        foreach ($pageDays as $j => $d) {
+            $days[$d['date']->format('Y-m-d')] = [
+                'date' => $d['date'],
+                'date_label' => $this->dateLabel($d['date']),
                 'groups' => [],
-                'is_new' => false,
+                'is_new' => $d['is_new'],
+                'badge_new' => $sepIndex !== null && $d['is_new'] && ($start + $j) > $sepIndex,
             ];
-
-            if (!$days[$dayKey]['is_new']) {
-                foreach ($g['participations'] as $p) {
-                    if ($seenBefore === null || $p->getCreatedAt() > $seenBefore) {
-                        $days[$dayKey]['is_new'] = true;
-                        break;
-                    }
-                }
+        }
+        foreach ($items as $g) {
+            $dayKey = $g['event']->getDate()->format('Y-m-d');
+            if (!isset($days[$dayKey])) {
+                continue;
             }
 
             $users = [];
@@ -174,14 +206,15 @@ final class FeedService
             usort($d['groups'], fn (array $a, array $b) => $a['events'][0]['event']->getStartDateTime() <=> $b['events'][0]['event']->getStartDateTime());
         }
         unset($d);
-        $days = array_values($days);
+        // Un jour sans événement chargé (ne devrait pas arriver) ne fait pas de carte vide
+        $days = array_values(array_filter($days, fn (array $d) => $d['groups'] !== []));
 
         return [
             'friend_count' => count($friends),
             'upcoming' => $upcoming,
             'days' => $days,
-            // En une requête pour tout le feed : la pagination découpe les jours
-            // après coup, une passe par page rouvrirait le même travail.
+            'sep_at' => $sepAt,
+            'has_more' => $hasMore,
             'reactions' => $this->reactionRepo->stateFor($participations, $user),
         ];
     }

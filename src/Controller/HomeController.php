@@ -54,8 +54,9 @@ class HomeController extends AbstractController
             ];
         }
 
-        // Friends activity preview (full feed lives at /feed)
-        $feed = $feedService->buildFeed($user);
+        // Friends activity preview (full feed lives at /feed) : trois jours suffisent
+        // pour trois cartes, inutile de construire davantage
+        $feed = $feedService->buildFeed($user, null, 1, self::FEED_PREVIEW_MAX, withUpcoming: false);
 
         // Le feed regroupe par jour puis par amis/type/lieu ; ici on veut les
         // 3 derniers événements à plat, chacun avec le libellé de date de son jour
