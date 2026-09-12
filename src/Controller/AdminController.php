@@ -16,6 +16,7 @@ use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Participation\CompanionSync;
 use App\Participation\ParticipationService;
 use App\Service\AccountDeletionService;
 use App\Service\SetlistFmService;
@@ -92,7 +93,7 @@ class AdminController extends AbstractController
     }
 
     #[Route('/users/{id}/edit', name: 'app_admin_user_edit', methods: ['GET', 'POST'])]
-    public function editUser(User $user, Request $request, UserRepository $userRepo): Response
+    public function editUser(User $user, Request $request, UserRepository $userRepo, CompanionSync $companions): Response
     {
         if ($request->isMethod('POST')) {
             $old = ['email' => $user->getEmail(), 'role' => $user->getRole(), 'displayName' => $user->getDisplayName()];
@@ -129,6 +130,7 @@ class AdminController extends AbstractController
             }
             if ($old['displayName'] !== $user->getDisplayName()) {
                 $this->logAction('update', 'User', (string) $user->getId(), 'displayName', $old['displayName'], $user->getDisplayName());
+                $companions->rename($user);
             }
 
             $this->em->flush();

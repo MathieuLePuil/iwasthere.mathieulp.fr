@@ -197,6 +197,21 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Les participations (de n'importe qui) dont le « Avec qui » cite cet utilisateur.
+     * La liste est un JSON figé ; le LIKE sur l'id est le seul index qu'on ait.
+     *
+     * @return EventParticipation[]
+     */
+    public function findTagging(string $userId): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.friends LIKE :ref')
+            ->setParameter('ref', '%"userId":"' . $userId . '"%')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Toutes les participations à un événement, utilisateur chargé. Rien n'est
      * filtré ici : c'est l'appelant qui applique l'audience de chaque compte
      * (User::canBeSeenBy) selon qui regarde.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\User;
+use App\Participation\CompanionSync;
 use App\Repository\EventParticipationRepository;
 use App\Repository\ReactionRepository;
 use Doctrine\DBAL\ParameterType;
@@ -31,6 +32,7 @@ class AccountDeletionService
         private readonly ReactionRepository $reactionRepo,
         private readonly AvatarService $avatars,
         private readonly EventImageService $images,
+        private readonly CompanionSync $companions,
     ) {}
 
     public function delete(User $user): void
@@ -46,6 +48,8 @@ class AccountDeletionService
                 $this->images->delete($participation);
             }
             $this->avatars->delete($user);
+            // Les « Avec qui » des autres ne doivent pas garder un fantôme
+            $this->companions->forget($user);
             $this->em->flush();
 
             $id = $user->getId()->toBinary();

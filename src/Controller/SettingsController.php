@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Http\Input;
+use App\Participation\CompanionSync;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use App\Service\AccountDeletionService;
@@ -148,9 +149,10 @@ class SettingsController extends AbstractController
     }
 
     #[Route('/profile', name: 'app_settings_profile', methods: ['POST'])]
-    public function saveProfile(Request $request, EntityManagerInterface $em, UserRepository $userRepo): Response
+    public function saveProfile(Request $request, EntityManagerInterface $em, UserRepository $userRepo, CompanionSync $companions): Response
     {
         $user = $this->getUser();
+        $before = [$user->getUsername(), $user->getDisplayName()];
 
         if ($displayName = Input::text($request->request->get('display_name'), 100)) {
             $user->setDisplayName($displayName);
@@ -170,6 +172,11 @@ class SettingsController extends AbstractController
                 return $this->redirectToRoute('app_settings_profile_page');
             }
             $user->setUsername($newUsername);
+        }
+
+        // Les « Avec qui » des amis citent pseudo et nom en clair : ils suivent
+        if ($before !== [$user->getUsername(), $user->getDisplayName()]) {
+            $companions->rename($user);
         }
 
         $em->flush();
