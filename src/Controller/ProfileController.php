@@ -141,13 +141,20 @@ class ProfileController extends AbstractController
 
         $existing = $friendRepo->findRelationship($user, $targetUser);
         if ($existing) {
-            if ($existing->getStatus() === 'refused') {
-                $em->remove($existing);
-                $em->flush();
-            } else {
+            if ($existing->getStatus() !== 'refused') {
                 $this->addFlash('info', 'Une relation existe déjà avec cet utilisateur.');
                 return $this->redirectToRoute('app_profile_search');
             }
+            // Un refus tient trente jours : sans ça, la demande refusée revenait dans
+            // la seconde, avec sa notification et son push. Celui qui a refusé, lui,
+            // peut toujours faire le premier pas.
+            $refusedMe = $existing->getOwner() === $user;
+            if ($refusedMe && $existing->getCreatedAt() > new \DateTimeImmutable('-30 days')) {
+                $this->addFlash('info', 'Ta demande n\'a pas été acceptée. Tu pourras la renvoyer dans quelques semaines.');
+                return $this->redirectToRoute('app_profile_search');
+            }
+            $em->remove($existing);
+            $em->flush();
         }
 
         $friend = new Friend();
@@ -230,7 +237,9 @@ class ProfileController extends AbstractController
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
-        $em->remove($friend);
+        // Conservée en « refused » plutôt que supprimée : c'est ce qui empêche le
+        // demandeur de réessayer aussitôt (voir addFriend).
+        $friend->setStatus('refused')->setCreatedAt(new \DateTimeImmutable());
         $em->flush();
         $this->addFlash('info', 'Demande refusée.');
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);

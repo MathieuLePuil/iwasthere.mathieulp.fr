@@ -125,7 +125,8 @@ class NotificationsController extends AbstractController
             $em->remove($requestNotif);
         }
 
-        $em->remove($friend);
+        // Conservée en « refused » : le demandeur ne pourra pas réessayer avant trente jours
+        $friend->setStatus('refused')->setCreatedAt(new \DateTimeImmutable());
         $em->flush();
         $this->addFlash('info', 'Demande d\'ami refusée.');
 
