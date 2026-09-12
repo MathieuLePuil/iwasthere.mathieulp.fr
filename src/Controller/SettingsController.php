@@ -73,7 +73,7 @@ class SettingsController extends AbstractController
         if (strlen($username) < 3) {
             return $this->json(['available' => null]);
         }
-        if ($username === $this->getUser()->getUserIdentifier()) {
+        if ($username === $this->getUser()->getUsername()) {
             return $this->json(['available' => 'current']);
         }
         $taken = $userRepo->findOneBy(['username' => $username]) !== null;
@@ -157,7 +157,7 @@ class SettingsController extends AbstractController
         $user->setBio($bio ?: null);
 
         $newUsername = strtolower(trim($request->request->get('username', '')));
-        if ($newUsername && $newUsername !== $user->getUserIdentifier()) {
+        if ($newUsername && $newUsername !== $user->getUsername()) {
             if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
                 $this->addFlash('error', 'Le pseudo doit faire 3 à 30 caractères (lettres minuscules, chiffres, _).');
                 return $this->redirectToRoute('app_settings_profile_page');
