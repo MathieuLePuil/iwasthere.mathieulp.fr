@@ -1,0 +1,103 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Vide l'OPcache du pool PHP-FPM de l'application.
+ *
+ * Le pool tourne avec `opcache.validate_timestamps = 0` : après un
+ * `cache:clear`, FPM continue de servir l'ancien container compilé et cherche
+ * des fichiers `var/cache/prod/ContainerXXX/` déjà supprimés du disque → 500
+ * dès qu'un service pas encore chargé est demandé. Ce script exécute
+ * `opcache_reset()` *dans* FPM via une requête FastCGI sur son socket (comme
+ * cachetool), sans exposer d'endpoint web ni nécessiter root.
+ *
+ * Usage : bin/opcache-reset [/chemin/vers/le.sock]
+ */
+
+$root = dirname(__DIR__);
+$socket = $argv[1] ?? null;
+
+if ($socket === null) {
+    // Le pool est celui dont la conf déclare notre user
+    foreach (glob('/etc/php/*/fpm/pool.d/*.conf') as $conf) {
+        $ini = @file_get_contents($conf);
+        if ($ini !== false
+            && preg_match('/^user\s*=\s*' . preg_quote(get_current_user(), '/') . '\s*$/m', $ini)
+            && preg_match('/^listen\s*=\s*(\S+)/m', $ini, $m)
+            && str_contains($ini, $root)) {
+            $socket = $m[1];
+            break;
+        }
+    }
+}
+if ($socket === null || !file_exists($socket)) {
+    fwrite(STDERR, "Socket FPM introuvable (passe-le en argument).\n");
+    exit(1);
+}
+
+// Fichier exécuté par FPM : hors de public/, nom aléatoire, supprimé aussitôt
+$script = $root . '/var/opcache-reset-' . bin2hex(random_bytes(8)) . '.php';
+file_put_contents($script, '<?php echo function_exists("opcache_reset") && opcache_reset() ? "OK" : "KO";');
+
+try {
+    $out = fcgiRequest($socket, [
+        'REQUEST_METHOD'    => 'GET',
+        'SCRIPT_FILENAME'   => $script,
+        'SCRIPT_NAME'       => basename($script),
+        'REQUEST_URI'       => '/' . basename($script),
+        'SERVER_PROTOCOL'   => 'HTTP/1.1',
+        'GATEWAY_INTERFACE' => 'CGI/1.1',
+        'SERVER_SOFTWARE'   => 'opcache-reset',
+        'REMOTE_ADDR'       => '127.0.0.1',
+        'SERVER_NAME'       => 'localhost',
+    ]);
+} finally {
+    @unlink($script);
+}
+
+$body = substr($out, strpos($out, "\r\n\r\n") + 4);
+if (trim($body) !== 'OK') {
+    fwrite(STDERR, "Échec du reset OPcache : " . trim($out) . "\n");
+    exit(1);
+}
+echo "OPcache vidé (" . $socket . ")\n";
+
+/** Requête FastCGI minimale (FCGI_BEGIN_REQUEST + PARAMS + STDIN vide), réponse brute. */
+function fcgiRequest(string $socket, array $params): string
+{
+    $fp = stream_socket_client('unix://' . $socket, $errno, $errstr, 5);
+    if (!$fp) {
+        throw new RuntimeException("Connexion FPM impossible : $errstr");
+    }
+    $record = fn(int $type, string $content) => pack('CCnnCx', 1, $type, 1, strlen($content), 0) . $content;
+
+    $paramData = '';
+    foreach ($params as $k => $v) {
+        $paramData .= (strlen($k) < 128 ? chr(strlen($k)) : pack('N', strlen($k) | 0x80000000))
+            . (strlen($v) < 128 ? chr(strlen($v)) : pack('N', strlen($v) | 0x80000000))
+            . $k . $v;
+    }
+    fwrite($fp, $record(1, pack('nCx5', 1, 0))   // BEGIN_REQUEST, rôle RESPONDER, keep-alive off
+        . $record(4, $paramData) . $record(4, '') // PARAMS puis fin des PARAMS
+        . $record(5, ''));                         // STDIN vide
+
+    $out = '';
+    while (!feof($fp)) {
+        $h = fread($fp, 8);
+        if (strlen($h) < 8) {
+            break;
+        }
+        ['type' => $type, 'len' => $len, 'pad' => $pad] = unpack('Cver/Ctype/nid/nlen/Cpad/Cres', $h);
+        $content = $len ? stream_get_contents($fp, $len) : '';
+        if ($pad) {
+            fread($fp, $pad);
+        }
+        if ($type === 6) {          // STDOUT
+            $out .= $content;
+        } elseif ($type === 3) {    // END_REQUEST
+            break;
+        }
+    }
+    fclose($fp);
+
+    return $out;
+}
