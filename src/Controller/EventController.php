@@ -648,6 +648,8 @@ if (!empty($data['duration'])) {
             $participation->setEvent($event)->setUser($user)->setStatus('past');
             $em->persist($participation);
             $event->setParticipantCount($event->getParticipantCount() + 1);
+            // Les amis qui m'ont tagué se retrouvent d'office dans mon « Avec qui »
+            $this->linkWithTaggers($participation, $participationRepo);
             $em->flush();
         }
 
@@ -880,13 +882,19 @@ if (!empty($data['duration'])) {
 
         if ($eventId) {
             $event = $eventRepo->find($eventId);
-            if ($event && !$participationRepo->findByUserAndEvent($user, $event)) {
-                $newParticipation = new EventParticipation();
-                $newParticipation->setEvent($event)
-                    ->setUser($user)
-                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
-                $em->persist($newParticipation);
-                $event->setParticipantCount($event->getParticipantCount() + 1);
+            if ($event) {
+                $mine = $participationRepo->findByUserAndEvent($user, $event);
+                if (!$mine) {
+                    $mine = new EventParticipation();
+                    $mine->setEvent($event)
+                        ->setUser($user)
+                        ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
+                    $em->persist($mine);
+                    $event->setParticipantCount($event->getParticipantCount() + 1);
+                }
+                // Celui qui m'a invité m'a déjà dans son « Avec qui » : il doit
+                // apparaître dans le mien aussi, dès l'acceptation et jusqu'au souvenir.
+                $this->linkWithTaggers($mine, $participationRepo);
             }
         }
 
@@ -1031,6 +1039,28 @@ if (!empty($data['duration'])) {
         }
 
         return [$event, $other];
+    }
+
+    /**
+     * Rattache mutuellement cette participation à celles, sur le même événement,
+     * qui taguent déjà son utilisateur dans leur « Avec qui ». Un ami qui invite
+     * (ou est invité) reste ainsi associé à l'événement de bout en bout.
+     */
+    private function linkWithTaggers(EventParticipation $mine, EventParticipationRepository $participationRepo): void
+    {
+        $userId = (string) $mine->getUser()->getId();
+
+        foreach ($participationRepo->findByEvent($mine->getEvent()) as $other) {
+            if ($other === $mine || $other->getUser() === $mine->getUser()) {
+                continue;
+            }
+            foreach ($other->getFriends() ?? [] as $f) {
+                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $userId) {
+                    $this->linkCompanions($mine, $other);
+                    break;
+                }
+            }
+        }
     }
 
     /** Inscrit chacun comme accompagnant de l'autre — la relation est symétrique. */
