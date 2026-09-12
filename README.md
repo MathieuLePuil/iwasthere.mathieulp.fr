@@ -180,7 +180,9 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    tournent chaque minute — les rappels partent à l'heure choisie par chaque
    utilisateur, à la minute près.
 
-10. **Mise à jour du code — dans cet ordre.** Le pool PHP-FPM tourne avec
+10. **Mise à jour du code.** `bin/deploy` enchaîne tout dans le bon ordre
+    (dépendances, arrêt du worker, migrations, assets, cache, OPcache). Le détail,
+    pour savoir pourquoi l'ordre compte : Le pool PHP-FPM tourne avec
     `opcache.validate_timestamps = 0` : sans reset, FPM continue de servir
     l'ancien container compilé et cherche des fichiers `var/cache/prod/ContainerXXX/`
     que `cache:clear` vient de supprimer → **500 aléatoires** dès qu'un service pas

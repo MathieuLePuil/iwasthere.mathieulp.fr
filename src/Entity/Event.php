@@ -10,6 +10,8 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: EventRepository::class)]
 #[ORM\Index(name: 'idx_event_date', columns: ['date'])]
+#[ORM\Index(name: 'idx_event_duplicate', columns: ['type', 'date', 'venue_id'])]
+#[ORM\Index(name: 'idx_event_creator', columns: ['created_by_user_id'])]
 class Event
 {
     #[ORM\Id]

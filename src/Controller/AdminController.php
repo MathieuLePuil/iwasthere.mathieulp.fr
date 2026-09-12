@@ -32,6 +32,8 @@ use Symfony\Component\Uid\Uuid;
 #[Route('/admin')]
 class AdminController extends AbstractController
 {
+    private const PER_PAGE = 50;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
     ) {}
@@ -62,9 +64,9 @@ class AdminController extends AbstractController
         VenueRepository $venueRepo,
     ): Response {
         return $this->render('admin/dashboard.html.twig', [
-            'total_users' => count($userRepo->findAll()),
-            'total_events' => count($eventRepo->findAll()),
-            'total_venues' => count($venueRepo->findAll()),
+            'total_users' => $userRepo->count([]),
+            'total_events' => $eventRepo->count([]),
+            'total_venues' => $venueRepo->count([]),
         ]);
     }
 
@@ -163,12 +165,19 @@ class AdminController extends AbstractController
     #[Route('/events', name: 'app_admin_events')]
     public function events(Request $request, EventRepository $eventRepo): Response
     {
-        $q = $request->query->get('q', '');
+        $q = (string) $request->query->get('q', '');
+        $page = max(1, $request->query->getInt('page', 1));
         $events = $q
-            ? $eventRepo->search($q)
-            : $eventRepo->findBy([], ['createdAt' => 'DESC']);
+            ? $eventRepo->search($q, 50)
+            : $eventRepo->findBy([], ['createdAt' => 'DESC'], self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $totalPages = $q ? 1 : max(1, (int) ceil($eventRepo->count([]) / self::PER_PAGE));
 
-        return $this->render('admin/events.html.twig', ['events' => $events, 'q' => $q]);
+        return $this->render('admin/events.html.twig', [
+            'events' => $events,
+            'q' => $q,
+            'page' => min($page, $totalPages),
+            'total_pages' => $totalPages,
+        ]);
     }
 
     #[Route('/events/{id}', name: 'app_admin_event_show')]
@@ -262,12 +271,19 @@ class AdminController extends AbstractController
     #[Route('/venues', name: 'app_admin_venues')]
     public function venues(Request $request, VenueRepository $venueRepo): Response
     {
-        $q = $request->query->get('q', '');
+        $q = (string) $request->query->get('q', '');
+        $page = max(1, $request->query->getInt('page', 1));
         $venues = $q
-            ? $venueRepo->search($q)
-            : $venueRepo->findBy([], ['name' => 'ASC']);
+            ? $venueRepo->search($q, 50)
+            : $venueRepo->findBy([], ['name' => 'ASC'], self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $totalPages = $q ? 1 : max(1, (int) ceil($venueRepo->count([]) / self::PER_PAGE));
 
-        return $this->render('admin/venues.html.twig', ['venues' => $venues, 'q' => $q]);
+        return $this->render('admin/venues.html.twig', [
+            'venues' => $venues,
+            'q' => $q,
+            'page' => min($page, $totalPages),
+            'total_pages' => $totalPages,
+        ]);
     }
 
     #[Route('/venues/{id}/edit', name: 'app_admin_venue_edit', methods: ['GET', 'POST'])]

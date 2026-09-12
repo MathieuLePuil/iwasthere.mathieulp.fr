@@ -1,5 +1,6 @@
 {% extends 'admin/layout.html.twig' %}
 
+{% import 'components/_macros.html.twig' as m %}
 {% block title %}Lieux{% endblock %}
 
 {% block body %}
@@ -46,4 +47,5 @@
         </tbody>
     </table>
 </div>
+{{ m.pagination('app_admin_venues', {}, page, total_pages) }}
 {% endblock %}

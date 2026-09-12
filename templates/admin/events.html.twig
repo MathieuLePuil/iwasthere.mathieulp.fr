@@ -1,5 +1,6 @@
 {% extends 'admin/layout.html.twig' %}
 
+{% import 'components/_macros.html.twig' as m %}
 {% block title %}Événements{% endblock %}
 
 {% block body %}
@@ -84,4 +85,5 @@
         </tbody>
     </table>
 </div>
+{{ m.pagination('app_admin_events', {}, page, total_pages) }}
 {% endblock %}

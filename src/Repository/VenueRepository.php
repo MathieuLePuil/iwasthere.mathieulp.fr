@@ -35,13 +35,13 @@ class VenueRepository extends ServiceEntityRepository
     /**
      * @return Venue[]
      */
-    public function search(string $query): array
+    public function search(string $query, int $limit = 10): array
     {
         return $this->createQueryBuilder('v')
             ->where('v.name LIKE :q')
             ->setParameter('q', LikeEscaper::contains($query))
             ->orderBy('v.name', 'ASC')
-            ->setMaxResults(10)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
     }

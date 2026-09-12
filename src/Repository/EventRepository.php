@@ -191,7 +191,7 @@ class EventRepository extends ServiceEntityRepository
     /**
      * @return Event[]
      */
-    public function search(string $query): array
+    public function search(string $query, int $limit = 10): array
     {
         $words = array_values(array_filter(array_map('trim', explode(' ', $query))));
         if (empty($words)) {
@@ -208,7 +208,7 @@ class EventRepository extends ServiceEntityRepository
         }
 
         return $qb->orderBy('e.date', 'DESC')
-            ->setMaxResults(10)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
     }
