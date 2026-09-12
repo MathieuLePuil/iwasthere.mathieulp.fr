@@ -147,7 +147,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT teams FROM event WHERE teams LIKE :q AND teams IS NOT NULL AND teams != "" LIMIT 30',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         $names = [];
@@ -170,7 +170,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT artist_name FROM event WHERE artist_name LIKE :q AND artist_name IS NOT NULL AND artist_name != "" ORDER BY artist_name LIMIT 10',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         return array_column($results, 'artist_name');
@@ -182,7 +182,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT tournament_name FROM event WHERE tournament_name LIKE :q AND tournament_name IS NOT NULL AND tournament_name != "" ORDER BY tournament_name LIMIT 10',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         return array_column($results, 'tournament_name');
@@ -204,7 +204,7 @@ class EventRepository extends ServiceEntityRepository
         foreach ($words as $i => $word) {
             $p = 'w' . $i;
             $qb->andWhere("e.artistName LIKE :$p OR e.tournamentName LIKE :$p OR v.name LIKE :$p OR e.teams LIKE :$p")
-               ->setParameter($p, '%' . $word . '%');
+               ->setParameter($p, LikeEscaper::contains($word));
         }
 
         return $qb->orderBy('e.date', 'DESC')

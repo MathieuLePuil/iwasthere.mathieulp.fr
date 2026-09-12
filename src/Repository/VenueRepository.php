@@ -39,7 +39,7 @@ class VenueRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('v')
             ->where('v.name LIKE :q')
-            ->setParameter('q', '%' . $query . '%')
+            ->setParameter('q', LikeEscaper::contains($query))
             ->orderBy('v.name', 'ASC')
             ->setMaxResults(10)
             ->getQuery()

@@ -84,7 +84,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     {
         return $this->createQueryBuilder('u')
             ->where('u.username LIKE :q OR u.email LIKE :q OR u.displayName LIKE :q')
-            ->setParameter('q', '%' . $query . '%')
+            ->setParameter('q', LikeEscaper::contains($query))
             ->setMaxResults(50)
             ->getQuery()
             ->getResult();
@@ -98,7 +98,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         return $this->createQueryBuilder('u')
             ->where('u.username LIKE :q OR u.displayName LIKE :q')
             ->andWhere('u != :current')
-            ->setParameter('q', '%' . $query . '%')
+            ->setParameter('q', LikeEscaper::contains($query))
             ->setParameter('current', $currentUser)
             ->setMaxResults(10)
             ->getQuery()
