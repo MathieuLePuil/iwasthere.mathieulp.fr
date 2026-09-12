@@ -38,7 +38,7 @@
     </div>
 
     {# Title block #}
-    {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
+    {% set type_emoji = {} %}{% for t in event_types() %}{% set type_emoji = type_emoji|merge({(t.value): t.emoji}) %}{% endfor %}
     <div class="px-4 -mt-2 mb-4" style="position: relative; z-index: 2">
         <div class="flex items-center gap-2 mb-1">
             <span class="iwt-hero-art-tag iwt-hero-art-tag--{{ event.type ?? 'default' }}">{{ type_emoji[event.type] ?? '🎫' }} {{ event.type|capitalize }}</span>

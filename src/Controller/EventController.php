@@ -9,6 +9,9 @@ use App\Entity\EventParticipation;
 use App\Entity\Notification;
 use App\Entity\User;
 use App\Entity\Venue;
+use App\Event\EventCategory;
+use App\Event\EventType;
+use App\Http\Input;
 use App\Notification\ActivityNotifier;
 use App\Notification\NotificationDispatcher;
 use App\Notification\NotificationType;
@@ -67,12 +70,24 @@ class EventController extends AbstractController
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
 
+            // Le type fait foi et fixe la catégorie : un « type » hors catalogue ou une
+            // date illisible sont refusés avant d'écrire quoi que ce soit.
+            $type = EventType::tryFrom((string) ($data['type'] ?? ''));
+            $date = Input::date($data['date'] ?? null);
+            if ($type === null || $date === null) {
+                $this->addFlash('error', $type === null ? 'Choisis un type d\'événement.' : 'La date n\'est pas valide.');
+
+                return $this->redirectToRoute('app_event_new', $type === null ? [] : [
+                    'category' => $type->category()->value,
+                    'type'     => $type->value,
+                ]);
+            }
+
             // Refused before anything is created, so a rejected form writes nothing.
             // Only past events carry a score (the souvenir block is hidden otherwise),
             // same convention as Event::isPast().
-            $date = !empty($data['date']) ? new \DateTimeImmutable($data['date']) : null;
-            if (($data['type'] ?? '') === 'tennis'
-                && $date && $date < new \DateTimeImmutable('today')
+            if ($type->isTennis()
+                && $date < new \DateTimeImmutable('today')
                 && $this->tennisWinnerMissing($data)
             ) {
                 $this->addFlash('error', self::TENNIS_WINNER_REQUIRED);
@@ -87,10 +102,9 @@ class EventController extends AbstractController
 
             // Find or create venue
             $venue = null;
-            if (!empty($data['venue_id'])) {
-                $venue = $venueRepo->find($data['venue_id']);
-            } elseif (!empty(trim($data['venue_name'] ?? ''))) {
-                $venueName = trim($data['venue_name']);
+            if ($venueId = Input::uuid($data['venue_id'] ?? null)) {
+                $venue = $venueRepo->find($venueId);
+            } elseif ($venueName = Input::text($data['venue_name'] ?? null, 255)) {
                 // Reuse an existing venue with the same name (case/whitespace-insensitive)
                 // instead of creating an identical duplicate.
                 $venue = $venueRepo->findOneByName($venueName);
@@ -106,31 +120,33 @@ class EventController extends AbstractController
             }
 
             // Check if joining existing event
-            if (!empty($data['existing_event_id'])) {
-                $event = $eventRepo->find($data['existing_event_id']);
-            } else {
+            $event = null;
+            if ($existingId = Input::uuid($data['existing_event_id'] ?? null)) {
+                $event = $eventRepo->find($existingId);
+            }
+            if ($event === null) {
                 $event = new Event();
-                $event->setCategory($data['category'])
-                    ->setType($data['type'])
-                    ->setDate(new \DateTimeImmutable($data['date']))
+                $event->setCategory($type->category()->value)
+                    ->setType($type->value)
+                    ->setDate($date)
                     ->setCreatedByUserId($this->getUser()->getId());
 
-                if (!empty($data['start_time'])) {
-                    $event->setStartTime(new \DateTimeImmutable($data['start_time']));
+                if ($startTime = Input::time($data['start_time'] ?? null)) {
+                    $event->setStartTime($startTime);
                 }
 
                 if ($venue) {
                     $event->setVenue($venue);
                 }
-                if (!empty($data['artist_name'])) {
-                    $event->setArtistName($data['artist_name']);
+                if ($artist = Input::text($data['artist_name'] ?? null, 255)) {
+                    $event->setArtistName($artist);
                 }
-                if (!empty($data['tournament_name'])) {
-                    $event->setTournamentName($data['tournament_name']);
+                if ($tournament = Input::text($data['tournament_name'] ?? null, 255)) {
+                    $event->setTournamentName($tournament);
                 }
                 // Combine team1 + team2 into teams field
-                $team1 = trim($data['team1'] ?? $data['teams'] ?? '');
-                $team2 = trim($data['team2'] ?? '');
+                $team1 = Input::text($data['team1'] ?? $data['teams'] ?? null, 120) ?? '';
+                $team2 = Input::text($data['team2'] ?? null, 120) ?? '';
                 if ($team1 || $team2) {
                     $teams = $team2 ? "$team1 vs $team2" : $team1;
                     $event->setTeams($teams);
@@ -148,7 +164,7 @@ class EventController extends AbstractController
             }
 
             // Artist picture via Deezer (new event, or joined one still missing it)
-            if ($event && !$event->getArtistImageUrl()) {
+            if (!$event->getArtistImageUrl()) {
                 $deezer->applyToEvent($event);
             }
 
@@ -162,19 +178,19 @@ class EventController extends AbstractController
 
             // Match result is shared event data — set it whether the event is new
             // or joined, so every participant sees the same score/winner.
-            $finalScore = $data['final_score'] ?? '';
-            if (empty($finalScore) && isset($data['score_team1'], $data['score_team2'])) {
-                $s1 = trim($data['score_team1']);
-                $s2 = trim($data['score_team2']);
-                if ($s1 !== '' || $s2 !== '') {
-                    $finalScore = ($s1 !== '' ? $s1 : '0') . ' - ' . ($s2 !== '' ? $s2 : '0');
+            $finalScore = Input::text($data['final_score'] ?? null, 100) ?? '';
+            if ($finalScore === '' && isset($data['score_team1'], $data['score_team2'])) {
+                $s1 = Input::int($data['score_team1'], 0, 999);
+                $s2 = Input::int($data['score_team2'], 0, 999);
+                if ($s1 !== null || $s2 !== null) {
+                    $finalScore = ($s1 ?? 0) . ' - ' . ($s2 ?? 0);
                 }
             }
-            if (!empty($finalScore)) {
+            if ($finalScore !== '') {
                 $event->setFinalScore($finalScore);
             }
             // Winner checkbox exists only for tennis; dual-score sports derive it from the score
-            if (($data['type'] ?? '') === 'tennis' && in_array($data['winner'] ?? '', ['1', '2'], true)) {
+            if ($type->isTennis() && in_array($data['winner'] ?? '', ['1', '2'], true)) {
                 $event->setWinner($data['winner']);
             }
 
@@ -190,35 +206,11 @@ class EventController extends AbstractController
                     ->setUser($this->getUser())
                     ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
 
-if (!empty($data['duration'])) {
-                    $participation->setDuration((int) $data['duration']);
-                }
-                if (!empty($data['rating'])) {
-                    $participation->setRating((int) $data['rating']);
-                }
-                if (!empty($data['comment'])) {
-                    $participation->setComment($data['comment']);
-                }
+                $participation->setDuration(Input::int($data['duration'] ?? null, 1, 1440));
+                $participation->setRating(Input::int($data['rating'] ?? null, 1, 5));
+                $participation->setComment(Input::text($data['comment'] ?? null, 2000));
 
-                // Build friends list
-                $friendsData = [];
-                foreach ($data['friends_app'] ?? [] as $uid) {
-                    $friendUser = $userRepo->find($uid);
-                    if ($friendUser) {
-                        $friendsData[] = [
-                            'type'        => 'app',
-                            'userId'      => (string) $friendUser->getId(),
-                            'username'    => $friendUser->getUsername(),
-                            'displayName' => $friendUser->getDisplayName(),
-                        ];
-                    }
-                }
-                foreach ($data['friends_external'] ?? [] as $name) {
-                    $name = trim((string) $name);
-                    if ($name !== '') {
-                        $friendsData[] = ['type' => 'external', 'name' => $name];
-                    }
-                }
+                $friendsData = $this->buildFriends($data, $userRepo);
                 if ($friendsData) {
                     $participation->setFriends($friendsData);
                 }
@@ -281,14 +273,17 @@ if (!empty($data['duration'])) {
         }
 
         $locked = $request->query->has('category');
-        $category = $request->query->get('category', 'music');
-        $type = $request->query->get('type', $category === 'sport' ? 'football' : 'concert');
+        $category = EventCategory::tryFrom((string) $request->query->get('category', 'music')) ?? EventCategory::Music;
+        $type = EventType::tryFrom((string) $request->query->get('type', '')) ?? $category->defaultType();
+        if ($type->category() !== $category) {
+            $type = $category->defaultType();
+        }
 
         $confirmedFriends = $friendRepo->findConfirmedFriends($this->getUser());
 
         return $this->render('event/new.html.twig', [
-            'category'          => $category,
-            'type'              => $type,
+            'category'          => $category->value,
+            'type'              => $type->value,
             'locked'            => $locked,
             'confirmed_friends' => $confirmedFriends,
         ]);
@@ -460,20 +455,26 @@ if (!empty($data['duration'])) {
             }
 
             // Update event factual data (any participant can edit)
-            if (!empty($data['date'])) {
-                $event->setDate(new \DateTimeImmutable($data['date']));
+            if (isset($data['date'])) {
+                $newDate = Input::date($data['date']);
+                if ($newDate === null) {
+                    $this->addFlash('error', 'La date n\'est pas valide.');
+
+                    return $this->redirectToRoute('app_event_edit', ['id' => $event->getId()]);
+                }
+                $event->setDate($newDate);
             }
             if (array_key_exists('start_time', $data)) {
-                $event->setStartTime(
-                    $data['start_time'] !== '' ? new \DateTimeImmutable($data['start_time']) : null
-                );
+                $event->setStartTime(Input::time($data['start_time']));
             }
-            if (!empty($data['type'])) {
-                $event->setType($data['type']);
+            // Le type ne change qu'au sein de sa catégorie : un concert ne devient pas un match
+            $newType = EventType::tryFrom((string) ($data['type'] ?? ''));
+            if ($newType !== null && $newType->category()->value === $event->getCategory()) {
+                $event->setType($newType->value);
             }
-            if (!empty($data['artist_name'])) {
+            if ($artist = Input::text($data['artist_name'] ?? null, 255)) {
                 $previousArtist = $event->getArtistName();
-                $event->setArtistName($data['artist_name']);
+                $event->setArtistName($artist);
                 if ($event->getArtistName() !== $previousArtist) {
                     $event->setArtistImageUrl(null);
                 }
@@ -481,11 +482,11 @@ if (!empty($data['duration'])) {
             if ($event->getCategory() === 'music' && !$event->getArtistImageUrl()) {
                 $deezer->applyToEvent($event);
             }
-            if (!empty($data['teams'])) {
-                $event->setTeams($data['teams']);
+            if ($teams = Input::text($data['teams'] ?? null, 255)) {
+                $event->setTeams($teams);
             }
-            if (!empty($data['tournament_name'])) {
-                $event->setTournamentName($data['tournament_name']);
+            if ($tournament = Input::text($data['tournament_name'] ?? null, 255)) {
+                $event->setTournamentName($tournament);
             }
 
             // Souvenir data (score, setlist, note, durée…) only once the event is past
@@ -498,7 +499,7 @@ if (!empty($data['duration'])) {
 
             // Sport specific — score and winner are shared event data
             if (isset($data['final_score'])) {
-                $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
+                $event->setFinalScore(Input::text($data['final_score'], 100));
             }
             if ($event->getCategory() === 'sport' && $event->isPast()) {
                 // Winner checkbox exists only for tennis ('1'/'2' when checked, absent
@@ -510,26 +511,26 @@ if (!empty($data['duration'])) {
             }
 
             // Update setlist if manually entered (allow editing even setlist_fm sources)
-            if (isset($data['setlist']) && is_array($data['setlist'])) {
-                $setlistLines = array_values(array_filter(array_map('trim', $data['setlist'])));
-                if (!empty($setlistLines)) {
+            if (isset($data['setlist'])) {
+                $setlistLines = $this->songLines($data['setlist']);
+                if ($setlistLines !== []) {
                     $event->setSetlist($setlistLines)->setSetlistSource('manual');
                 }
             }
-            if (isset($data['setlist_encores']) && is_array($data['setlist_encores'])) {
-                $encoreLines = array_values(array_filter(array_map('trim', $data['setlist_encores'])));
-                $event->setSetlistEncores($encoreLines ?: null);
+            if (isset($data['setlist_encores'])) {
+                $event->setSetlistEncores($this->songLines($data['setlist_encores']) ?: null);
             }
 
             // Update personal data
-            if (isset($data['rating']) && $data['rating'] !== '') {
-                $participation->setRating((int) $data['rating']);
+            if (isset($data['rating'])) {
+                // Une note vide efface la note : c'est le seul moyen de la retirer
+                $participation->setRating(Input::int($data['rating'], 1, 5));
             }
             if (isset($data['comment'])) {
-                $participation->setComment($data['comment']);
+                $participation->setComment(Input::text($data['comment'], 2000));
             }
             if (isset($data['duration']) && $data['duration'] !== '') {
-                $participation->setDuration((int) $data['duration']);
+                $participation->setDuration(Input::int($data['duration'], 1, 1440));
             }
             // Le statut se déduit de la date de l'événement
             $participation->setStatus(
@@ -541,24 +542,7 @@ if (!empty($data['duration'])) {
                 array_filter($participation->getFriends() ?? [], fn($f) => ($f['type'] ?? '') === 'app'),
                 'userId'
             );
-            $friendsData = [];
-            foreach ($data['friends_app'] ?? [] as $uid) {
-                $friendUser = $userRepo->find($uid);
-                if ($friendUser) {
-                    $friendsData[] = [
-                        'type'        => 'app',
-                        'userId'      => (string) $friendUser->getId(),
-                        'username'    => $friendUser->getUsername(),
-                        'displayName' => $friendUser->getDisplayName(),
-                    ];
-                }
-            }
-            foreach ($data['friends_external'] ?? [] as $name) {
-                $name = trim((string) $name);
-                if ($name !== '') {
-                    $friendsData[] = ['type' => 'external', 'name' => $name];
-                }
-            }
+            $friendsData = $this->buildFriends($data, $userRepo);
             $participation->setFriends($friendsData);
 
             $em->flush();
@@ -702,16 +686,16 @@ if (!empty($data['duration'])) {
 
         // ── Ressenti (personnel) ──
         if (isset($data['rating']) && $data['rating'] !== '') {
-            $participation->setRating((int) $data['rating']);
+            $participation->setRating(Input::int($data['rating'], 1, 5));
         }
         if (isset($data['comment'])) {
-            $participation->setComment(trim($data['comment']) !== '' ? $data['comment'] : null);
+            $participation->setComment(Input::text($data['comment'], 2000));
         }
 
         // ── Résultat (sport, donnée partagée de l'événement) ──
         if ($event->getCategory() === 'sport') {
             if (isset($data['final_score'])) {
-                $event->setFinalScore($data['final_score'] !== '' ? $data['final_score'] : null);
+                $event->setFinalScore(Input::text($data['final_score'], 100));
             }
             // La case vainqueur n'existe que pour le tennis ; les autres sports la déduisent du score
             $event->setWinner(
@@ -721,9 +705,9 @@ if (!empty($data['duration'])) {
         }
 
         // ── Setlist (musique) — saisie manuelle éventuelle ──
-        if (isset($data['setlist']) && is_array($data['setlist'])) {
-            $setlistLines = array_values(array_filter(array_map('trim', $data['setlist'])));
-            if (!empty($setlistLines)) {
+        if (isset($data['setlist'])) {
+            $setlistLines = $this->songLines($data['setlist']);
+            if ($setlistLines !== []) {
                 $event->setSetlist($setlistLines)->setSetlistSource('manual');
             }
         }
@@ -733,24 +717,7 @@ if (!empty($data['duration'])) {
             array_filter($participation->getFriends() ?? [], fn ($f) => ($f['type'] ?? '') === 'app'),
             'userId'
         );
-        $friendsData = [];
-        foreach ($data['friends_app'] ?? [] as $uid) {
-            $friendUser = $userRepo->find($uid);
-            if ($friendUser) {
-                $friendsData[] = [
-                    'type'        => 'app',
-                    'userId'      => (string) $friendUser->getId(),
-                    'username'    => $friendUser->getUsername(),
-                    'displayName' => $friendUser->getDisplayName(),
-                ];
-            }
-        }
-        foreach ($data['friends_external'] ?? [] as $name) {
-            $name = trim((string) $name);
-            if ($name !== '') {
-                $friendsData[] = ['type' => 'external', 'name' => $name];
-            }
-        }
+        $friendsData = $this->buildFriends($data, $userRepo);
         $participation->setFriends($friendsData);
 
         // ── Photo (facultative) ──
@@ -1085,6 +1052,56 @@ if (!empty($data['duration'])) {
             ];
             $participation->setFriends($friends);
         }
+    }
+
+    /**
+     * La liste « Avec qui » telle que postée : amis de l'app (par id, en une seule
+     * requête) puis noms libres. Les ids qui ne sont pas des UUID ou ne
+     * correspondent à personne sont ignorés.
+     *
+     * @return list<array<string, string>>
+     */
+    private function buildFriends(array $data, UserRepository $userRepo): array
+    {
+        $friendsData = [];
+
+        $ids = array_values(array_unique(array_filter(
+            array_map(Input::uuid(...), Input::strings($data['friends_app'] ?? null)),
+        )));
+        if ($ids !== []) {
+            foreach ($userRepo->findByIds($ids) as $friendUser) {
+                $friendsData[] = [
+                    'type'        => 'app',
+                    'userId'      => (string) $friendUser->getId(),
+                    'username'    => $friendUser->getUsername(),
+                    'displayName' => $friendUser->getDisplayName(),
+                ];
+            }
+        }
+        foreach (Input::strings($data['friends_external'] ?? null) as $name) {
+            if ($name = Input::text($name, 100)) {
+                $friendsData[] = ['type' => 'external', 'name' => $name];
+            }
+        }
+
+        return $friendsData;
+    }
+
+    /**
+     * Les titres d'une setlist saisie à la main : une chaîne par ligne, vides écartées.
+     *
+     * @return list<string>
+     */
+    private function songLines(mixed $lines): array
+    {
+        $songs = [];
+        foreach (array_slice(Input::strings($lines), 0, 200) as $line) {
+            if ($name = Input::text($line, 200)) {
+                $songs[] = $name;
+            }
+        }
+
+        return $songs;
     }
 
     #[Route('/participation/{id}/remove-me', name: 'app_event_participation_remove_me', methods: ['POST'])]

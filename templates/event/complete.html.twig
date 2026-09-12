@@ -3,7 +3,7 @@
 {% block title %}Compléter — {{ event.artistName ?? event.tournamentName ?? 'Événement' }} — IWasThere{% endblock %}
 
 {% set name = event.artistName ?? event.tournamentName ?? event.teams ?? 'Événement' %}
-{% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾', 'basket': '🏀'} %}
+{% set type_emoji = {} %}{% for t in event_types() %}{% set type_emoji = type_emoji|merge({(t.value): t.emoji}) %}{% endfor %}
 {% set emoji = type_emoji[event.type] ?? '🎫' %}
 {% set has_setlist = event.category == 'music' and event.setlist|length > 0 %}
 {% set first_rating = participation.rating is null %}

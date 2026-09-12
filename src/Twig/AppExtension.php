@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Twig;
 
 use App\Entity\Event;
+use App\Event\EventCategory;
+use App\Event\EventType;
 use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
 use App\Repository\NotificationRepository;
@@ -28,7 +30,31 @@ class AppExtension extends AbstractExtension
             new TwigFunction('greeting', $this->greeting(...)),
             new TwigFunction('reaction_emojis', $this->reactionEmojis(...)),
             new TwigFunction('event_hue', $this->eventHue(...)),
+            new TwigFunction('event_type', $this->eventType(...)),
+            new TwigFunction('event_types', $this->eventTypes(...)),
         ];
+    }
+
+    /** Le type d'un événement (ou d'une valeur brute), null s'il n'est pas au catalogue. */
+    public function eventType(Event|string|null $type): ?EventType
+    {
+        if ($type instanceof Event) {
+            $type = $type->getType();
+        }
+
+        return $type === null ? null : EventType::tryFrom($type);
+    }
+
+    /**
+     * Les types d'une catégorie ('music', 'sport'), ou tous.
+     *
+     * @return list<EventType>
+     */
+    public function eventTypes(?string $category = null): array
+    {
+        $cat = $category === null ? null : EventCategory::tryFrom($category);
+
+        return $cat === null ? EventType::cases() : EventType::ofCategory($cat);
     }
 
     /**

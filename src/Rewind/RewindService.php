@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Rewind;
 
+use App\Event\EventType;
 use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Repository\EventParticipationRepository;
@@ -137,10 +138,11 @@ final class RewindService
         }
         arsort($byType);
 
-        $labels = [
-            'concert' => 'concerts', 'festival' => 'festivals',
-            'football' => 'matchs de foot', 'rugby' => 'matchs de rugby', 'tennis' => 'matchs de tennis',
-        ];
+        $labels = [];
+        foreach (EventType::cases() as $t) {
+            // plural() préfixe le nombre ; ici seul le nom est voulu
+            $labels[$t->value] = preg_replace('/^\d+ /', '', $t->plural(2));
+        }
 
         return [
             'key' => 'counts',

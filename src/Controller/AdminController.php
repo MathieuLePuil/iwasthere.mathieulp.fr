@@ -9,6 +9,8 @@ use App\Entity\Event;
 use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Entity\Venue;
+use App\Event\EventType;
+use App\Http\Input;
 use App\Repository\AuditLogRepository;
 use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
@@ -90,15 +92,34 @@ class AdminController extends AbstractController
     }
 
     #[Route('/users/{id}/edit', name: 'app_admin_user_edit', methods: ['GET', 'POST'])]
-    public function editUser(User $user, Request $request): Response
+    public function editUser(User $user, Request $request, UserRepository $userRepo): Response
     {
         if ($request->isMethod('POST')) {
             $old = ['email' => $user->getEmail(), 'role' => $user->getRole(), 'displayName' => $user->getDisplayName()];
 
-            $user->setDisplayName((string) $request->request->get('display_name', $user->getDisplayName()));
-            $user->setEmail((string) $request->request->get('email', $user->getEmail()));
-            $user->setBio($request->request->get('bio') ?: null);
-            $user->setRole((string) $request->request->get('role', $user->getRole()));
+            $email = mb_strtolower(Input::text($request->request->get('email'), 180) ?? '');
+            $role = (string) $request->request->get('role', $user->getRole());
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->addFlash('error', 'Adresse email invalide.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+            $taken = $userRepo->findOneByEmail($email);
+            if ($taken !== null && $taken !== $user) {
+                $this->addFlash('error', 'Cette adresse est déjà utilisée par un autre compte.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+            if (!in_array($role, User::ROLES, true)) {
+                $this->addFlash('error', 'Rôle inconnu.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+
+            $user->setDisplayName(Input::text($request->request->get('display_name'), 100) ?? $user->getDisplayName());
+            $user->setEmail($email);
+            $user->setBio(Input::text($request->request->get('bio'), 1000));
+            $user->setRole($role);
 
             if ($old['email'] !== $user->getEmail()) {
                 $this->logAction('update', 'User', (string) $user->getId(), 'email', $old['email'], $user->getEmail());
@@ -163,22 +184,19 @@ class AdminController extends AbstractController
         if ($request->isMethod('POST')) {
             $old = $event->getArtistName() ?? $event->getTournamentName();
 
-            $dateStr = $request->request->get('date');
-            if ($dateStr) {
-                $event->setDate(new \DateTimeImmutable($dateStr));
+            if ($date = Input::date($request->request->get('date'))) {
+                $event->setDate($date);
             }
-            $event->setArtistName($request->request->get('artist_name') ?: null);
-            $event->setTournamentName($request->request->get('tournament_name') ?: null);
-            $event->setTeams($request->request->get('teams') ?: null);
-            $event->setType((string) $request->request->get('type', $event->getType()));
+            $event->setArtistName(Input::text($request->request->get('artist_name'), 255));
+            $event->setTournamentName(Input::text($request->request->get('tournament_name'), 255));
+            $event->setTeams(Input::text($request->request->get('teams'), 255));
+            $type = EventType::tryFrom((string) $request->request->get('type', ''));
+            if ($type !== null) {
+                $event->setType($type->value)->setCategory($type->category()->value);
+            }
 
-            $venueId = $request->request->get('venue_id');
-            if ($venueId) {
-                $venue = $venueRepo->find($venueId);
-                $event->setVenue($venue);
-            } else {
-                $event->setVenue(null);
-            }
+            $venueId = Input::uuid($request->request->get('venue_id'));
+            $event->setVenue($venueId ? $venueRepo->find($venueId) : null);
 
             $event->setUpdatedAt(new \DateTime());
             $this->logAction('update', 'Event', (string) $event->getId(), null, $old, $event->getArtistName() ?? $event->getTournamentName());
@@ -256,12 +274,12 @@ class AdminController extends AbstractController
         if ($request->isMethod('POST')) {
             $old = $venue->getName();
 
-            $venue->setName((string) $request->request->get('name', $venue->getName()));
-            $venue->setAddress((string) $request->request->get('address', $venue->getAddress()));
-            $venue->setLatitude((float) $request->request->get('latitude', $venue->getLatitude()));
-            $venue->setLongitude((float) $request->request->get('longitude', $venue->getLongitude()));
-            $venue->setCapacity($request->request->get('capacity') !== '' ? (int) $request->request->get('capacity') : null);
-            $venue->setVenueType($request->request->get('venue_type') ?: null);
+            $venue->setName(Input::text($request->request->get('name'), 255) ?? $venue->getName());
+            $venue->setAddress(Input::text($request->request->get('address'), 255) ?? '');
+            $venue->setLatitude(max(-90.0, min(90.0, (float) $request->request->get('latitude', $venue->getLatitude()))));
+            $venue->setLongitude(max(-180.0, min(180.0, (float) $request->request->get('longitude', $venue->getLongitude()))));
+            $venue->setCapacity(Input::int($request->request->get('capacity'), 1, 1000000));
+            $venue->setVenueType(Input::text($request->request->get('venue_type'), 20));
             $venue->setUpdatedAt(new \DateTime());
 
             $this->logAction('update', 'Venue', (string) $venue->getId(), 'name', $old, $venue->getName());

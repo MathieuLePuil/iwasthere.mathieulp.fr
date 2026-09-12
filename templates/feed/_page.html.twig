@@ -30,15 +30,14 @@
         {% set count = grp.events|length %}
         {% set n = grp.users|length %}
         {# Un festival reste « un festival » même avec plusieurs groupes vus : même lieu, même jour #}
-        {% set nouns = {
-            'concert':  ['à un concert',         'à ' ~ count ~ ' concerts'],
-            'festival': ['à un festival',        'à un festival'],
-            'football': ['à un match de foot',   'à ' ~ count ~ ' matchs de foot'],
-            'rugby':    ['à un match de rugby',  'à ' ~ count ~ ' matchs de rugby'],
-            'tennis':   ['à un match de tennis', 'à ' ~ count ~ ' matchs de tennis'],
-        } %}
-        {% set pair = nouns[grp.type] ?? ['à un événement', 'à ' ~ count ~ ' événements'] %}
-        {% set noun = count > 1 ? pair[1] : pair[0] %}
+        {% set t = event_type(grp.type) %}
+        {% if t is null %}
+            {% set noun = count > 1 ? 'à ' ~ count ~ ' événements' : 'à un événement' %}
+        {% elseif t.value == 'festival' or count == 1 %}
+            {% set noun = 'à ' ~ t.noun %}
+        {% else %}
+            {% set noun = 'à ' ~ t.plural(count) %}
+        {% endif %}
 
         <div{% if not loop.first %} class="mt-3" style="border-top: 1px solid var(--border-subtle)"{% endif %}>
 

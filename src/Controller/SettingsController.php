@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Http\Input;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use App\Service\AccountDeletionService;
@@ -92,8 +93,11 @@ class SettingsController extends AbstractController
             $prefs[$type->value] = $request->request->getBoolean('notif_' . $type->value);
         }
 
+        // Une heure illisible retombe sur 08:00 plutôt que d'être écrite telle quelle
+        // dans une colonne de 5 caractères.
+        $time = Input::time($request->request->get('notif_completion_time'));
         $user->setNotifPrefs($prefs)
-            ->setNotifCompletionTime($request->request->get('notif_completion_time', '08:00'));
+            ->setNotifCompletionTime($time?->format('H:i') ?? '08:00');
         $em->flush();
 
         $this->addFlash('success', 'Préférences de notifications sauvegardées.');
@@ -148,13 +152,11 @@ class SettingsController extends AbstractController
     {
         $user = $this->getUser();
 
-        $displayName = trim($request->request->get('display_name', ''));
-        if ($displayName) {
+        if ($displayName = Input::text($request->request->get('display_name'), 100)) {
             $user->setDisplayName($displayName);
         }
 
-        $bio = trim($request->request->get('bio', ''));
-        $user->setBio($bio ?: null);
+        $user->setBio(Input::text($request->request->get('bio'), 1000));
 
         $newUsername = strtolower(trim($request->request->get('username', '')));
         if ($newUsername && $newUsername !== $user->getUsername()) {
@@ -182,9 +184,9 @@ class SettingsController extends AbstractController
         UserPasswordHasherInterface $hasher
     ): Response {
         $user = $this->getUser();
-        $current = $request->request->get('current_password');
-        $new = $request->request->get('new_password');
-        $confirm = $request->request->get('confirm_password');
+        $current = (string) $request->request->get('current_password', '');
+        $new = (string) $request->request->get('new_password', '');
+        $confirm = (string) $request->request->get('confirm_password', '');
 
         if (!$user->getPassword() || !$hasher->isPasswordValid($user, $current)) {
             $this->addFlash('error', 'Mot de passe actuel incorrect.');

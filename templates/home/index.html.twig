@@ -113,7 +113,7 @@
             <p class="section-title">Prochain événement</p>
         </div>
         {% if next_event %}
-        {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
+        {% set type_emoji = {} %}{% for t in event_types() %}{% set type_emoji = type_emoji|merge({(t.value): t.emoji}) %}{% endfor %}
         <div class="iwt-hero">
             <div class="iwt-hero-poster{% if not next_event.event.artistImageUrl %} poster-{{ next_event.event.type ?? 'default' }}{% endif %}"
                  style="{% if next_event.event.artistImageUrl %}background: linear-gradient(180deg, rgba(11,13,16,0.2) 0%, rgba(11,13,16,0.75) 100%), url('{{ next_event.event.artistImageUrl }}') center 25%/cover{% else %}--evt-hue: {{ event_hue(next_event.event) }}{% endif %}">

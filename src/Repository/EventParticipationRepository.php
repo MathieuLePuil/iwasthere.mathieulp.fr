@@ -7,6 +7,8 @@ namespace App\Repository;
 use App\Entity\Event;
 use App\Entity\EventParticipation;
 use App\Entity\User;
+use App\Event\EventCategory;
+use App\Event\EventType;
 use App\Stats\FestivalEditions;
 use App\Stats\LuckyTeam;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -666,7 +668,7 @@ class EventParticipationRepository extends ServiceEntityRepository
         $concerts = 0; $festivals = 0; $sports = 0;
         $totalDuration = 0; $totalRating = 0; $ratingCount = 0;
         $artistVariants = []; $venues = []; $years = []; $months = []; $weekdays = [];
-        $sportTypes = ['football' => 0, 'rugby' => 0, 'tennis' => 0];
+        $sportTypes = array_fill_keys(array_map(fn (EventType $t) => $t->value, EventType::ofCategory(EventCategory::Sport)), 0);
         $friends = [];
         $byYear = []; $heatmap = [];
         $firstDate = null; $lastDate = null;

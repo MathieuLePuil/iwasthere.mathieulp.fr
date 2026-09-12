@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Event\EventType;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -88,6 +89,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /** Heure d'envoi des rappels programmés (jour J, complétion), en heure française */
     #[ORM\Column(length: 5, nullable: true, options: ['default' => '08:00'])]
     private ?string $notifCompletionTime = '08:00';
+
+    /** Les rôles que l'admin peut attribuer ; voir getRoles() pour leur traduction Symfony. */
+    public const ROLES = ['user', 'superAdmin'];
 
     #[ORM\Column(length: 20, options: ['default' => 'user'])]
     private string $role = 'user';
@@ -207,8 +211,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /** Les sports collectifs où une équipe porte-bonheur a un sens (le tennis est individuel). */
-    public const COLLECTIVE_SPORTS = ['football', 'rugby'];
+    /**
+     * Les sports collectifs où une équipe porte-bonheur a un sens (le tennis est individuel).
+     *
+     * @return list<string>
+     */
+    public static function collectiveSports(): array
+    {
+        return array_map(
+            fn (EventType $t) => $t->value,
+            array_values(array_filter(EventType::cases(), fn (EventType $t) => $t->isCollective())),
+        );
+    }
 
     /** @return array<string, string> */
     public function getFavoriteTeams(): array
@@ -225,8 +239,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFavoriteTeams(array $teams): static
     {
         $clean = [];
-        foreach (self::COLLECTIVE_SPORTS as $sport) {
-            $name = trim((string) ($teams[$sport] ?? ''));
+        foreach (self::collectiveSports() as $sport) {
+            $name = mb_substr(trim((string) ($teams[$sport] ?? '')), 0, 100);
             if ($name !== '') {
                 $clean[$sport] = $name;
             }

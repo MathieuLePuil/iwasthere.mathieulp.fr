@@ -6,7 +6,9 @@ namespace App\Repository;
 
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
@@ -33,6 +35,31 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $user->setPassword($newHashedPassword);
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
+    }
+
+    /**
+     * Les utilisateurs de ces ids, en une requête. Les ids invalides sont ignorés.
+     *
+     * @param list<string> $ids
+     * @return User[]
+     */
+    public function findByIds(array $ids): array
+    {
+        $binary = [];
+        foreach ($ids as $id) {
+            if (is_string($id) && Uuid::isValid($id)) {
+                $binary[] = Uuid::fromString($id)->toBinary();
+            }
+        }
+        if ($binary === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('u')
+            ->where('u.id IN (:ids)')
+            ->setParameter('ids', $binary, ArrayParameterType::BINARY)
+            ->getQuery()
+            ->getResult();
     }
 
     public function findOneByEmail(string $email): ?User

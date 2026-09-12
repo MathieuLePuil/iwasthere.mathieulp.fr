@@ -48,6 +48,7 @@
   --type-football: #60A5FA; --type-football-soft: rgba(96, 165, 250, 0.14);
   --type-rugby:    #A8B89A; --type-rugby-soft:    rgba(168, 184, 154, 0.14);
   --type-tennis:   #F4D04A; --type-tennis-soft:   rgba(244, 208, 74, 0.12);
+  --type-basket:   #F0955A; --type-basket-soft:   rgba(240, 149, 90, 0.14);
   --type-default:  #8B95A1; --type-default-soft:  rgba(139, 149, 161, 0.18);
 
   --rating:       #FBBF24;
@@ -94,6 +95,7 @@
   --type-football: #2563EB; --type-football-soft: rgba(37, 99, 235, 0.10);
   --type-rugby:    #5A6A2E; --type-rugby-soft:    rgba(90, 106, 46, 0.12);
   --type-tennis:   #806600; --type-tennis-soft:   rgba(128, 102, 0, 0.10);
+  --type-basket:   #B45A1E; --type-basket-soft:   rgba(180, 90, 30, 0.10);
   --type-default:  var(--fg-2); --type-default-soft: rgba(11, 13, 16, 0.06);
 
   --rating:       #B45309;
@@ -526,6 +528,7 @@
   .badge-football { background: var(--type-football-soft); color: var(--type-football); }
   .badge-rugby    { background: var(--type-rugby-soft);    color: var(--type-rugby); }
   .badge-tennis   { background: var(--type-tennis-soft);   color: var(--type-tennis); }
+  .badge-basket   { background: var(--type-basket-soft);   color: var(--type-basket); }
   .badge-default  { background: var(--type-default-soft);  color: var(--type-default); }
 
   /* Section title */
@@ -868,6 +871,7 @@
   .iwt-hero-art-tag--football { color: #7EE8A2; background: rgba(74, 222, 128, 0.10); }
   .iwt-hero-art-tag--rugby    { color: #B0BC9A; background: rgba(163, 177, 138, 0.10); }
   .iwt-hero-art-tag--tennis   { color: #F4D04A; background: rgba(234, 179, 8, 0.10); }
+  .iwt-hero-art-tag--basket   { color: #F0955A; background: rgba(240, 149, 90, 0.10); }
   .iwt-hero-body {
     padding: 14px 16px 18px;
     display: flex;
@@ -1079,6 +1083,12 @@
     var(--evt-tint),
     radial-gradient(120% 80% at 80% 80%, #321414 0%, transparent 60%),
     linear-gradient(180deg, #160808 0%, #060304 100%);
+}
+.poster-basket {
+  background:
+    var(--evt-tint),
+    radial-gradient(120% 80% at 70% 90%, #3A1E0C 0%, transparent 60%),
+    linear-gradient(180deg, #140A04 0%, #060302 100%);
 }
 .poster-default {
   background:
@@ -1346,6 +1356,7 @@
 :root[data-theme="light"] .iwt-hero-art-tag--football { background: #E4F5EA; color: #15803D; }
 :root[data-theme="light"] .iwt-hero-art-tag--rugby    { background: #EFF1E7; color: #5A6A2E; }
 :root[data-theme="light"] .iwt-hero-art-tag--tennis   { background: #F7F0D6; color: #806600; }
+:root[data-theme="light"] .iwt-hero-art-tag--basket   { background: #FBEADF; color: #B45A1E; }
 
 /* ── Transitions de page ──
    Turbo 8 rend chaque visite dans document.startViewTransition() grâce à la meta

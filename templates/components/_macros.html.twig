@@ -1,17 +1,11 @@
 {% macro event_badge(type) %}
     {# Couleurs portées par les classes .badge-* (assets/styles/app.css) plutôt qu'en
        inline : sans ça le thème clair ne pouvait pas les réécrire et affichait du
-       pastel illisible (tennis jaune à 1.5:1 sur blanc). #}
-    {% set labels = {
-        'concert':  '🎤 Concert',
-        'festival': '🎪 Festival',
-        'football': '⚽ Football',
-        'rugby':    '🏉 Rugby',
-        'tennis':   '🎾 Tennis',
-    } %}
-    {% set known = ['concert', 'festival', 'football', 'rugby', 'tennis'] %}
-    <span class="badge {{ type in known ? 'badge-' ~ type : 'badge-default' }}">
-        {{ labels[type] ?? type }}
+       pastel illisible (tennis jaune à 1.5:1 sur blanc). Libellé et emoji viennent
+       de l'enum EventType : un type ajouté là est badgé partout. #}
+    {% set t = event_type(type) %}
+    <span class="badge {{ t ? 'badge-' ~ t.value : 'badge-default' }}">
+        {{ t ? t.labelWithEmoji : type }}
     </span>
 {% endmacro %}
 

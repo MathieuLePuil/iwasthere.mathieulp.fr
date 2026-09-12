@@ -60,7 +60,7 @@
             <div>
                 <p class="text-sm font-medium mb-2" style="color: var(--fg-3)">Sport</p>
                 <div class="grid grid-cols-2 gap-2">
-                    {% for sport in [['football','Football','⚽'],['rugby','Rugby','🏉'],['tennis','Tennis','🎾'],['basket','Basket','🏀']] %}
+                    {% for t in event_types('sport') %}{% set sport = [t.value, t.label, t.emoji] %}
                     <label>
                         <input type="radio" name="type" value="{{ sport[0] }}" class="sr-only"
                                {% if event.type == sport[0] %}checked{% endif %}

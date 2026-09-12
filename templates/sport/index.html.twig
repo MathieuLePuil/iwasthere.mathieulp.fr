@@ -23,7 +23,9 @@
     </div>
 
     {# Modal — équipes porte-bonheur, une par sport collectif, ouverte par le blason ci-dessus #}
-    {% set sport_labels = {'football': '⚽ Football', 'rugby': '🏉 Rugby'} %}
+    {# Une équipe par sport collectif — le tennis est individuel #}
+    {% set sport_labels = {} %}
+    {% for t in event_types('sport')|filter(t => t.collective) %}{% set sport_labels = sport_labels|merge({(t.value): t.labelWithEmoji}) %}{% endfor %}
     <dialog id="team-config" class="iwt-dialog">
         <form method="post" action="{{ path('app_sport_favorite_team') }}">
             <h2 class="font-semibold text-lg mb-1" style="color: var(--fg-1)">Mes équipes 🍀</h2>
@@ -54,12 +56,7 @@
         tab:            tab,
         past_count:     past_count,
         upcoming_count: upcoming_count,
-        types: [
-            {value: '',         label: 'Tous'},
-            {value: 'football', label: '⚽ Football'},
-            {value: 'rugby',    label: '🏉 Rugby'},
-            {value: 'tennis',   label: '🎾 Tennis'}
-        ],
+        types: [{value: '', label: 'Tous'}]|merge(event_types('sport')|map(t => {value: t.value, label: t.labelWithEmoji})),
         active_type: filter_type,
         years:       years,
         active_year: filter_year,

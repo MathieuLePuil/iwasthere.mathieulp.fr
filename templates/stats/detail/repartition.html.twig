@@ -11,13 +11,14 @@
         <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Répartition</h1>
     </div>
 
-    {% set type_labels = {
-        'concert':  {label: 'Concerts',  emoji: '🎤', color: 'var(--type-concert)'},
-        'festival': {label: 'En festival', emoji: '🎪', color: 'var(--type-festival)'},
-        'football': {label: 'Football',  emoji: '⚽', color: 'var(--type-football)'},
-        'rugby':    {label: 'Rugby',     emoji: '🏉', color: 'var(--type-rugby)'},
-        'tennis':   {label: 'Tennis',    emoji: '🎾', color: 'var(--type-tennis)'},
-    } %}
+    {% set type_labels = {} %}
+    {% for t in event_types() %}
+        {% set type_labels = type_labels|merge({(t.value): {
+            label: t.value == 'concert' ? 'Concerts' : (t.value == 'festival' ? 'En festival' : t.label),
+            emoji: t.emoji,
+            color: 'var(--type-' ~ t.value ~ ')',
+        }}) %}
+    {% endfor %}
 
     <div class="card mb-4">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Par type d'événement</h2>
