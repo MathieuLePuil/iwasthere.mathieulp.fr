@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { csrfHeaders } from '../csrf.js';
 
 /**
  * Applique le thème tout de suite puis l'enregistre en tâche de fond : attendre
@@ -25,7 +26,7 @@ export default class extends Controller {
         body.append('theme', theme);
 
         try {
-            const res = await fetch(this.urlValue, { method: 'POST', body, credentials: 'same-origin' });
+            const res = await fetch(this.urlValue, { method: 'POST', body, credentials: 'same-origin', headers: csrfHeaders() });
             if (!res.ok) throw new Error(res.status);
         } catch (_) {
             // Rien n'est persisté : on remet l'ancien thème plutôt que de laisser

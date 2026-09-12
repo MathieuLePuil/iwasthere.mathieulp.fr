@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { csrfHeaders } from '../csrf.js';
 
 /**
  * Le mini-parcours guidé de complétion (le lendemain d'un événement).
@@ -110,7 +111,7 @@ export default class extends Controller {
         try {
             const res = await fetch(this.urlValue, {
                 method: 'POST',
-                headers: { Accept: 'application/json' },
+                headers: csrfHeaders({ Accept: 'application/json' }),
                 body: new FormData(this.element),
             });
             const data = await res.json().catch(() => ({}));

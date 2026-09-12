@@ -81,11 +81,11 @@
                         {% if notif.type == 'friend_request' and notif.data and notif.data.friendId is defined %}
                         <div class="flex gap-2 mt-2 notif-actions">
                             <form method="post" action="{{ path('app_friend_request_accept', {id: notif.data.friendId}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('friend_request') }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                 <button class="btn-primary text-xs py-1.5 px-3">Accepter</button>
                             </form>
                             <form method="post" action="{{ path('app_friend_request_refuse', {id: notif.data.friendId}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('friend_request') }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                 <button class="btn-secondary text-xs py-1.5 px-3">Refuser</button>
                             </form>
                         </div>

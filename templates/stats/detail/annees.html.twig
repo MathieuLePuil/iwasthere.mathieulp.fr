@@ -17,16 +17,16 @@
     <div class="card mb-5">
         <h2 class="font-medium mb-3" style="color: var(--fg-1)">Comparer deux années</h2>
 
-        <form method="get" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4">
+        <form method="get" class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4" data-controller="auto-submit">
             <select name="a" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
-                    onchange="this.form.submit()">
+                    data-action="change->auto-submit#submit">
                 {% for y in cmp.available %}
                 <option value="{{ y }}" {{ y == cmp.a.year ? 'selected' : '' }}>{{ y }}</option>
                 {% endfor %}
             </select>
             <span class="text-xs font-medium" style="color: var(--fg-4)">vs</span>
             <select name="b" class="input-field text-center font-semibold" style="padding-block: 0.5rem"
-                    onchange="this.form.submit()">
+                    data-action="change->auto-submit#submit">
                 {% for y in cmp.available %}
                 <option value="{{ y }}" {{ y == cmp.b.year ? 'selected' : '' }}>{{ y }}</option>
                 {% endfor %}
