@@ -478,6 +478,28 @@ class Event
         return $this->editHistory;
     }
 
+    /** Les cinquante dernières modifications, la plus récente en dernier. */
+    public const EDIT_HISTORY_MAX = 50;
+
+    /**
+     * Consigne une modification d'un champ partagé : qui, quand, de quoi à quoi.
+     * Tout participant peut corriger un événement ; c'est ce qui permet de savoir
+     * qui a changé une date ou un nom, et de revenir dessus.
+     */
+    public function recordEdit(Uuid $by, string $field, ?string $from, ?string $to): static
+    {
+        $this->editHistory[] = [
+            'by'    => (string) $by,
+            'at'    => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+            'field' => $field,
+            'from'  => $from,
+            'to'    => $to,
+        ];
+        $this->editHistory = array_slice($this->editHistory, -self::EDIT_HISTORY_MAX);
+
+        return $this;
+    }
+
     public function setEditHistory(array $editHistory): static
     {
         $this->editHistory = $editHistory;

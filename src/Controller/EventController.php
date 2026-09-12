@@ -459,7 +459,16 @@ class EventController extends AbstractController
                 return $this->redirectToRoute('app_event_edit', ['id' => $event->getId()]);
             }
 
-            // Update event factual data (any participant can edit)
+            // Update event factual data (any participant can edit). Chaque champ
+            // partagé modifié est consigné dans l'historique de l'événement, et les
+            // autres participants sont prévenus d'un changement de date ou de nom.
+            $before = [
+                'date'       => $event->getDate()->format('Y-m-d'),
+                'start_time' => $event->getStartTime()?->format('H:i'),
+                'type'       => $event->getType(),
+                'name'       => $event->getArtistName() ?? $event->getTournamentName(),
+                'teams'      => $event->getTeams(),
+            ];
             if (isset($data['date'])) {
                 $newDate = Input::date($data['date']);
                 if ($newDate === null) {
@@ -472,10 +481,18 @@ class EventController extends AbstractController
             if (array_key_exists('start_time', $data)) {
                 $event->setStartTime(Input::time($data['start_time']));
             }
-            // Le type ne change qu'au sein de sa catégorie : un concert ne devient pas un match
+            // Le type ne change qu'au sein de sa catégorie (un concert ne devient pas un
+            // match), et seulement par son créateur tant que d'autres y participent :
+            // requalifier l'événement de tout le monde n'appartient pas à un seul.
             $newType = EventType::tryFrom((string) ($data['type'] ?? ''));
-            if ($newType !== null && $newType->category()->value === $event->getCategory()) {
-                $event->setType($newType->value);
+            if ($newType !== null && $newType->value !== $event->getType()
+                && $newType->category()->value === $event->getCategory()) {
+                $isCreator = $event->getCreatedByUserId()?->equals($user->getId()) ?? false;
+                if ($isCreator || $event->getParticipantCount() <= 1) {
+                    $event->setType($newType->value);
+                } else {
+                    $this->addFlash('warning', 'Le type d\'un événement partagé ne peut être changé que par la personne qui l\'a créé.');
+                }
             }
             if ($artist = Input::text($data['artist_name'] ?? null, 255)) {
                 $previousArtist = $event->getArtistName();
@@ -490,6 +507,18 @@ class EventController extends AbstractController
             if ($tournament = Input::text($data['tournament_name'] ?? null, 255)) {
                 $event->setTournamentName($tournament);
             }
+            $after = [
+                'date'       => $event->getDate()->format('Y-m-d'),
+                'start_time' => $event->getStartTime()?->format('H:i'),
+                'type'       => $event->getType(),
+                'name'       => $event->getArtistName() ?? $event->getTournamentName(),
+                'teams'      => $event->getTeams(),
+            ];
+            $changed = array_keys(array_filter($before, fn ($v, $k) => $v !== $after[$k], ARRAY_FILTER_USE_BOTH));
+            foreach ($changed as $field) {
+                $event->recordEdit($user->getId(), $field, $before[$field], $after[$field]);
+            }
+            $event->setUpdatedAt(new \DateTime());
 
             // Souvenir data (score, setlist, note, durée…) only once the event is past
             if (!$event->isPast()) {
@@ -544,6 +573,12 @@ class EventController extends AbstractController
 
             $em->flush();
             $this->enrichLater($event, $bus);
+
+            // Les autres participants vivent le même événement : un changement de date
+            // ou de nom les concerne autant, et sans ça ils ne l'apprendraient jamais.
+            if (array_intersect($changed, ['date', 'name', 'teams']) !== []) {
+                $this->notifyOtherParticipants($event, $participation, $participationRepo, $notifier);
+            }
 
             // Notify newly added app friends
             $me = $this->getUser();
@@ -1054,6 +1089,31 @@ class EventController extends AbstractController
                 'displayName' => $user->getDisplayName(),
             ];
             $participation->setFriends($friends);
+        }
+    }
+
+    /** Prévient les autres participants qu'un des leurs vient de corriger l'événement. */
+    private function notifyOtherParticipants(
+        Event $event,
+        EventParticipation $mine,
+        EventParticipationRepository $participationRepo,
+        NotificationDispatcher $notifier,
+    ): void {
+        $editor = $mine->getUser();
+        $name = $event->getArtistName() ?? $event->getTournamentName() ?? $event->getTeams() ?? 'un événement';
+
+        foreach ($participationRepo->findByEventWithUsers($event) as $other) {
+            if ($other->getUser()->getId()->equals($editor->getId())) {
+                continue;
+            }
+            $notifier->dispatch(
+                $other->getUser(),
+                NotificationType::EventUpdated,
+                $editor->getDisplayName() . ' a corrigé un événement',
+                $name . ' — ' . $event->getDate()->format('d/m/Y') . '. Vérifie que ta fiche est toujours juste.',
+                $this->generateUrl('app_event_show', ['id' => (string) $event->getId()]),
+                ['eventId' => (string) $event->getId()],
+            );
         }
     }
 

@@ -22,6 +22,7 @@ enum NotificationType: string
     case FriendActivity = 'friend_activity';
     case FriendSameEvent = 'friend_same_event';
     case FriendReaction = 'friend_reaction';
+    case EventUpdated = 'event_updated';
     case EventDay = 'event_day';
     case EventCompletion = 'event_completion';
     case EventAnniversary = 'event_anniversary';
@@ -37,6 +38,7 @@ enum NotificationType: string
             self::FriendActivity => 'Activité de tes amis',
             self::FriendSameEvent => 'Un ami au même événement',
             self::FriendReaction => 'Réactions à tes événements',
+            self::EventUpdated => 'Un événement de ton journal a été corrigé',
             self::EventDay => 'Rappel le jour J',
             self::EventCompletion => 'Rappel de complétion',
             self::EventAnniversary => 'Anniversaire d\'un événement',
@@ -54,6 +56,7 @@ enum NotificationType: string
             self::FriendActivity => 'Un ami ajoute un événement ou publie un souvenir',
             self::FriendSameEvent => 'On te demande si vous y allez ensemble',
             self::FriendReaction => 'Un ami réagit à un événement de ton journal',
+            self::EventUpdated => 'Un autre participant change la date, le lieu ou le nom d\'un événement partagé',
             self::EventDay => 'Le matin de ton événement',
             self::EventCompletion => 'Le lendemain, pour noter et raconter',
             self::EventAnniversary => 'Le jour où tu y étais, un an plus tôt',
@@ -70,6 +73,7 @@ enum NotificationType: string
             self::FriendActivity => '📣',
             self::FriendSameEvent => '🎟️',
             self::FriendReaction => '🔥',
+            self::EventUpdated => '✏️',
             self::EventDay => '📅',
             self::EventCompletion => '⭐',
             self::EventAnniversary => '🕰️',
@@ -87,6 +91,7 @@ enum NotificationType: string
             self::FriendActivity => 'rgba(96,165,250,0.15)',
             self::FriendSameEvent => 'rgba(176,96,255,0.15)',
             self::FriendReaction => 'rgba(251,146,60,0.15)',
+            self::EventUpdated => 'rgba(96,165,250,0.15)',
             self::EventDay => 'rgba(251,191,36,0.15)',
             self::EventCompletion => 'rgba(251,191,36,0.15)',
             self::EventAnniversary => 'rgba(176,96,255,0.15)',
@@ -112,7 +117,7 @@ enum NotificationType: string
     {
         return [
             'Amis' => [self::FriendRequest, self::FriendAccepted, self::FriendTaggedInEvent],
-            'Activité' => [self::FriendActivity, self::FriendSameEvent, self::FriendReaction],
+            'Activité' => [self::FriendActivity, self::FriendSameEvent, self::FriendReaction, self::EventUpdated],
             'Rappels' => [self::EventDay, self::EventCompletion, self::EventAnniversary],
             'Rewind' => [self::RewindAvailable],
         ];
