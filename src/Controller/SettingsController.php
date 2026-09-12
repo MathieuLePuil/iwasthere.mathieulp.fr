@@ -10,8 +10,10 @@ use App\Participation\CompanionSync;
 use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use App\Service\AccountDeletionService;
+use App\Service\DataExportService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -212,6 +214,22 @@ class SettingsController extends AbstractController
         $em->flush();
         $this->addFlash('success', 'Mot de passe modifié avec succès.');
         return $this->redirectToRoute('app_settings_account_page');
+    }
+
+    /** Toutes les données du compte en JSON (portabilité). */
+    #[Route('/export', name: 'app_settings_export', methods: ['GET'])]
+    public function export(Request $request, DataExportService $exporter): JsonResponse
+    {
+        $user = $this->getUser();
+        $response = new JsonResponse($exporter->export($user, $request->getSchemeAndHttpHost()));
+        $response->setEncodingOptions(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
+            HeaderUtils::DISPOSITION_ATTACHMENT,
+            'iwasthere-' . $user->getUsername() . '-' . date('Y-m-d') . '.json',
+        ));
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
     }
 
     #[Route('/delete', name: 'app_settings_delete_account', methods: ['POST'])]

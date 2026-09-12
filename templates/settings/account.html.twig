@@ -75,6 +75,17 @@
         </a>
     </div>
 
+    {# ── Mes données ── #}
+    <div class="card">
+        <h2 class="font-medium mb-1 fg-1">Mes données</h2>
+        <p class="text-sm mb-3 fg-3">
+            Tout ton journal en un fichier JSON : événements, souvenirs, accompagnants, amis. Il t'appartient.
+        </p>
+        <a href="{{ path('app_settings_export') }}" download class="btn-secondary w-full py-3 block text-center no-underline">
+            Télécharger mes données
+        </a>
+    </div>
+
     {# ── Zone dangereuse ── #}
     <div class="card" style="border: 1px solid rgba(232,155,142,0.3)">
         <h2 class="font-medium mb-2 fg-negative">Zone dangereuse</h2>
