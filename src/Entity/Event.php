@@ -36,7 +36,7 @@ class Event
     private ?Uuid $venueId = null;
 
     #[ORM\ManyToOne(targetEntity: Venue::class)]
-    #[ORM\JoinColumn(name: 'venue_id', referencedColumnName: 'id', nullable: true)]
+    #[ORM\JoinColumn(name: 'venue_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Venue $venue = null;
 
     #[ORM\Column(length: 255, nullable: true)]

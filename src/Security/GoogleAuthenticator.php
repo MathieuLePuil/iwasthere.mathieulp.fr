@@ -91,8 +91,8 @@ class GoogleAuthenticator extends OAuth2Authenticator
 
     private function syncAvatar(User $user, GoogleUser $googleUser): void
     {
-        // Don't overwrite a manually uploaded avatar
-        if ($user->getAvatarUrl() && str_starts_with($user->getAvatarUrl(), '/uploads/avatars/')) {
+        // Une photo déjà en place (téléversée ou déjà synchronisée) n'est pas écrasée
+        if ($user->getAvatarUrl()) {
             return;
         }
 
@@ -101,7 +101,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
             return;
         }
 
-        $localPath = $this->avatarService->downloadFromUrl($remoteUrl, (string) $user->getId());
+        $localPath = $this->avatarService->downloadFromUrl($remoteUrl, $user);
         if ($localPath) {
             $user->setAvatarUrl($localPath);
         }

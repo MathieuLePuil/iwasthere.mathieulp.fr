@@ -90,7 +90,7 @@ class ProfileController extends AbstractController
             return $this->redirectToRoute('app_profile');
         }
 
-        $path = $avatarService->saveUploadedFile($file, (string) $user->getId());
+        $path = $avatarService->save($file, $user);
 
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');

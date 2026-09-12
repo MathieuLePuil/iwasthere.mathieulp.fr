@@ -29,12 +29,12 @@ class Reaction
     private Uuid $id;
 
     #[ORM\ManyToOne(targetEntity: EventParticipation::class)]
-    #[ORM\JoinColumn(name: 'participation_id', referencedColumnName: 'id', nullable: false)]
+    #[ORM\JoinColumn(name: 'participation_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private EventParticipation $participation;
 
     /** L'auteur de la réaction, jamais celui de la participation. */
     #[ORM\ManyToOne(targetEntity: User::class)]
-    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false)]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
     /**

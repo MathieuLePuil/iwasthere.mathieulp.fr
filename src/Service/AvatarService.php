@@ -4,78 +4,45 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\User;
+use App\Image\ImageProcessor;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpKernel\KernelInterface;
 
+/**
+ * La photo de profil. Même règles que la photo d'événement : nom aléatoire (l'id
+ * de l'utilisateur est public, il n'a rien à faire dans une URL de fichier),
+ * réencodage en WebP 400 px qui retire l'EXIF, ancienne photo effacée.
+ */
 class AvatarService
 {
+    public const MAX_SIDE = 400;
+
     private string $uploadDir;
 
-    public function __construct(KernelInterface $kernel)
-    {
+    public function __construct(
+        private readonly ImageProcessor $images,
+        KernelInterface $kernel,
+    ) {
         $this->uploadDir = $kernel->getProjectDir() . '/public/uploads/avatars';
     }
 
-    /**
-     * Saves an uploaded file as the user's avatar, returns the public path or null on failure.
-     */
-    public function saveUploadedFile(UploadedFile $file, string $userId): ?string
+    /** Enregistre la photo et renvoie son chemin public, ou null si le fichier est refusé. */
+    public function save(UploadedFile $file, User $user): ?string
     {
-        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!in_array($file->getMimeType(), $allowedMimes, true)) {
+        if (!$this->images->accepts($file->getMimeType())) {
             return null;
         }
 
-        $ext = match ($file->getMimeType()) {
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-            default      => null,
-        };
-
-        if ($ext === null) {
-            return null;
-        }
-
-        if (!is_dir($this->uploadDir)) {
-            mkdir($this->uploadDir, 0755, true);
-        }
-
-        $filename = $userId . '.' . $ext;
-        $filepath = $this->uploadDir . '/' . $filename;
-
-        // Remove old avatar files with different extension
-        foreach (['jpg', 'png', 'webp', 'gif'] as $oldExt) {
-            $oldFile = $this->uploadDir . '/' . $userId . '.' . $oldExt;
-            if ($oldExt !== $ext && file_exists($oldFile)) {
-                @unlink($oldFile);
-            }
-        }
-
-        try {
-            $file->move($this->uploadDir, $filename);
-        } catch (\Throwable) {
-            return null;
-        }
-
-        return '/uploads/avatars/' . $filename . '?v=' . time();
+        return $this->store($file->getPathname(), $user);
     }
 
-    /**
-     * Downloads an image from $url, stores it locally, returns the public path.
-     * Returns null on failure.
-     */
-    public function downloadFromUrl(string $url, string $userId): ?string
+    /** Télécharge la photo Google et l'enregistre comme un téléversement. */
+    public function downloadFromUrl(string $url, User $user): ?string
     {
         $context = stream_context_create([
-            'http' => [
-                'timeout' => 5,
-                'user_agent' => 'IWasThere/1.0',
-            ],
-            'ssl' => [
-                'verify_peer' => true,
-            ],
+            'http' => ['timeout' => 5, 'user_agent' => 'IWasThere/1.0'],
+            'ssl'  => ['verify_peer' => true],
         ]);
 
         $data = @file_get_contents($url, false, $context);
@@ -83,32 +50,54 @@ class AvatarService
             return null;
         }
 
-        // Detect image type from content
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->buffer($data);
-        $ext = match ($mime) {
-            'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-            default      => null,
-        };
-
-        if ($ext === null) {
+        $tmp = tempnam(sys_get_temp_dir(), 'avatar');
+        if ($tmp === false) {
             return null;
         }
+        try {
+            file_put_contents($tmp, $data);
 
+            return $this->store($tmp, $user);
+        } finally {
+            @unlink($tmp);
+        }
+    }
+
+    /** Efface le fichier de la photo actuelle, s'il y en a une. */
+    public function delete(User $user): void
+    {
+        $file = $this->fileOf($user->getAvatarUrl());
+        if ($file !== null && file_exists($file)) {
+            @unlink($file);
+        }
+    }
+
+    private function store(string $source, User $user): ?string
+    {
         if (!is_dir($this->uploadDir)) {
             mkdir($this->uploadDir, 0755, true);
         }
 
-        $filename = $userId . '.' . $ext;
-        $filepath = $this->uploadDir . '/' . $filename;
-
-        if (file_put_contents($filepath, $data) === false) {
+        $name = bin2hex(random_bytes(16)) . '.webp';
+        if (!$this->images->toWebp($source, $this->uploadDir . '/' . $name, self::MAX_SIDE)) {
             return null;
         }
 
-        return '/uploads/avatars/' . $filename;
+        $this->delete($user);
+
+        return '/uploads/avatars/' . $name;
+    }
+
+    private function fileOf(?string $avatarUrl): ?string
+    {
+        if ($avatarUrl === null || !str_starts_with($avatarUrl, '/uploads/avatars/')) {
+            return null;
+        }
+        $base = basename((string) strtok($avatarUrl, '?'));
+        if ($base === '' || !preg_match('/^[A-Za-z0-9._-]+$/', $base)) {
+            return null;
+        }
+
+        return $this->uploadDir . '/' . $base;
     }
 }

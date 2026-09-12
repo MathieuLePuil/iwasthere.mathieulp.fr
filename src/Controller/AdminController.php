@@ -14,6 +14,7 @@ use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Participation\ParticipationService;
 use App\Service\AccountDeletionService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -194,12 +195,12 @@ class AdminController extends AbstractController
     }
 
     #[Route('/events/{id}/participations/{pid}/delete', name: 'app_admin_participation_delete', methods: ['POST'])]
-    public function deleteParticipation(Event $event, string $pid, EventParticipationRepository $partRepo): Response
+    public function deleteParticipation(Event $event, string $pid, EventParticipationRepository $partRepo, ParticipationService $participations): Response
     {
-        $participation = $partRepo->find($pid);
+        $participation = Uuid::isValid($pid) ? $partRepo->find($pid) : null;
         if ($participation && $participation->getEvent()->getId()->equals($event->getId())) {
             $this->logAction('delete', 'EventParticipation', $pid);
-            $this->em->remove($participation);
+            $participations->remove($participation);
             $this->em->flush();
             $this->addFlash('success', 'Participation supprimée.');
         }
@@ -223,10 +224,10 @@ class AdminController extends AbstractController
     }
 
     #[Route('/events/{id}/delete', name: 'app_admin_event_delete', methods: ['POST'])]
-    public function deleteEvent(Event $event, EventParticipationRepository $participationRepo): Response
+    public function deleteEvent(Event $event, EventParticipationRepository $participationRepo, ParticipationService $participations): Response
     {
         foreach ($participationRepo->findByEvent($event) as $participation) {
-            $this->em->remove($participation);
+            $participations->remove($participation);
         }
         $this->logAction('delete', 'Event', (string) $event->getId(), null, $event->getArtistName() ?? $event->getTournamentName());
         $this->em->remove($event);

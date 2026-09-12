@@ -163,6 +163,20 @@ class NotificationRepository extends ServiceEntityRepository
     /**
      * @return Notification[]
      */
+    /**
+     * Efface les notifications qui citent cette participation (les invitations
+     * « X t'a ajouté à un événement ») : sans leur participation, leurs boutons
+     * accepter/refuser n'auraient plus d'objet.
+     */
+    public function deleteReferencingParticipation(string $participationId): void
+    {
+        $this->getEntityManager()->createQuery(
+            'DELETE FROM App\Entity\Notification n WHERE n.data LIKE :ref'
+        )
+            ->setParameter('ref', '%"participationId":"' . $participationId . '"%')
+            ->execute();
+    }
+
     public function findForUser(User $user, int $limit = 20): array
     {
         return $this->createQueryBuilder('n')

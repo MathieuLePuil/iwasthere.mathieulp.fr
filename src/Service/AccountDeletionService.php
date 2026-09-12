@@ -29,6 +29,8 @@ class AccountDeletionService
         private readonly EntityManagerInterface $em,
         private readonly EventParticipationRepository $participationRepo,
         private readonly ReactionRepository $reactionRepo,
+        private readonly AvatarService $avatars,
+        private readonly EventImageService $images,
     ) {}
 
     public function delete(User $user): void
@@ -39,7 +41,11 @@ class AccountDeletionService
             foreach ($this->participationRepo->findAllByUser($user) as $participation) {
                 $event = $participation->getEvent();
                 $event->setParticipantCount(max(0, $event->getParticipantCount() - 1));
+                // Les fichiers ne sont pas dans la transaction : une photo effacée avant un
+                // rollback serait perdue, mais une photo orpheline sur le disque est pire.
+                $this->images->delete($participation);
             }
+            $this->avatars->delete($user);
             $this->em->flush();
 
             $id = $user->getId()->toBinary();

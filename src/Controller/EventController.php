@@ -12,6 +12,7 @@ use App\Entity\Venue;
 use App\Notification\ActivityNotifier;
 use App\Notification\NotificationDispatcher;
 use App\Notification\NotificationType;
+use App\Participation\ParticipationService;
 use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\FriendRepository;
@@ -755,7 +756,7 @@ if (!empty($data['duration'])) {
         // ── Photo (facultative) ──
         $file = $request->files->get('image');
         if ($file) {
-            $path = $images->saveUploadedFile($file, (string) $event->getId(), (string) $participation->getUser()->getId());
+            $path = $images->save($file, $participation);
             if ($path !== null) {
                 $participation->setImageUrl($path);
             }
@@ -829,7 +830,7 @@ if (!empty($data['duration'])) {
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
         }
 
-        $path = $images->saveUploadedFile($file, (string) $event->getId(), (string) $user->getId());
+        $path = $images->save($file, $participation);
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
@@ -856,7 +857,7 @@ if (!empty($data['duration'])) {
             throw $this->createAccessDeniedException();
         }
 
-        $images->delete((string) $event->getId(), (string) $user->getId());
+        $images->delete($participation);
         $participation->setImageUrl(null);
         $em->flush();
 
@@ -1118,13 +1119,13 @@ if (!empty($data['duration'])) {
         Event $event,
         EntityManagerInterface $em,
         EventParticipationRepository $participationRepo,
+        ParticipationService $participations,
     ): Response {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
 
         if ($participation) {
-            $em->remove($participation);
-            $event->setParticipantCount(max(0, $event->getParticipantCount() - 1));
+            $participations->remove($participation);
             $em->flush();
             $this->addFlash('success', 'Événement supprimé de ton journal.');
         }
