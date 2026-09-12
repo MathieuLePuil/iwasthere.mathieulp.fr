@@ -133,8 +133,11 @@ class SecurityController extends AbstractController
             $user = $userRepo->findOneByEmail($emailAddress);
 
             if ($user) {
+                // Seul le haché est stocké : une lecture de la base ne donne pas de
+                // lien de réinitialisation valide. Le jeton en clair ne vit que
+                // dans l'email.
                 $token = bin2hex(random_bytes(32));
-                $user->setPasswordResetToken($token)
+                $user->setPasswordResetToken(hash('sha256', $token))
                     ->setPasswordResetTokenExpiresAt(new \DateTimeImmutable('+1 hour'));
                 $em->flush();
 
@@ -182,7 +185,9 @@ class SecurityController extends AbstractController
             return $this->redirectToRoute('app_home');
         }
 
-        $user = $userRepo->findOneBy(['passwordResetToken' => $token]);
+        $user = preg_match('/^[a-f0-9]{64}$/', $token)
+            ? $userRepo->findOneBy(['passwordResetToken' => hash('sha256', $token)])
+            : null;
 
         if (!$user || !$user->isPasswordResetTokenValid()) {
             $this->addFlash('error', 'Ce lien est invalide ou a expiré. Redemande une réinitialisation.');
