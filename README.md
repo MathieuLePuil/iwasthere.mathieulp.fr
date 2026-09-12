@@ -132,7 +132,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 
    ⚠️ **Une fois les clés VAPID en prod, ne JAMAIS les changer.** Les abonnements existants seraient invalidés et chaque utilisateur devrait réactiver les notifications. Sauvegarde la paire dans ton gestionnaire de secrets.
 
-3. **Migration de base.** Le rebuild a (re)créé la table `push_subscription`. À déployer :
+3. **Migration de base.** Les abonnements push vivent dans la table `push_subscription` (entité `PushSubscription`). À déployer :
 
    ```bash
    php bin/console doctrine:migrations:migrate --no-interaction
@@ -160,7 +160,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 
    - Sur Chrome desktop : accepter la popup, puis lancer la même commande.
 
-8. **Maintenance.** Le `PushService` supprime automatiquement de la base les abonnements expirés (HTTP 410 / 404 du push server). Aucune commande de purge n'est nécessaire.
+8. **Maintenance.** `NotificationService` supprime automatiquement de la base les abonnements expirés (HTTP 410 / 404 du push server). Aucune commande de purge n'est nécessaire.
 
 9. **Crons.** ⚠️ **Sans eux, aucun push ne part.** Deux lignes, chacune protégée par
    un `flock` pour qu'un passage ne chevauche pas le précédent :
