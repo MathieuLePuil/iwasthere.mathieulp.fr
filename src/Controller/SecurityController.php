@@ -16,6 +16,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -50,6 +51,7 @@ class SecurityController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $em,
         Security $security,
+        RateLimiterFactoryInterface $registerLimiter,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
@@ -58,6 +60,12 @@ class SecurityController extends AbstractController
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
+
+        if ($form->isSubmitted() && !$registerLimiter->create($request->getClientIp() ?? 'unknown')->consume()->isAccepted()) {
+            $this->addFlash('error', 'Trop d\'inscriptions depuis cette adresse. Réessaie dans une heure.');
+
+            return $this->redirectToRoute('app_register');
+        }
 
         if ($form->isSubmitted() && $form->isValid()) {
             $hashedPassword = $passwordHasher->hashPassword($user, $form->get('plainPassword')->getData());
@@ -82,8 +90,12 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/register/check-username', name: 'app_register_check_username')]
-    public function checkUsername(Request $request, UserRepository $userRepo): JsonResponse
+    public function checkUsername(Request $request, UserRepository $userRepo, RateLimiterFactoryInterface $usernameCheckLimiter): JsonResponse
     {
+        if (!$usernameCheckLimiter->create($request->getClientIp() ?? 'unknown')->consume()->isAccepted()) {
+            return $this->json(['available' => null], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
         $username = mb_strtolower(trim($request->query->get('username', '')));
         if (strlen($username) < 3) {
             return $this->json(['available' => null]);
@@ -98,13 +110,26 @@ class SecurityController extends AbstractController
         UserRepository $userRepo,
         EntityManagerInterface $em,
         MailerInterface $mailer,
+        RateLimiterFactoryInterface $forgotPasswordLimiter,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
         }
 
         if ($request->isMethod('POST')) {
-            $emailAddress = trim((string) $request->request->get('email', ''));
+            $emailAddress = mb_strtolower(trim((string) $request->request->get('email', '')));
+
+            // Comptée par adresse IP et par email visé : ni arroser une boîte, ni
+            // tester des adresses en série. Le message reste le même que pour un
+            // envoi, pour ne rien révéler.
+            $ip = $request->getClientIp() ?? 'unknown';
+            if (!$forgotPasswordLimiter->create($ip)->consume()->isAccepted()
+                || !$forgotPasswordLimiter->create('email:' . $emailAddress)->consume()->isAccepted()) {
+                $this->addFlash('success', 'Si un compte existe avec cette adresse, tu recevras un email dans quelques instants.');
+
+                return $this->redirectToRoute('app_forgot_password');
+            }
+
             $user = $userRepo->findOneByEmail($emailAddress);
 
             if ($user) {

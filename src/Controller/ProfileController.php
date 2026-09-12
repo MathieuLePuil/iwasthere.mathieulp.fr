@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -236,7 +237,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/invite', name: 'app_profile_invite', methods: ['POST'])]
-    public function invite(Request $request, MailerInterface $mailer): Response
+    public function invite(Request $request, MailerInterface $mailer, RateLimiterFactoryInterface $inviteLimiter): Response
     {
         $emailAddress = trim((string) $request->request->get('email', ''));
 
@@ -246,6 +247,13 @@ class ProfileController extends AbstractController
         }
 
         $inviter = $this->getUser();
+
+        // Dix par jour et par compte : au-delà, ce n'est plus une invitation, c'est
+        // un relais de courrier au nom du domaine.
+        if (!$inviteLimiter->create((string) $inviter->getId())->consume()->isAccepted()) {
+            $this->addFlash('error', 'Tu as atteint la limite d\'invitations pour aujourd\'hui. Réessaie demain.');
+            return $this->redirectToRoute('app_profile');
+        }
         $registerUrl = $this->generateUrl('app_register', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $html = $this->renderView('emails/friend_invite.html.twig', [
