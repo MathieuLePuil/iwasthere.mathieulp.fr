@@ -108,7 +108,7 @@
                 <td class="px-5 py-3 text-right">
                     <form method="post"
                           action="{{ path('app_admin_participation_delete', {id: event.id, pid: p.id}) }}"
-                          onsubmit="return confirm('Supprimer cette participation ?')">
+                          data-controller="confirm" data-action="submit->confirm#check" data-confirm-title-value="Supprimer cette participation ?" data-confirm-label-value="Supprimer">
                         <button class="text-xs" style="color: var(--negative)">Supprimer</button>
                     </form>
                 </td>

@@ -51,7 +51,7 @@
                            class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
                         {% if user != app.user %}
                         <form method="post" action="{{ path('app_admin_user_delete', {id: user.id}) }}"
-                              onsubmit="return confirm('Supprimer définitivement @{{ user.username }} ?')">
+                              data-controller="confirm" data-action="submit->confirm#check" data-confirm-title-value="Supprimer définitivement @{{ user.username }} ?" data-confirm-label-value="Supprimer">
                             <button class="text-xs" style="color: var(--negative)">Supprimer</button>
                         </form>
                         {% endif %}

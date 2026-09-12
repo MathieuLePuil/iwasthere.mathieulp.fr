@@ -9,9 +9,11 @@ use App\Event\EventCategory;
 use App\Event\EventType;
 use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
+use App\EventListener\SecurityHeadersListener;
 use App\Repository\NotificationRepository;
 use App\Service\EventImageService;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -22,6 +24,7 @@ class AppExtension extends AbstractExtension
         private readonly NotificationRepository $notifRepo,
         private readonly Security $security,
         private readonly EventImageService $images,
+        private readonly RequestStack $requests,
     ) {}
 
     public function getFunctions(): array
@@ -34,7 +37,14 @@ class AppExtension extends AbstractExtension
             new TwigFunction('event_hue', $this->eventHue(...)),
             new TwigFunction('event_type', $this->eventType(...)),
             new TwigFunction('event_types', $this->eventTypes(...)),
+            new TwigFunction('csp_nonce', $this->cspNonce(...)),
         ];
+    }
+
+    /** Le nonce de la requête, à poser sur les rares scripts inline (voir SecurityHeadersListener). */
+    public function cspNonce(): string
+    {
+        return (string) $this->requests->getMainRequest()?->attributes->get(SecurityHeadersListener::NONCE_ATTRIBUTE, '');
     }
 
     /** Le type d'un événement (ou d'une valeur brute), null s'il n'est pas au catalogue. */

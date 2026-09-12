@@ -3,15 +3,17 @@
    effectivement appliqué — seul ce dernier est lu par le CSS. Le rendu serveur pose déjà la valeur
    finale sauf en 'auto', que seul le client sait résoudre (voir le script plus bas). #}
 {% set theme_pref = app.user ? app.user.theme : 'dark' %}
-<html lang="fr" data-theme-pref="{{ theme_pref }}" data-theme="{{ theme_pref == 'light' ? 'light' : 'dark' }}">
+<html lang="fr" data-theme-pref="{{ theme_pref }}" data-theme="{{ theme_pref == 'light' ? 'light' : 'dark' }}"
+      data-user-id="{{ app.user ? app.user.id : '' }}"
+      data-subscribe-url="{{ (app.user and vapid_public_key is defined and vapid_public_key) ? path('app_subscribe') : '' }}">
     <head>
         <meta charset="UTF-8">
         {# Comme myrenault : PAS de metas legacy apple-mobile-web-app-* — avec elles, iOS 26
            lance la PWA dans l'ancien mode "web clip" à la géométrie cassée (bande réservée en
            bas, env() faux). Le manifest display:standalone suffit pour le mode plein écran.
-           maximum-scale coupe le tap-zoom iOS (effet zoom au changement de page) sans interdire
-           le zoom manuel, contrairement à user-scalable=no. #}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+           Pas de maximum-scale : iOS l'ignore de toute façon, et Chrome Android l'honore en
+           coupant le zoom (WCAG 1.4.4). Le tap-zoom iOS est évité par touch-action dans app.css. #}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         {# Fondu entre les pages : Turbo 8 enveloppe le rendu dans document.startViewTransition()
            dès que cette meta vaut same-origin, sur les deux snapshots (l'ancien et le nouveau) —
            d'où sa place dans le layout et pas dans une page. L'animation elle-même vit dans
@@ -25,7 +27,7 @@
            pas le déduire des tokens.
            data-cfasync="false" : sans lui, le Rocket Loader de Cloudflare réécrit le type du script
            et le rejoue après le premier rendu — ce qui rendrait ce bloc inutile (flash garanti). #}
-        <script data-cfasync="false">
+        <script data-cfasync="false" nonce="{{ csp_nonce() }}">
         (function () {
             var root = document.documentElement;
             var mq = window.matchMedia('(prefers-color-scheme: light)');
@@ -43,7 +45,7 @@
         {# Capté ici, très tôt : `beforeinstallprompt` (Chromium) peut se déclencher avant
            que Stimulus ne connecte le contrôleur install-prompt. On garde l'événement de
            côté et on signale sa disponibilité ; le contrôleur le relira. #}
-        <script data-cfasync="false">
+        <script data-cfasync="false" nonce="{{ csp_nonce() }}">
         window.addEventListener('beforeinstallprompt', function (e) {
             e.preventDefault();
             window.__iwtInstallPrompt = e;
@@ -62,7 +64,7 @@
         <title>{% block title %}IWasThere{% endblock %}</title>
         {% block stylesheets %}{% endblock %}
         {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
+            {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
         {% endblock %}
     </head>
     <body class="antialiased">
@@ -76,7 +78,7 @@
             </a>
             <div class="flex-1"></div>
             {%- set _unread = unread_notifications_count() -%}
-            <a href="{{ path('app_notifications') }}" class="iwt-icon-btn"
+            <a href="{{ path('app_notifications') }}" class="iwt-icon-btn" aria-label="Notifications"
                data-controller="notification-badge"
                data-notification-badge-count-value="{{ _unread }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -88,7 +90,7 @@
                     {{ _unread > 9 ? '9+' : _unread }}
                 </span>
             </a>
-            <a href="{{ path('app_settings') }}" class="iwt-icon-btn">
+            <a href="{{ path('app_settings') }}" class="iwt-icon-btn" aria-label="Paramètres">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9 1.65 1.65 0 0 0 4.27 7.18l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -107,7 +109,7 @@
                 {# Un type hors catalogue (addFlash libre) retombe sur 'info' plutôt que de
                    sortir sans couleurs. #}
                 {% set variant = type in ['success', 'error', 'warning'] ? type : 'info' %}
-                <div data-controller="flash-message" class="iwt-flash iwt-flash--{{ variant }}">
+                <div data-controller="flash-message" class="iwt-flash iwt-flash--{{ variant }}" role="{{ variant == 'error' ? 'alert' : 'status' }}" aria-live="polite">
                     {% if variant == 'success' %}
                     <svg class="iwt-flash-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
                     {% elseif variant == 'error' %}
@@ -175,8 +177,8 @@
                     {% if app.user.avatarUrl %}
                         <img src="{{ app.user.avatarUrl }}" class="w-6 h-6 rounded-full object-cover" alt=""
                              style="{{ current_route starts with 'app_profile' ? 'box-shadow: 0 0 0 2px var(--positive)' : '' }}"
-                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                        <div class="w-6 h-6 rounded-full items-center justify-center text-[10px] font-bold" style="display:none;background: var(--positive-soft); color: var(--positive)">{{ app.user.displayName|first|upper }}</div>
+                             data-controller="img-fallback" data-action="error->img-fallback#swap">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" hidden style="background: var(--positive-soft); color: var(--positive)">{{ app.user.displayName|first|upper }}</div>
                     {% else %}
                         <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
                              style="background: var(--positive-soft); color: var(--positive)">
@@ -194,44 +196,6 @@
         {% include 'components/_install_prompt.html.twig' %}
         {% endif %}
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-            {% if not app.user %}
-            // Personne n'est connecté : les pages du compte précédent quittent le cache
-            // hors-ligne (voir le gestionnaire « clear-pages » du service worker).
-            navigator.serviceWorker.ready.then(function (reg) {
-                reg.active && reg.active.postMessage({ type: 'clear-pages' });
-            }).catch(() => {});
-            {% endif %}
-        }
-    </script>
-    {% if app.user and vapid_public_key is defined and vapid_public_key %}
-    <script data-turbo-eval="false">
-    (function() {
-        if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
-        navigator.serviceWorker.ready.then(function(reg) {
-            return reg.pushManager.getSubscription();
-        }).then(function(sub) {
-            if (!sub) return;
-            // Renvoyé seulement si l'abonnement a changé : le poster à chaque page
-            // réécrivait la liste des abonnements pour rien.
-            var key = 'iwt-push-sent';
-            var fingerprint = sub.endpoint + '|' + '{{ app.user.id }}';
-            try { if (localStorage.getItem(key) === fingerprint) return; } catch (e) {}
-            fetch('{{ path('app_subscribe') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                },
-                body: JSON.stringify(sub),
-            }).then(function (res) {
-                if (res.ok) { try { localStorage.setItem(key, fingerprint); } catch (e) {} }
-            }).catch(() => {});
-        }).catch(() => {});
-    })();
-    </script>
-    {% endif %}
+    {# Service worker, purge à la déconnexion et renvoi de l'abonnement push : assets/pwa.js #}
     </body>
 </html>

@@ -71,7 +71,7 @@
 <div class="card" style="border: 1px solid rgba(232,155,142,0.3); background: rgba(232,155,142,0.04)">
     <h3 class="font-medium mb-3" style="color: var(--negative)">⚠️ Actions irréversibles</h3>
     <form method="post" action="{{ path('app_admin_user_delete', {id: profile_user.id}) }}"
-          onsubmit="return confirm('Supprimer définitivement le compte de {{ profile_user.displayName }} ?')">
+          data-controller="confirm" data-action="submit->confirm#check" data-confirm-title-value="Supprimer définitivement le compte de {{ profile_user.displayName }} ?" data-confirm-label-value="Supprimer">
         <button class="btn-danger px-4 py-2">Supprimer ce compte</button>
     </form>
 </div>

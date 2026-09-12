@@ -53,7 +53,7 @@
     <div class="iwt-toolbar mb-3">
         {% if sorts is not empty %}
         <select class="iwt-select iwt-select--sort{{ active_sort != '' and active_sort != default_sort ? ' is-active' : '' }}"
-                aria-label="Trier les événements" onchange="location.assign(this.value)">
+                aria-label="Trier les événements" data-controller="nav-select" data-action="change->nav-select#go">
             {% for s in sorts %}
                 <option value="{{ path(route, base|merge({sort: s.value, page: null})) }}"
                         {{ active_sort == s.value or (active_sort == '' and s.value == default_sort) ? 'selected' : '' }}>{{ s.label }}</option>
@@ -63,7 +63,7 @@
 
         {% if years is not empty %}
         <select class="iwt-select iwt-select--year{{ active_year != '' ? ' is-active' : '' }}"
-                aria-label="Filtrer par année" onchange="location.assign(this.value)">
+                aria-label="Filtrer par année" data-controller="nav-select" data-action="change->nav-select#go">
             <option value="{{ path(route, base|merge({year: null, page: null})) }}"
                     {{ active_year == '' ? 'selected' : '' }}>Toutes les années</option>
             {% for y in years %}

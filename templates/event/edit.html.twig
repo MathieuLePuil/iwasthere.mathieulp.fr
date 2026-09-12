@@ -11,7 +11,7 @@
         <h1 class="text-xl font-semibold" style="color: var(--fg-1)">Modifier la fiche</h1>
     </div>
 
-    <form method="post" class="space-y-5" data-controller="form-loader souvenir-gate">
+    <form method="post" class="space-y-5" data-controller="form-loader souvenir-gate event-form">
 
         {# Event info — date + type #}
         <div class="card space-y-4">
@@ -37,9 +37,8 @@
                     <label class="flex-1">
                         <input type="radio" name="type" value="concert" class="sr-only"
                                {% if event.type == 'concert' %}checked{% endif %}
-                               onchange="updateEditTypeBtns()">
-                        <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
-                             style="border-color: {{ event.type == 'concert' ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == 'concert' ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                               data-action="change->event-form#typeChanged">
+                        <div class="iwt-type-btn text-center p-3 rounded-xl border-2 transition-all cursor-pointer{{ event.type == 'concert' ? ' is-selected' : '' }}" data-type-btn>
                             <span class="text-xl">🎤</span>
                             <p class="text-xs font-medium mt-1">Concert</p>
                         </div>
@@ -47,9 +46,8 @@
                     <label class="flex-1">
                         <input type="radio" name="type" value="festival" class="sr-only"
                                {% if event.type == 'festival' %}checked{% endif %}
-                               onchange="updateEditTypeBtns()">
-                        <div class="text-center p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
-                             style="border-color: {{ event.type == 'festival' ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == 'festival' ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                               data-action="change->event-form#typeChanged">
+                        <div class="iwt-type-btn text-center p-3 rounded-xl border-2 transition-all cursor-pointer{{ event.type == 'festival' ? ' is-selected' : '' }}" data-type-btn>
                             <span class="text-xl">🎪</span>
                             <p class="text-xs font-medium mt-1">Festival</p>
                         </div>
@@ -64,9 +62,8 @@
                     <label>
                         <input type="radio" name="type" value="{{ sport[0] }}" class="sr-only"
                                {% if event.type == sport[0] %}checked{% endif %}
-                               onchange="updateEditTypeBtns(); syncWinnerRequired()">
-                        <div class="flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer" data-type-btn
-                             style="border-color: {{ event.type == sport[0] ? 'var(--positive)' : 'var(--border-default)' }}; background: {{ event.type == sport[0] ? 'var(--positive-soft)' : 'var(--bg-2)' }}">
+                               data-action="change->event-form#typeChanged">
+                        <div class="iwt-type-btn flex items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer{{ event.type == sport[0] ? ' is-selected' : '' }}" data-type-btn>
                             <span class="text-lg">{{ sport[2] }}</span>
                             <p class="text-sm font-medium">{{ sport[1] }}</p>
                         </div>
@@ -76,43 +73,7 @@
             </div>
             {% endif %}
         </div>
-        <script>
-        function updateEditTypeBtns() {
-            document.querySelectorAll('[data-type-btn]').forEach(function(div) {
-                var radio = div.closest('label').querySelector('input[type="radio"]');
-                div.style.borderColor = radio.checked ? 'var(--positive)' : 'var(--border-default)';
-                div.style.background  = radio.checked ? 'var(--positive-soft)' : 'var(--bg-2)';
-            });
-        }
-        function exclusiveWinner(el) {
-            if (!el.checked) return;
-            document.querySelectorAll('input[name="winner"]').forEach(function(c) {
-                if (c !== el) c.checked = false;
-            });
-        }
 
-        /* Un score de tennis est noté du point de vue du vainqueur : il ne dit pas qui a
-           gagné, la case est donc obligatoire dès qu'un score est saisi. On passe par la
-           validation native plutôt qu'un preventDefault — le navigateur bloque l'envoi,
-           affiche le message et cible la case tout seul, et Turbo n'envoie rien tant que
-           le formulaire est invalide. */
-        function syncWinnerRequired() {
-            var boxes = document.querySelectorAll('input[name="winner"]');
-            var score = document.querySelector('input[name="final_score"]');
-            if (!boxes.length || !score) return;
-
-            // Les cases ne sont rendues que pour le tennis, mais le sport reste modifiable
-            // ici : repasser sur football doit lever l'exigence sans recharger la page.
-            var type = document.querySelector('input[name="type"]:checked');
-            var missing = (!type || type.value === 'tennis')
-                && score.value.trim() !== ''
-                && ![].some.call(boxes, function(c) { return c.checked; });
-
-            [].forEach.call(boxes, function(c) {
-                c.setCustomValidity(missing ? 'Indique le vainqueur : un score de tennis ne permet pas de le déduire.' : '');
-            });
-        }
-        </script>
 
         {# Souvenir data (ressenti, setlist, résultats, durée) — only once the event is past #}
         {% if not event.isPast %}
@@ -195,7 +156,7 @@
                 {# Tennis is scored from the winner's side, sets split on spaces ("6/4 7/5") —
                    the convention every row in the database follows. The placeholder used to
                    suggest a format no actual data uses, which is what misled the parser. #}
-                <input type="text" name="final_score" class="input-field" oninput="syncWinnerRequired()"
+                <input type="text" name="final_score" class="input-field" data-action="input->event-form#syncWinnerRequired"
                        placeholder="{{ event.type == 'tennis' ? 'ex : 6/4 7/5' : 'ex : 3-1' }}" value="{{ event.finalScore }}">
             </div>
             {# Tennis only — for the other sports the winner is derived from the score #}
@@ -211,7 +172,7 @@
                            style="border-color: var(--border-default); background: var(--bg-2)">
                         <input type="checkbox" name="winner" value="{{ i }}"
                                style="accent-color: var(--positive)"
-                               onchange="exclusiveWinner(this); syncWinnerRequired()"
+                               data-action="change->event-form#exclusiveWinner"
                                {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winnerParts[i-1]|lower) %}checked{% endif %}>
                         <span class="text-sm font-medium truncate" style="color: var(--fg-2)">🏆 {{ winnerParts[i-1] }}</span>
                     </label>
@@ -221,7 +182,7 @@
             {# État initial : une fiche déjà enregistrée avec un score mais sans vainqueur
                doit bloquer dès l'ouverture. Placé après les cases pour qu'elles existent,
                et hors DOMContentLoaded, qui ne se redéclenche pas sur une visite Turbo. #}
-            <script>syncWinnerRequired();</script>
+
             {% endif %}
         </div>
         {% endif %}

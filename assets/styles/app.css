@@ -158,7 +158,39 @@
     outline: 2px solid rgba(176, 96, 255, 0.5);
     outline-offset: 2px;
   }
+  /* Les choix rendus par un bouton radio caché (.sr-only / .peer) : le focus clavier
+     se voit sur l'élément visible qui suit, sinon on tabule dans le vide. */
+  .sr-only:focus-visible + *,
+  .peer:focus-visible + * {
+    outline: 2px solid rgba(176, 96, 255, 0.5);
+    outline-offset: 2px;
+  }
+  /* Coupe le zoom au double-tap (ce que faisait maximum-scale=1) sans interdire le
+     pinch-zoom, que Chrome Android bloquait avec — WCAG 1.4.4. */
+  body { touch-action: manipulation; }
 }
+
+/* ── Choix de type (formulaire d'événement) ──
+   L'état sélectionné est une classe, posée au rendu et par le contrôleur event-form,
+   plutôt que des couleurs inline que le thème clair ne pouvait pas réécrire. */
+.iwt-type-btn { border-color: var(--border-default); background: var(--bg-2); }
+.iwt-type-btn.is-selected { border-color: var(--positive); background: var(--positive-soft); }
+
+/* ── Interrupteur (notifications push) ── */
+.iwt-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+.iwt-switch input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.iwt-switch-track {
+  width: 48px; height: 26px; border-radius: 999px; position: relative; display: block;
+  background: var(--bg-3); transition: background .2s;
+}
+.iwt-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--fg-4); transition: transform .2s, background .2s;
+}
+.iwt-switch input:checked + .iwt-switch-track { background: rgba(61, 220, 151, 0.30); }
+.iwt-switch input:checked + .iwt-switch-track .iwt-switch-thumb { background: var(--positive); transform: translateX(22px); }
+.iwt-switch input:disabled + .iwt-switch-track { opacity: 0.45; }
+.iwt-switch input:focus-visible + .iwt-switch-track { outline: 2px solid rgba(176, 96, 255, 0.5); outline-offset: 2px; }
 
 /* bg-white override — Tailwind hardcodes 'white', not a theme variable */
 .bg-white { background-color: var(--bg-1) !important; }

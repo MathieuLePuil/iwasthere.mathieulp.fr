@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 
 /**
@@ -14,11 +16,28 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
  * prod tourne derrière un proxy dont on ne maîtrise pas la configuration.
  * HSTS n'est envoyé qu'en HTTPS — sur localhost en HTTP il serait ignoré, et
  * sur un domaine de test il pourrait le verrouiller pour un an.
+ *
+ * La CSP n'admet aucun script inline : tout le JS vit dans assets/, et les deux
+ * seuls scripts de tête (thème, installabilité) et l'importmap portent un nonce
+ * tiré par requête (csp_nonce() dans Twig). Les styles inline restent admis :
+ * les templates en portent un millier, et un style ne fait pas exécuter de code.
  */
-#[AsEventListener(event: ResponseEvent::class)]
+#[AsEventListener(event: RequestEvent::class, method: 'onRequest', priority: 100)]
+#[AsEventListener(event: ResponseEvent::class, method: 'onResponse')]
 final class SecurityHeadersListener
 {
-    public function __invoke(ResponseEvent $event): void
+    public const NONCE_ATTRIBUTE = 'csp_nonce';
+
+    private const NO_STORE_PREFIXES = ['/notifications', '/settings', '/admin', '/login', '/register', '/forgot-password', '/reset-password'];
+
+    public function onRequest(RequestEvent $event): void
+    {
+        if ($event->isMainRequest()) {
+            $event->getRequest()->attributes->set(self::NONCE_ATTRIBUTE, base64_encode(random_bytes(16)));
+        }
+    }
+
+    public function onResponse(ResponseEvent $event): void
     {
         if (!$event->isMainRequest()) {
             return;
@@ -37,6 +56,7 @@ final class SecurityHeadersListener
         $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         // Ce que l'app n'utilise pas est coupé, y compris pour les scripts tiers.
         $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+        $headers->set('Content-Security-Policy', $this->csp($request));
 
         // Ces pages ne doivent survivre ni dans le cache du navigateur ni dans celui
         // du service worker (qui lit ce même en-tête) : fil de notifications,
@@ -50,5 +70,26 @@ final class SecurityHeadersListener
         }
     }
 
-    private const NO_STORE_PREFIXES = ['/notifications', '/settings', '/admin', '/login', '/register', '/forgot-password', '/reset-password'];
+    private function csp(Request $request): string
+    {
+        $nonce = (string) $request->attributes->get(self::NONCE_ATTRIBUTE, '');
+
+        return implode('; ', [
+            "default-src 'self'",
+            // Le ticket souvenir dessine des blobs et des data: URI ; les photos d'artistes
+            // et de profil sont servies d'ici, mais un avatar d'avant la synchronisation
+            // Google pouvait rester distant.
+            "img-src 'self' data: blob: https:",
+            "script-src 'self' 'nonce-{$nonce}'",
+            "style-src 'self' 'unsafe-inline'",
+            "font-src 'self'",
+            "connect-src 'self'",
+            "worker-src 'self'",
+            "manifest-src 'self'",
+            "frame-ancestors 'self'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "object-src 'none'",
+        ]);
+    }
 }

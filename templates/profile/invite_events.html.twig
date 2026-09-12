@@ -27,13 +27,13 @@
             </p>
         </div>
     {% else %}
-        <form method="post" id="invite-events-form">
+        <form method="post" id="invite-events-form" data-controller="invite-select">
 
             {# Select all #}
             <label class="card flex items-center gap-3 mb-3 cursor-pointer select-none">
-                <input type="checkbox" id="invite-select-all" class="w-5 h-5 rounded accent-[var(--positive)]">
+                <input type="checkbox" id="invite-select-all" data-invite-select-target="all" data-action="change->invite-select#toggleAll" class="w-5 h-5 rounded accent-[var(--positive)]">
                 <span class="font-medium text-sm" style="color: var(--fg-1)">Tout sélectionner</span>
-                <span class="ml-auto text-xs" style="color: var(--fg-4)" id="invite-count">0 / {{ participations|length }}</span>
+                <span class="ml-auto text-xs" style="color: var(--fg-4)" id="invite-count" data-invite-select-target="count">0 / {{ participations|length }}</span>
             </label>
 
             <div class="space-y-3 mb-40">
@@ -53,37 +53,14 @@
             </div>
 
             <div class="fixed left-0 right-0 z-40 px-4 pt-3 pb-3" style="bottom: calc(4rem + min(env(safe-area-inset-bottom, 0px), 12px)); background: var(--bg-1); border-top: 1px solid var(--border-subtle)">
-                <button type="submit" id="invite-submit" class="btn-primary w-full py-3" disabled>
+                <button type="submit" id="invite-submit" data-invite-select-target="submit" class="btn-primary w-full py-3" disabled>
                     Inviter aux événements sélectionnés
                 </button>
             </div>
 
         </form>
 
-        <script>
-        (function () {
-            const form = document.getElementById('invite-events-form');
-            if (!form) return;
-            const selectAll = document.getElementById('invite-select-all');
-            const boxes = form.querySelectorAll('.invite-event-checkbox');
-            const counter = document.getElementById('invite-count');
-            const submit = document.getElementById('invite-submit');
 
-            function refresh() {
-                const checked = form.querySelectorAll('.invite-event-checkbox:checked').length;
-                counter.textContent = checked + ' / ' + boxes.length;
-                selectAll.checked = checked === boxes.length;
-                submit.disabled = checked === 0;
-            }
-
-            selectAll.addEventListener('change', function () {
-                boxes.forEach(function (b) { b.checked = selectAll.checked; });
-                refresh();
-            });
-            boxes.forEach(function (b) { b.addEventListener('change', refresh); });
-            refresh();
-        })();
-        </script>
     {% endif %}
 
 </div>

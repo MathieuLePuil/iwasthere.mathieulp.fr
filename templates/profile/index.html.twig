@@ -8,8 +8,8 @@
 
     {# Profile header — always visible #}
     <div class="flex items-center gap-4 mb-5">
-        <form method="post" action="{{ path('app_profile_avatar') }}" enctype="multipart/form-data" id="avatar-form">
-            <button type="button" onclick="document.getElementById('avatar-input').click()" class="relative block" style="width:64px;height:64px">
+        <form method="post" action="{{ path('app_profile_avatar') }}" enctype="multipart/form-data" id="avatar-form" data-controller="auto-submit">
+            <label for="avatar-input" class="relative block cursor-pointer" style="width:64px;height:64px" aria-label="Changer ma photo de profil">
                 {% if app.user.avatarUrl %}
                     <img src="{{ app.user.avatarUrl }}" class="w-16 h-16 rounded-full object-cover" alt="">
                 {% else %}
@@ -18,8 +18,8 @@
                 <div class="absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center" style="background: var(--positive)">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
-            </button>
-            <input type="file" id="avatar-input" name="avatar" accept="image/*" class="sr-only" onchange="document.getElementById('avatar-form').submit()">
+            </label>
+            <input type="file" id="avatar-input" name="avatar" accept="image/*" class="sr-only" data-action="change->auto-submit#submit">
         </form>
         <div class="flex-1">
             <h1 class="text-xl font-semibold" style="color: var(--fg-1); letter-spacing: -0.01em">{{ app.user.displayName }}</h1>

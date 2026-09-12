@@ -14,7 +14,7 @@
 <form method="post"
       enctype="multipart/form-data"
       class="cmpl"
-      data-controller="completion"
+      data-controller="event-form completion"
       data-completion-url-value="{{ path('app_event_complete', {id: event.id}) }}"
       data-completion-show-url-value="{{ path('app_event_show', {id: event.id}) }}">
 
@@ -94,7 +94,7 @@
                 {% for i in [1, 2] %}
                 <label class="cmpl-winner-opt">
                     <input type="checkbox" name="winner" value="{{ i }}" class="sr-only"
-                           onchange="cmplExclusiveWinner(this)"
+                           data-action="change->event-form#exclusiveWinner"
                            {% if event.winner == i ~ '' or (event.winner and event.winner|lower|trim == winner_parts[i-1]|lower) %}checked{% endif %}>
                     <span class="cmpl-winner-box">🏆 {{ winner_parts[i-1] }}</span>
                 </label>
@@ -260,13 +260,5 @@
     </div>
 </form>
 
-<script>
-    /* Case vainqueur exclusive (tennis) : cocher l'un décoche l'autre. */
-    function cmplExclusiveWinner(el) {
-        if (!el.checked) return;
-        el.closest('.cmpl-winner').querySelectorAll('input[name="winner"]').forEach(function (c) {
-            if (c !== el) c.checked = false;
-        });
-    }
-</script>
+
 {% endblock %}

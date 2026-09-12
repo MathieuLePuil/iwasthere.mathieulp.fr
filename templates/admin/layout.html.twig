@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Admin{% endblock %} — IWasThere Admin</title>
+    {# Même jeton que le layout principal : csrf.js le joint à chaque formulaire de l'admin #}
+    <meta name="csrf-token" content="{{ csrf_token('app') }}">
+    <link rel="stylesheet" href="{{ asset('styles/fonts.css') }}">
     {% block stylesheets %}{% endblock %}
-    {% block javascripts %}{{ importmap('app') }}{% endblock %}
+    {% block javascripts %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}
 </head>
 <body class="min-h-screen" style="background: var(--bg-0); height: auto; overflow: auto; display: block">
 

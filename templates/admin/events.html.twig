@@ -69,7 +69,7 @@
                         <a href="{{ path('app_admin_event_edit', {id: event.id}) }}"
                            class="text-xs font-medium" style="color: #60A5FA">Éditer</a>
                         <form method="post" action="{{ path('app_admin_event_delete', {id: event.id}) }}"
-                              onsubmit="return confirm('Supprimer cet événement et toutes les participations ?')">
+                              data-controller="confirm" data-action="submit->confirm#check" data-confirm-title-value="Supprimer cet événement et toutes les participations ?" data-confirm-label-value="Supprimer">
                             <button class="text-xs" style="color: var(--negative)">Supprimer</button>
                         </form>
                     </div>

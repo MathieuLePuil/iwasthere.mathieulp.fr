@@ -18,120 +18,20 @@
             Pour désactiver, va dans Réglages iPhone → Notifications → IWasThere.
         </p>
 
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
-            <div style="flex:1; min-width:0;">
-                <div style="font-size:.875rem; font-weight:500; color:var(--fg-1)">Activer les notifications</div>
-            </div>
-            <label style="position:relative; display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0;">
-                <input type="checkbox" id="notif-toggle"
-                       style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;">
-                <span id="notif-track"
-                      style="width:48px; height:26px; background:#2c2c2e; border-radius:999px;
-                             position:relative; display:block; transition:background .2s;">
-                    <span id="notif-thumb"
-                          style="position:absolute; top:2px; left:2px; width:22px; height:22px;
-                                 background:#888; border-radius:50%;
-                                 transition:transform .2s, background .2s;"></span>
-                </span>
+        <div class="flex items-center justify-between gap-4"
+             data-controller="push-toggle"
+             data-push-toggle-public-key-value="{{ vapid_public_key|default('') }}"
+             data-push-toggle-url-value="{{ path('app_subscribe') }}">
+            <label for="notif-toggle" class="flex-1 min-w-0 text-sm font-medium" style="color: var(--fg-1)">Activer les notifications</label>
+            <label class="iwt-switch">
+                <input type="checkbox" id="notif-toggle" data-push-toggle-target="toggle" data-action="change->push-toggle#change">
+                <span class="iwt-switch-track"><span class="iwt-switch-thumb"></span></span>
             </label>
         </div>
     </div>
+    </div>
 
-    <script data-turbo-eval="false">
-    (function() {
-        const toggle = document.getElementById('notif-toggle');
-        const track = document.getElementById('notif-track');
-        const thumb = document.getElementById('notif-thumb');
-        const publicKey = "{{ vapid_public_key|default('') }}";
-        const subscribeUrl = "{{ path('app_subscribe') }}";
 
-        function urlBase64ToUint8Array(b64) {
-            const pad = '='.repeat((4 - b64.length % 4) % 4);
-            const base64 = (b64 + pad).replace(/\-/g, '+').replace(/_/g, '/');
-            const raw = window.atob(base64);
-            const out = new Uint8Array(raw.length);
-            for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
-            return out;
-        }
-
-        function paint(on) {
-            if (on) {
-                track.style.background = 'rgba(61,220,151,0.30)';
-                thumb.style.background = '#3DDC97';
-                thumb.style.transform = 'translateX(22px)';
-            } else {
-                track.style.background = '#2c2c2e';
-                thumb.style.background = '#888';
-                thumb.style.transform = 'translateX(0)';
-            }
-        }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        }
-
-        if (!publicKey) {
-            toggle.disabled = true;
-        } else {
-            if (Notification.permission === 'granted') {
-                toggle.checked = true;
-                paint(true);
-            } else if (Notification.permission === 'denied') {
-                toggle.disabled = true;
-            }
-
-            toggle.addEventListener('change', async function() {
-                paint(this.checked);
-                if (this.checked) {
-                    const ok = await subscribeUser();
-                    if (!ok) {
-                        this.checked = false;
-                        paint(false);
-                    }
-                } else {
-                    await unsubscribeUser();
-                }
-            });
-        }
-
-        async function subscribeUser() {
-            if (!('serviceWorker' in navigator)) return false;
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') return false;
-
-                const reg = await navigator.serviceWorker.ready;
-                let sub = await reg.pushManager.getSubscription();
-                if (!sub) {
-                    sub = await reg.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(publicKey)
-                    });
-                }
-
-                const response = await fetch(subscribeUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(sub)
-                });
-                return response.ok;
-            } catch (e) {
-                console.error('subscribeUser error:', e);
-                return false;
-            }
-        }
-
-        async function unsubscribeUser() {
-            try {
-                const reg = await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) await sub.unsubscribe();
-            } catch (e) {
-                console.error('unsubscribeUser error:', e);
-            }
-        }
-    })();
-    </script>
     {% endif %}
 
     {# ── Préférences : une ligne par type de notification, groupées ── #}
