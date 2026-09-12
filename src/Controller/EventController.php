@@ -384,15 +384,16 @@ class EventController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_event_show')]
-    public function show(Event $event, EventParticipationRepository $participationRepo): Response
+    public function show(Event $event, EventParticipationRepository $participationRepo, FriendRepository $friendRepo): Response
     {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
 
-        // Get all participants' public/visible data
-        $allParticipations = $participationRepo->findVisibleForEvent($event, $user);
+        $allParticipations = $participationRepo->findByEventWithUsers($event);
 
-        // Detect if the current user is tagged in someone else's participation
+        // Detect if the current user is tagged in someone else's participation. On
+        // regarde toutes les participations, visibles ou non : qui m'a tagué veut
+        // que je le voie.
         $taggedIn = null;
         if (!$participation) {
             $userId = (string) $user->getId();
@@ -406,10 +407,21 @@ class EventController extends AbstractController
             }
         }
 
+        // La liste des participants respecte l'audience « événements » de chacun :
+        // un journal privé n'apparaît qu'à son auteur, un journal « amis » à ses amis.
+        $friendIds = $friendRepo->findConfirmedFriendIds($user);
+        $visible = array_values(array_filter($allParticipations, function (EventParticipation $p) use ($user, $friendIds) {
+            $author = $p->getUser();
+            $isSelf = $author->getId()->equals($user->getId());
+
+            return $author->canBeSeenBy('events', $isSelf, isset($friendIds[(string) $author->getId()]));
+        }));
+
         return $this->render('event/show.html.twig', [
             'event'              => $event,
             'participation'      => $participation,
-            'all_participations' => $allParticipations,
+            'all_participations' => $visible,
+            'hidden_count'       => count($allParticipations) - count($visible),
             'tagged_in'          => $taggedIn,
         ]);
     }

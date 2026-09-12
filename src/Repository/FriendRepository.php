@@ -94,6 +94,24 @@ class FriendRepository extends ServiceEntityRepository
     /**
      * @return Friend[]
      */
+    /**
+     * Les ids des amis confirmés, indexés pour un test d'appartenance en O(1).
+     *
+     * @return array<string, true>
+     */
+    public function findConfirmedFriendIds(User $user): array
+    {
+        $ids = [];
+        foreach ($this->findConfirmedFriends($user) as $rel) {
+            $other = $rel->getOwner()->getId()->equals($user->getId()) ? $rel->getFriendUser() : $rel->getOwner();
+            if ($other !== null) {
+                $ids[(string) $other->getId()] = true;
+            }
+        }
+
+        return $ids;
+    }
+
     public function findPendingReceived(User $user): array
     {
         return $this->createQueryBuilder('f')

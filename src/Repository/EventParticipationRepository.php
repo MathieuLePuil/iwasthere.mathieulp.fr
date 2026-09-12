@@ -212,13 +212,19 @@ class EventParticipationRepository extends ServiceEntityRepository
     }
 
     /**
+     * Toutes les participations à un événement, utilisateur chargé. Rien n'est
+     * filtré ici : c'est l'appelant qui applique l'audience de chaque compte
+     * (User::canBeSeenBy) selon qui regarde.
+     *
      * @return EventParticipation[]
      */
-    public function findVisibleForEvent(Event $event, User $currentUser): array
+    public function findByEventWithUsers(Event $event): array
     {
         return $this->createQueryBuilder('p')
+            ->join('p.user', 'u')->addSelect('u')
             ->where('p.event = :event')
             ->setParameter('event', $event->getId()->toBinary(), ParameterType::BINARY)
+            ->orderBy('p.createdAt', 'ASC')
             ->getQuery()
             ->getResult();
     }

@@ -343,10 +343,10 @@
         </div>
         {% endif %}
 
-        {# All participants #}
-        {% if all_participations|length > 1 %}
+        {# All participants — ceux que la confidentialité de chacun laisse voir #}
+        {% if all_participations|length + hidden_count > 1 %}
         <div class="card">
-            <h2 class="font-medium text-sm mb-3" style="color: var(--fg-1)">Participants ({{ all_participations|length }})</h2>
+            <h2 class="font-medium text-sm mb-3" style="color: var(--fg-1)">Participants ({{ all_participations|length + hidden_count }})</h2>
             <div class="space-y-3">
                 {% for p in all_participations %}
                 {% if p.user != app.user %}
@@ -356,15 +356,19 @@
                         <p class="text-sm font-medium" style="color: var(--fg-1)">{{ p.user.displayName }}</p>
                         <p class="text-xs" style="color: var(--fg-4)">@{{ p.user.username }}</p>
                     </div>
-                    {# La page liste tous les participants, amis ou non : la note d'un
-                       compte privé ne s'affiche donc pas ici. Équivaut à l'ancien
-                       `p.visibility == 'public'`, qui recopiait ce même réglage. #}
-                    {% if p.user.isPublicProfile and p.rating %}
+                    {# La liste est déjà filtrée par l'audience de chaque compte
+                       (EventController::show) : qui est visible ici l'est avec sa note. #}
+                    {% if p.rating %}
                         {{ m.star_rating(p.rating) }}
                     {% endif %}
                 </div>
                 {% endif %}
                 {% endfor %}
+                {% if hidden_count > 0 %}
+                <p class="text-xs" style="color: var(--fg-4)">
+                    {{ hidden_count > 1 ? 'et ' ~ hidden_count ~ ' autres personnes' : 'et une autre personne' }} dont le journal n'est pas visible pour toi
+                </p>
+                {% endif %}
             </div>
         </div>
         {% endif %}
