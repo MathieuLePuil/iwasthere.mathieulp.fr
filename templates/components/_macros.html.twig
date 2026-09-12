@@ -24,7 +24,7 @@
     {% set sizes = {'sm': 'w-8 h-8 text-xs', 'md': 'w-10 h-10 text-sm', 'lg': 'w-16 h-16 text-xl'} %}
     {% set sz = sizes[size] ?? sizes.md %}
     {% if user.avatarUrl is defined and user.avatarUrl %}
-        <img src="{{ user.avatarUrl }}" class="{{ sz }} rounded-full object-cover" alt="{{ user.displayName }}">
+        <img src="{{ user.avatarUrl }}" loading="lazy" class="{{ sz }} rounded-full object-cover" alt="{{ user.displayName }}">
     {% else %}
         <div class="{{ sz }} rounded-full flex items-center justify-center flex-shrink-0 font-bold"
              style="background: var(--positive-soft); color: var(--positive)">

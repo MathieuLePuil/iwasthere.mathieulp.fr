@@ -51,7 +51,7 @@
                             {% for p in g.participations|slice(0, 3) %}
                                 <span class="inline-flex rounded-full" style="box-shadow: 0 0 0 2px var(--bg-1)">
                                     {% if p.user.avatarUrl %}
-                                        <img src="{{ p.user.avatarUrl }}" class="w-5 h-5 rounded-full object-cover" alt="{{ p.user.displayName }}">
+                                        <img src="{{ p.user.avatarUrl }}" loading="lazy" width="20" height="20" class="w-5 h-5 rounded-full object-cover" alt="{{ p.user.displayName }}">
                                     {% else %}
                                         <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style="background: var(--positive-soft); color: var(--positive)">{{ p.user.displayName|first|upper }}</span>
                                     {% endif %}

@@ -114,7 +114,7 @@
                             <p class="text-sm mt-1.5 leading-relaxed" style="color: var(--fg-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden">« {{ p.comment }} »</p>
                             {% endif %}
                             {% if p.imageUrl %}
-                            <img src="{{ p.imageUrl }}" alt="" loading="lazy"
+                            <img src="{{ p.imageUrl|thumb }}" alt="" loading="lazy" decoding="async"
                                  class="w-full object-cover rounded-xl mt-2.5 block"
                                  style="max-height: 240px; border: 1px solid var(--border-subtle)">
                             {% endif %}

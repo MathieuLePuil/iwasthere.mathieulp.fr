@@ -10,6 +10,7 @@ use App\Event\EventType;
 use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
 use App\Repository\NotificationRepository;
+use App\Service\EventImageService;
 use Symfony\Bundle\SecurityBundle\Security;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
@@ -20,6 +21,7 @@ class AppExtension extends AbstractExtension
     public function __construct(
         private readonly NotificationRepository $notifRepo,
         private readonly Security $security,
+        private readonly EventImageService $images,
     ) {}
 
     public function getFunctions(): array
@@ -120,6 +122,9 @@ class AppExtension extends AbstractExtension
     {
         return [
             new TwigFilter('time_ago', $this->timeAgo(...)),
+            // La miniature d'une photo d'événement (480 px) pour les cartes ; la photo
+            // elle-même pour celles d'avant les miniatures.
+            new TwigFilter('thumb', $this->images->thumbUrl(...)),
         ];
     }
 
