@@ -29,3 +29,7 @@ framework:
             Symfony\Component\Notifier\Message\SmsMessage: async
             Symfony\Component\Mailer\Messenger\SendEmailMessage: async
             App\Message\SendPushNotification: async
+            # Appels HTTP sortants (setlist.fm avec ses attentes sur 429, Deezer) :
+            # jamais dans la requête qui crée l'événement.
+            App\Message\ImportSetlistMessage: async
+            App\Message\FetchArtistImageMessage: async

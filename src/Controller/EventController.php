@@ -12,6 +12,8 @@ use App\Entity\Venue;
 use App\Event\EventCategory;
 use App\Event\EventType;
 use App\Http\Input;
+use App\Message\FetchArtistImageMessage;
+use App\Message\ImportSetlistMessage;
 use App\Notification\ActivityNotifier;
 use App\Notification\NotificationDispatcher;
 use App\Notification\NotificationType;
@@ -22,16 +24,15 @@ use App\Repository\FriendRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
-use App\Service\DeezerArtistService;
 use App\Service\EventImageService;
 use App\Service\IcsExporter;
-use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -62,10 +63,9 @@ class EventController extends AbstractController
         EventRepository $eventRepo,
         FriendRepository $friendRepo,
         UserRepository $userRepo,
-        SetlistFmService $setlistFm,
         NotificationDispatcher $notifier,
         ActivityNotifier $activity,
-        DeezerArtistService $deezer,
+        MessageBusInterface $bus,
     ): Response {
         if ($request->isMethod('POST')) {
             $data = $request->request->all();
@@ -163,10 +163,6 @@ class EventController extends AbstractController
                 }
             }
 
-            // Artist picture via Deezer (new event, or joined one still missing it)
-            if (!$event->getArtistImageUrl()) {
-                $deezer->applyToEvent($event);
-            }
 
             // Souvenir data (score, note, durée…) only exists once the event is past
             if (!$event->isPast()) {
@@ -255,10 +251,8 @@ class EventController extends AbstractController
                 // pour ceux qui ont déjà cet événement
                 $activity->announceParticipation($participation);
 
-                // Auto-import setlist for past music events
-                if ($event->getCategory() === 'music' && $event->getDate() < new \DateTimeImmutable('today')) {
-                    $setlistFm->tryImportSetlist($event);
-                }
+                // Photo d'artiste et setlist : par le worker, la réponse n'attend pas
+                $this->enrichLater($event, $bus);
 
                 $this->addFlash('success', 'Événement ajouté à ton journal !');
 
@@ -266,6 +260,7 @@ class EventController extends AbstractController
             }
 
             $em->flush();
+            $this->enrichLater($event, $bus);
             $this->addFlash('info', 'Tu participes déjà à cet événement.');
 
             return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
@@ -435,7 +430,7 @@ class EventController extends AbstractController
         UserRepository $userRepo,
         NotificationDispatcher $notifier,
         ActivityNotifier $activity,
-        DeezerArtistService $deezer,
+        MessageBusInterface $bus,
     ): Response {
         $user = $this->getUser();
         $participation = $participationRepo->findByUserAndEvent($user, $event);
@@ -488,9 +483,6 @@ class EventController extends AbstractController
                 if ($event->getArtistName() !== $previousArtist) {
                     $event->setArtistImageUrl(null);
                 }
-            }
-            if ($event->getCategory() === 'music' && !$event->getArtistImageUrl()) {
-                $deezer->applyToEvent($event);
             }
             if ($teams = Input::text($data['teams'] ?? null, 255)) {
                 $event->setTeams($teams);
@@ -551,6 +543,7 @@ class EventController extends AbstractController
             $participation->setFriends($friendsData);
 
             $em->flush();
+            $this->enrichLater($event, $bus);
 
             // Notify newly added app friends
             $me = $this->getUser();
@@ -622,7 +615,7 @@ class EventController extends AbstractController
         NotificationDispatcher $notifier,
         ActivityNotifier $activity,
         EventImageService $images,
-        SetlistFmService $setlistFm,
+        MessageBusInterface $bus,
     ): Response {
         $user = $this->getUser();
 
@@ -649,10 +642,11 @@ class EventController extends AbstractController
             );
         }
 
-        // Le lendemain, la setlist est souvent disponible : on tente l'import à l'ouverture
-        // pour offrir la belle étape « setlist retrouvée » plutôt qu'un champ vide.
+        // Le lendemain, la setlist est souvent disponible : on relance l'import (par le
+        // worker — un 429 de setlist.fm fait attendre jusqu'à douze secondes, pas dans
+        // une page) pour que l'étape « setlist retrouvée » soit prête à la prochaine visite.
         if ($event->getCategory() === 'music' && empty($event->getSetlist())) {
-            $setlistFm->tryImportSetlist($event);
+            $bus->dispatch(new ImportSetlistMessage($event->getId()));
         }
 
         return $this->render('event/complete.html.twig', [
@@ -1060,6 +1054,23 @@ class EventController extends AbstractController
                 'displayName' => $user->getDisplayName(),
             ];
             $participation->setFriends($friends);
+        }
+    }
+
+    /**
+     * Ce qui vient de l'extérieur — photo d'artiste (Deezer), setlist (setlist.fm) —
+     * est demandé au worker après le flush : l'événement existe, la réponse part.
+     */
+    private function enrichLater(Event $event, MessageBusInterface $bus): void
+    {
+        if ($event->getCategory() !== 'music' || !$event->getArtistName()) {
+            return;
+        }
+        if (!$event->getArtistImageUrl()) {
+            $bus->dispatch(new FetchArtistImageMessage($event->getId()));
+        }
+        if ($event->isPast() && empty($event->getSetlist())) {
+            $bus->dispatch(new ImportSetlistMessage($event->getId()));
         }
     }
 
