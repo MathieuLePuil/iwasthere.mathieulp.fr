@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: EventRepository::class)]
+#[ORM\Index(name: 'idx_event_date', columns: ['date'])]
 class Event
 {
     #[ORM\Id]

@@ -43,11 +43,12 @@ class EventParticipationRepository extends ServiceEntityRepository
     public function findByUser(User $user, int $limit = 0): array
     {
         $qb = $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
-            ->andWhere('p.status = :status')
+            ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'past')
+            ->setParameter('today', new \DateTimeImmutable('today'))
             ->orderBy('e.date', 'DESC');
 
         if ($limit > 0) {
@@ -84,30 +85,14 @@ class EventParticipationRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /**
-     * @return EventParticipation[]
-     */
-    public function findByUserAndStatus(User $user, string $status): array
-    {
-        return $this->createQueryBuilder('ep')
-            ->andWhere('ep.user = :user')
-            ->andWhere('ep.status = :status')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', $status)
-            ->orderBy('ep.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
     public function findNextUpcoming(User $user): ?EventParticipation
     {
         return $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
-            ->andWhere('p.status = :status')
             ->andWhere('e.date >= :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'upcoming')
             ->setParameter('today', new \DateTimeImmutable('today'))
             ->orderBy('e.date', 'ASC')
             ->setMaxResults(1)
@@ -121,11 +106,12 @@ class EventParticipationRepository extends ServiceEntityRepository
     public function findRecentPast(User $user, int $limit = 3): array
     {
         return $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
-            ->andWhere('p.status = :status')
+            ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'past')
+            ->setParameter('today', new \DateTimeImmutable('today'))
             ->orderBy('e.date', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
@@ -138,13 +124,12 @@ class EventParticipationRepository extends ServiceEntityRepository
     public function findPendingReminders(User $user): array
     {
         return $this->createQueryBuilder('p')
-            ->join('p.event', 'e')
+            ->join('p.event', 'e')->addSelect('e')
+            ->leftJoin('e.venue', 'v')->addSelect('v')
             ->where('p.user = :user')
-            ->andWhere('p.status = :status')
             ->andWhere('p.rating IS NULL')
             ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'past')
             ->setParameter('today', new \DateTimeImmutable('today'))
             ->orderBy('e.date', 'DESC')
             ->setMaxResults(5)
@@ -291,24 +276,6 @@ class EventParticipationRepository extends ServiceEntityRepository
         return $byEvent;
     }
 
-    public function updateStaleUpcoming(User $user): void
-    {
-        $this->getEntityManager()->createQuery(
-            'UPDATE App\Entity\EventParticipation p
-             SET p.status = :past
-             WHERE p.user = :user
-               AND p.status = :upcoming
-               AND p.event IN (
-                   SELECT e.id FROM App\Entity\Event e WHERE e.date < :today
-               )'
-        )
-        ->setParameter('past', 'past')
-        ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-        ->setParameter('upcoming', 'upcoming')
-        ->setParameter('today', new \DateTimeImmutable('today'))
-        ->execute();
-    }
-
     public function getAvgRating(User $user): ?float
     {
         $result = $this->createQueryBuilder('p')
@@ -326,10 +293,11 @@ class EventParticipationRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
+            ->join('p.event', 'e')
             ->where('p.user = :user')
-            ->andWhere('p.status = :status')
+            ->andWhere('e.date < :today')
             ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'past')
+            ->setParameter('today', new \DateTimeImmutable('today'))
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -553,9 +521,7 @@ class EventParticipationRepository extends ServiceEntityRepository
     /**
      * Les événements déjà vécus, pour la page /p/{pseudo}.
      *
-     * La date fait foi plutôt que `p.status`, qui n'est recalé que par
-     * updateStaleUpcoming() — une page servie à un visiteur anonyme ne déclenche
-     * aucun recalage, elle ne peut pas s'y fier.
+     * La date fait foi, comme partout : passé = strictement avant aujourd'hui.
      *
      * Rien n'est filtré ici : c'est au contrôleur de décider s'il a le droit
      * d'afficher cette page, selon que le compte est public ou qu'on en est l'ami.

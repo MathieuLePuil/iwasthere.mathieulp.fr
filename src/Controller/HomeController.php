@@ -26,8 +26,6 @@ class HomeController extends AbstractController
     ): Response {
         $user = $this->getUser();
 
-        $participationRepo->updateStaleUpcoming($user);
-
         // Next upcoming event
         $nextEvent = $participationRepo->findNextUpcoming($user);
 

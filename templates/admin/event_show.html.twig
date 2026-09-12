@@ -79,9 +79,9 @@
                 </td>
                 <td class="px-5 py-3">
                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                          style="{% if p.status == 'past' %}background: var(--positive-soft); color: var(--positive)
+                          style="{% if p.isPast %}background: var(--positive-soft); color: var(--positive)
                           {% else %}background: rgba(96,165,250,0.1); color: #60A5FA{% endif %}">
-                        {{ p.status }}
+                        {{ p.isPast ? 'passé' : 'à venir' }}
                     </span>
                 </td>
                 <td class="px-5 py-3 text-xs" style="color: var(--fg-2)">

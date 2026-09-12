@@ -203,8 +203,7 @@ class EventController extends AbstractController
             if (!$existing) {
                 $participation = new EventParticipation();
                 $participation->setEvent($event)
-                    ->setUser($this->getUser())
-                    ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
+                    ->setUser($this->getUser());
 
                 $participation->setDuration(Input::int($data['duration'] ?? null, 1, 1440));
                 $participation->setRating(Input::int($data['rating'] ?? null, 1, 5));
@@ -444,8 +443,7 @@ class EventController extends AbstractController
         if (!$participation) {
             // Auto-create participation
             $participation = new EventParticipation();
-            $participation->setEvent($event)->setUser($user)
-                ->setStatus($event->getDate() < new \DateTimeImmutable('today') ? 'past' : 'upcoming');
+            $participation->setEvent($event)->setUser($user);
             $em->persist($participation);
             $event->setParticipantCount($event->getParticipantCount() + 1);
         }
@@ -544,11 +542,6 @@ class EventController extends AbstractController
             if (isset($data['duration']) && $data['duration'] !== '') {
                 $participation->setDuration(Input::int($data['duration'], 1, 1440));
             }
-            // Le statut se déduit de la date de l'événement
-            $participation->setStatus(
-                $event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past'
-            );
-
             // Friends
             $oldAppFriendIds = array_column(
                 array_filter($participation->getFriends() ?? [], fn($f) => ($f['type'] ?? '') === 'app'),
@@ -642,7 +635,7 @@ class EventController extends AbstractController
         if (!$participation) {
             // Arrivée par un tag ou un lien direct : on rattache la participation
             $participation = new EventParticipation();
-            $participation->setEvent($event)->setUser($user)->setStatus('past');
+            $participation->setEvent($event)->setUser($user);
             $em->persist($participation);
             $event->setParticipantCount($event->getParticipantCount() + 1);
             // Les amis qui m'ont tagué se retrouvent d'office dans mon « Avec qui »
@@ -874,9 +867,7 @@ class EventController extends AbstractController
         $mine = $participationRepo->findByUserAndEvent($user, $event);
         if (!$mine) {
             $mine = new EventParticipation();
-            $mine->setEvent($event)
-                ->setUser($user)
-                ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
+            $mine->setEvent($event)->setUser($user);
             $em->persist($mine);
             $event->setParticipantCount($event->getParticipantCount() + 1);
         }

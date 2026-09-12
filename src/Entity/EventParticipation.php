@@ -26,9 +26,6 @@ class EventParticipation
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false)]
     private User $user;
 
-    #[ORM\Column(length: 20)]
-    private string $status;
-
     #[ORM\Column(nullable: true)]
     private ?int $rating = null;
 
@@ -38,7 +35,7 @@ class EventParticipation
     #[ORM\Column(nullable: true)]
     private ?int $duration = null;
 
-#[ORM\Column(type: 'json')]
+    #[ORM\Column(type: 'json')]
     private array $friends = [];
 
     #[ORM\Column(type: 'json')]
@@ -89,16 +86,10 @@ class EventParticipation
         return $this;
     }
 
-    public function getStatus(): string
+    /** Même convention que Event::isPast() : la date fait foi, rien n'est stocké. */
+    public function isPast(): bool
     {
-        return $this->status;
-    }
-
-    public function setStatus(string $status): static
-    {
-        $this->status = $status;
-
-        return $this;
+        return $this->event->isPast();
     }
 
     public function getRating(): ?int
@@ -137,7 +128,7 @@ class EventParticipation
         return $this;
     }
 
-public function getFriends(): array
+    public function getFriends(): array
     {
         return $this->friends;
     }

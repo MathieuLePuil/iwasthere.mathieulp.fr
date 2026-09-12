@@ -382,7 +382,6 @@ class AppFixtures extends Fixture
                 $participation = new EventParticipation();
                 $participation->setEvent($event);
                 $participation->setUser($user);
-                $participation->setStatus($isPast ? 'past' : 'upcoming');
 
                 if ($isPast) {
                     $participation->setRating($ratings[($ci) % count($ratings)]);

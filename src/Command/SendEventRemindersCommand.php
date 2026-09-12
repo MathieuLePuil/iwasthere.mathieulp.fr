@@ -215,12 +215,6 @@ class SendEventRemindersCommand extends Command
     /** « Raconte-nous » — tant que la fiche d'un événement passé n'est pas notée. */
     private function remindCompletion(User $user, string $today, SymfonyStyle $io): bool
     {
-        // Sans cela, les participations restent "upcoming" tant que l'utilisateur
-        // n'a pas ouvert l'app, et findPendingReminders ne les voit pas
-        if (!$this->dryRun) {
-            $this->participationRepo->updateStaleUpcoming($user);
-        }
-
         $reminders = $this->participationRepo->findPendingReminders($user);
         if ($reminders === []) {
             return false;
