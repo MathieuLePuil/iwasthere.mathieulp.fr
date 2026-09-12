@@ -7,11 +7,13 @@ use App\Repository\UserRepository;
 use App\Service\AvatarService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
+use Psr\Log\LoggerInterface;
 use KnpU\OAuth2ClientBundle\Security\Authenticator\OAuth2Authenticator;
 use League\OAuth2\Client\Provider\GoogleUser;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
@@ -33,6 +35,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
         private RouterInterface $router,
         private UserRepository $userRepository,
         private AvatarService $avatarService,
+        private LoggerInterface $logger,
     ) {}
 
     public function supports(Request $request): ?bool
@@ -72,8 +75,13 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 $user = new User();
                 $user->setGoogleId($googleUser->getId());
                 $user->setEmail($googleUser->getEmail());
-                $user->setDisplayName($googleUser->getName() ?? $googleUser->getEmail());
-                $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $googleUser->getEmail())[0]));
+                $user->setDisplayName(mb_substr($googleUser->getName() ?? $googleUser->getEmail(), 0, 100));
+                // Même alphabet et même longueur que l'inscription classique (et que la
+                // route /p/{pseudo}) : un pseudo vide ou trop long n'aurait pas de page.
+                $baseUsername = substr(strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $googleUser->getEmail())[0]) ?? ''), 0, 24);
+                if (strlen($baseUsername) < 3) {
+                    $baseUsername = 'user';
+                }
                 $user->setUsername($this->generateUniqueUsername($baseUsername));
 
                 $this->em->persist($user);
@@ -136,7 +144,16 @@ class GoogleAuthenticator extends OAuth2Authenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        $request->getSession()->set('oauth_error', $exception->getMessage());
+        // Le détail (réponse Google, réseau) va dans le journal ; l'utilisateur voit
+        // un message qu'il peut suivre, dans le flash que le layout affiche déjà —
+        // l'ancien `oauth_error` en session n'était lu par aucun template.
+        $this->logger->warning('Connexion Google refusée', ['exception' => $exception]);
+
+        $session = $request->getSession();
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('error', 'La connexion avec Google n\'a pas abouti. Réessaie, ou connecte-toi avec ton email.');
+        }
+
         return new RedirectResponse($this->router->generate('app_login'));
     }
 }

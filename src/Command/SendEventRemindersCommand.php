@@ -232,7 +232,7 @@ class SendEventRemindersCommand extends Command
         $created = $this->send(
             $user,
             NotificationType::EventCompletion,
-            'Comment s\'était ce concert ?',
+            $count === 1 ? 'C\'était comment, ' . $this->eventName($first) . ' ?' : 'Raconte tes derniers événements',
             $count === 1
                 ? 'Tu n\'as pas encore rempli ta fiche pour ' . $this->eventName($first) . '.'
                 : sprintf('%d événements attendent ta note et tes commentaires.', $count),

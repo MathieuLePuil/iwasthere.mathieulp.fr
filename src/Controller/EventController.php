@@ -858,32 +858,38 @@ class EventController extends AbstractController
         }
 
         $data = $notification->getData() ?? [];
-        $eventId = $data['eventId'] ?? null;
+        $eventId = Input::uuid($data['eventId'] ?? null);
+        $event = $eventId ? $eventRepo->find($eventId) : null;
 
-        if ($eventId) {
-            $event = $eventRepo->find($eventId);
-            if ($event) {
-                $mine = $participationRepo->findByUserAndEvent($user, $event);
-                if (!$mine) {
-                    $mine = new EventParticipation();
-                    $mine->setEvent($event)
-                        ->setUser($user)
-                        ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
-                    $em->persist($mine);
-                    $event->setParticipantCount($event->getParticipantCount() + 1);
-                }
-                // Celui qui m'a invité m'a déjà dans son « Avec qui » : il doit
-                // apparaître dans le mien aussi, dès l'acceptation et jusqu'au souvenir.
-                $this->linkWithTaggers($mine, $participationRepo);
-            }
+        if ($event === null) {
+            // L'événement a été supprimé entre l'invitation et l'acceptation : la
+            // notification n'a plus d'objet, et il n'y a rien où renvoyer.
+            $em->remove($notification);
+            $em->flush();
+            $this->addFlash('info', 'Cet événement n\'existe plus.');
+
+            return $this->redirectToRoute('app_notifications');
         }
+
+        $mine = $participationRepo->findByUserAndEvent($user, $event);
+        if (!$mine) {
+            $mine = new EventParticipation();
+            $mine->setEvent($event)
+                ->setUser($user)
+                ->setStatus($event->getDate() >= new \DateTimeImmutable('today') ? 'upcoming' : 'past');
+            $em->persist($mine);
+            $event->setParticipantCount($event->getParticipantCount() + 1);
+        }
+        // Celui qui m'a invité m'a déjà dans son « Avec qui » : il doit
+        // apparaître dans le mien aussi, dès l'acceptation et jusqu'au souvenir.
+        $this->linkWithTaggers($mine, $participationRepo);
 
         $em->remove($notification);
         $em->flush();
 
         $this->addFlash('success', 'Événement ajouté à ton journal !');
 
-        return $this->redirectToRoute('app_event_show', ['id' => $eventId]);
+        return $this->redirectToRoute('app_event_show', ['id' => $event->getId()]);
     }
 
     #[Route('/tag/{id}/decline', name: 'app_event_tag_decline', methods: ['POST'])]
