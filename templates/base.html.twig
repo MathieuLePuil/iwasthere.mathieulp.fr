@@ -62,6 +62,9 @@
         {# Polices servies d'ici (assets/fonts) : plus d'appel à Google à chaque page. #}
         <link rel="stylesheet" href="{{ asset('styles/fonts.css') }}">
         <title>{% block title %}IWasThere{% endblock %}</title>
+        {% block meta %}
+        <meta name="description" content="IWasThere — ton journal d'expériences live : concerts, festivals, matchs.">
+        {% endblock %}
         {% block stylesheets %}{% endblock %}
         {% block javascripts %}
             {% block importmap %}{{ importmap('app', {nonce: csp_nonce()}) }}{% endblock %}

@@ -24,7 +24,7 @@ class RegistrationFormType extends AbstractType
         $builder
             ->add('displayName', TextType::class, [
                 'label' => 'Nom affiché',
-                'attr' => ['placeholder' => 'Votre nom', 'class' => 'input-field'],
+                'attr' => ['placeholder' => 'Votre nom', 'class' => 'input-field', 'autocomplete' => 'name'],
                 'constraints' => [
                     new NotBlank(message: 'Le nom est requis'),
                     new Length(min: 2, max: 100),
@@ -32,7 +32,7 @@ class RegistrationFormType extends AbstractType
             ])
             ->add('username', TextType::class, [
                 'label' => 'Identifiant (@)',
-                'attr' => ['placeholder' => 'ex: mathieulpl', 'class' => 'input-field'],
+                'attr' => ['placeholder' => 'ex: mathieulpl', 'class' => 'input-field', 'autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false'],
                 'constraints' => [
                     new NotBlank(message: "L'identifiant est requis"),
                     // 3–30 : la borne de la page publique /p/{pseudo}, sinon un pseudo
@@ -46,7 +46,7 @@ class RegistrationFormType extends AbstractType
             ])
             ->add('email', EmailType::class, [
                 'label' => 'Email',
-                'attr' => ['placeholder' => 'votre@email.com', 'class' => 'input-field'],
+                'attr' => ['placeholder' => 'votre@email.com', 'class' => 'input-field', 'autocomplete' => 'email'],
                 'constraints' => [
                     new NotBlank(message: "L'email est requis"),
                     new Email(message: 'Cette adresse email n\'est pas valide.'),
@@ -58,11 +58,11 @@ class RegistrationFormType extends AbstractType
                 'invalid_message' => 'Les mots de passe ne correspondent pas.',
                 'first_options' => [
                     'label' => 'Mot de passe',
-                    'attr' => ['placeholder' => 'Mot de passe', 'class' => 'input-field'],
+                    'attr' => ['placeholder' => 'Mot de passe', 'class' => 'input-field', 'autocomplete' => 'new-password'],
                 ],
                 'second_options' => [
                     'label' => 'Confirmer le mot de passe',
-                    'attr' => ['placeholder' => 'Confirmer', 'class' => 'input-field'],
+                    'attr' => ['placeholder' => 'Confirmer', 'class' => 'input-field', 'autocomplete' => 'new-password'],
                 ],
                 'mapped' => false,
                 'constraints' => [

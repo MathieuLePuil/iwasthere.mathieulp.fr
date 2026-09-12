@@ -7,6 +7,21 @@
 
 {% block title %}{{ profile_user.displayName }} sur IWasThere{% endblock %}
 
+{% block meta %}
+    {# La seule page faite pour être partagée : un aperçu propre dans WhatsApp, iMessage, etc. #}
+    {% set og_description = can_see_stats and total_events is not null
+        ? '@' ~ profile_user.username ~ ' — ' ~ total_events ~ ' événement' ~ (total_events > 1 ? 's' : '') ~ ' vécu' ~ (total_events > 1 ? 's' : '') ~ ' sur IWasThere.'
+        : '@' ~ profile_user.username ~ ' est sur IWasThere, le journal des concerts, festivals et matchs.' %}
+    <meta name="description" content="{{ og_description }}">
+    <link rel="canonical" href="{{ url('app_public_profile', {username: profile_user.username}) }}">
+    <meta property="og:type" content="profile">
+    <meta property="og:title" content="{{ profile_user.displayName }} sur IWasThere">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:url" content="{{ url('app_public_profile', {username: profile_user.username}) }}">
+    <meta property="og:image" content="{{ profile_user.avatarUrl and can_see_events ? absolute_url(profile_user.avatarUrl) : absolute_url(asset('images/icons/icon-512.png')) }}">
+    <meta name="twitter:card" content="summary">
+{% endblock %}
+
 {% block body %}
 <div class="px-4 py-6" style="max-width: 560px; margin: 0 auto">
 

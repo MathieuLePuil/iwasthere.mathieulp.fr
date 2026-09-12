@@ -19,7 +19,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium mb-1.5 fg-3">Date</label>
-                    <input type="date" name="date" class="input-field"
+                    <input type="date" name="date" class="input-field" min="1900-01-01" max="{{ "now"|date_modify("+5 years")|date("Y-m-d") }}"
                            value="{{ event.date|date('Y-m-d') }}" required
                            data-souvenir-gate-target="date"
                            data-action="change->souvenir-gate#update">
@@ -91,8 +91,12 @@
         <div class="card">
             <p class="section-title mb-3">Mon ressenti</p>
             <div class="flex gap-2 justify-center" data-controller="star-rating">
+                {# Valeur vide postée quand aucune étoile n'est cochée : c'est ce qui permet
+                   de retirer une note (le serveur efface sur rating vide). #}
+                <input type="radio" name="rating" value="" class="sr-only" data-star-rating-target="none"
+                       {% if not participation.rating %}checked{% endif %} aria-label="Aucune note">
                 {% for i in 1..5 %}
-                <label class="cursor-pointer">
+                <label class="cursor-pointer" aria-label="{{ i }} étoile{{ i > 1 ? 's' : '' }}">
                     <input type="radio" name="rating" value="{{ i }}" class="sr-only"
                            {% if participation.rating == i %}checked{% endif %}>
                     <svg class="w-10 h-10 transition-colors rating-star"
@@ -103,6 +107,9 @@
                 </label>
                 {% endfor %}
             </div>
+            {% if participation.rating %}
+            <button type="button" class="block mx-auto mt-2 text-xs fg-4 underline" data-action="star-rating#clear">Retirer la note</button>
+            {% endif %}
             <textarea name="comment" rows="3" class="input-field resize-none mt-4"
                       placeholder="Ton ressenti, les moments forts...">{{ participation.comment }}</textarea>
         </div>

@@ -7,7 +7,11 @@
     <div class="flex items-center justify-between mb-5">
         <h1 class="text-xl font-semibold fg-1">Notifications</h1>
         {% if notifications|length > 0 %}
-        <form method="post" action="{{ path('app_notification_delete_all') }}">
+        <form method="post" action="{{ path('app_notification_delete_all') }}"
+              data-controller="confirm" data-action="submit->confirm#check"
+              data-confirm-title-value="Tout effacer ?"
+              data-confirm-body-value="Les invitations en attente disparaîtront aussi."
+              data-confirm-label-value="Tout effacer">
             <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg fg-3 sf-3">
                 Tout supprimer
             </button>
