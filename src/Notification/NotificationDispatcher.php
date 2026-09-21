@@ -95,13 +95,21 @@ final class NotificationDispatcher
         return true;
     }
 
-    /** Pousse sans rien inscrire, si l'utilisateur veut ce type. L'envoi part en asynchrone. */
-    public function push(User $recipient, NotificationType $type, string $title, string $body, ?string $url = null): void
+    /**
+     * Pousse sans rien inscrire, si l'utilisateur veut ce type. L'envoi part en asynchrone.
+     *
+     * @param string|null $ackUrl URL d'accusé de réception que le service worker appellera (alertes billetterie)
+     *
+     * @return bool le push a-t-il été demandé ? (false si l'utilisateur ne veut pas ce type)
+     */
+    public function push(User $recipient, NotificationType $type, string $title, string $body, ?string $url = null, ?string $ackUrl = null): bool
     {
         if (!$recipient->wantsPush($type)) {
-            return;
+            return false;
         }
 
-        $this->bus->dispatch(new SendPushNotification($title, $body, (string) $recipient->getId(), $url));
+        $this->bus->dispatch(new SendPushNotification($title, $body, (string) $recipient->getId(), $url, $ackUrl));
+
+        return true;
     }
 }

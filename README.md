@@ -169,7 +169,13 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    * * * * * /usr/bin/flock -n /chemin/var/messenger-worker.lock /usr/bin/php /chemin/bin/console messenger:consume async --env=prod --time-limit=3600 --memory-limit=128M --quiet >> /chemin/var/log/messenger-worker.log 2>&1
    * * * * * /usr/bin/flock -n /chemin/var/reminders.lock /usr/bin/php /chemin/bin/console app:notifications:send-reminders --env=prod --quiet >> /chemin/var/log/reminders.log 2>&1
    30 4 * * * /usr/bin/php /chemin/bin/console app:notifications:purge --env=prod --quiet >> /chemin/var/log/purge.log 2>&1
+   17 * * * * /usr/bin/php /chemin/bin/console app:ticketmaster:sync --env=prod >> /chemin/var/log/tm-sync.log 2>&1
+   * * * * * /usr/bin/php /chemin/bin/console app:notifications:dispatch --env=prod --quiet >> /chemin/var/log/tm-dispatch.log 2>&1
    ```
+
+   Les deux dernières lignes sont le module d'alertes billetterie Ticketmaster
+   (synchronisation horaire du catalogue, envoi des alertes à la minute) — voir
+   [docs/ticketmaster.md](docs/ticketmaster.md). Elles ont leur propre verrou.
 
    La troisième ligne, chaque nuit, efface les notifications lues depuis plus de
    90 jours : le fil n'est pas une archive, et chaque recherche par destinataire
@@ -211,6 +217,9 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 | `event_completion` 🕐     | Les jours suivants, tant que la fiche n'est pas notée    | `app:notifications:send-reminders` |
 | `event_anniversary` 🕐    | Un événement vécu un jour comme aujourd'hui              | `app:notifications:send-reminders` |
 | `rewind_available`        | Publication du Rewind (déclenchement manuel)             | `app:rewind:unlock`            |
+| `ticket_onsale` 🕐        | 24 h puis 1 h avant une ouverture de billetterie suivie  | `app:notifications:dispatch`   |
+| `ticket_event_change`     | Événement suivi annulé, reporté ou ouverture déplacée    | `app:ticketmaster:sync` + `app:notifications:dispatch` |
+| `artist_announced`        | Nouvelle date d'un artiste en wishlist ou déjà vu        | `app:ticketmaster:sync`        |
 
 🕐 = rappel programmé, envoyé à l'heure choisie par l'utilisateur (`notifCompletionTime`,
 08:00 par défaut, heure française). Ces trois-là dépendent du cron ci-dessus.
@@ -256,6 +265,8 @@ docker compose exec php php bin/console doctrine:migrations:migrate --no-interac
 docker compose exec php php bin/phpunit                         # tests
 docker compose exec php php bin/console app:generate-vapid-keys # générer clés VAPID
 docker compose exec php php bin/console app:push:test <user>    # envoyer un push de test
+docker compose exec php php bin/console app:ticketmaster:sync --file=fr.json.gz   # catalogue Ticketmaster depuis un flux local
+docker compose exec php php bin/console app:notifications:dispatch --dry-run       # alertes billetterie qui partiraient
 ```
 
 ---
@@ -290,6 +301,8 @@ compose.override.yaml      # Ports exposés (dev uniquement)
 | `VAPID_PRIVATE_KEY`    | Clé privée VAPID (push)                      | Oui            |
 | `VAPID_SUBJECT`        | Contact VAPID (`mailto:...` valide)          | Oui            |
 | `MAILER_DSN`           | DSN du serveur SMTP                          | Oui            |
+| `TICKETMASTER_API_KEY` | Clé Discovery API (alertes billetterie)      | Si le module est activé |
+| `TICKETMASTER_ALERTS_LOG_ONLY` | `1` : alertes journalisées, pas envoyées (mise en service) | Non |
 
 ---
 

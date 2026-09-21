@@ -27,6 +27,9 @@ enum NotificationType: string
     case EventCompletion = 'event_completion';
     case EventAnniversary = 'event_anniversary';
     case RewindAvailable = 'rewind_available';
+    case TicketOnsale = 'ticket_onsale';
+    case TicketEventChange = 'ticket_event_change';
+    case ArtistAnnounced = 'artist_announced';
 
     /** Intitulé de la ligne dans les préférences */
     public function label(): string
@@ -43,6 +46,9 @@ enum NotificationType: string
             self::EventCompletion => 'Rappel de complétion',
             self::EventAnniversary => 'Anniversaire d\'un événement',
             self::RewindAvailable => 'Ton Rewind est prêt',
+            self::TicketOnsale => 'Ouverture de billetterie',
+            self::TicketEventChange => 'Événement suivi modifié',
+            self::ArtistAnnounced => 'Nouvelle date d\'un artiste',
         };
     }
 
@@ -61,6 +67,9 @@ enum NotificationType: string
             self::EventCompletion => 'Le lendemain, pour noter et raconter',
             self::EventAnniversary => 'Le jour où tu y étais, un an plus tôt',
             self::RewindAvailable => 'Ton bilan de l\'année vient d\'être publié',
+            self::TicketOnsale => 'La veille (24 h) et l\'heure (1 h) avant une ouverture que tu suis',
+            self::TicketEventChange => 'Annulation, report ou ouverture déplacée d\'un événement suivi',
+            self::ArtistAnnounced => 'Un artiste de ta wishlist, ou que tu as déjà vu, annonce un concert en France',
         };
     }
 
@@ -78,6 +87,9 @@ enum NotificationType: string
             self::EventCompletion => '⭐',
             self::EventAnniversary => '🕰️',
             self::RewindAvailable => '🎁',
+            self::TicketOnsale => '🎫',
+            self::TicketEventChange => '⚠️',
+            self::ArtistAnnounced => '🎤',
         };
     }
 
@@ -96,6 +108,9 @@ enum NotificationType: string
             self::EventCompletion => 'rgba(251,191,36,0.15)',
             self::EventAnniversary => 'rgba(176,96,255,0.15)',
             self::RewindAvailable => 'rgba(176,96,255,0.15)',
+            self::TicketOnsale => 'rgba(61,220,151,0.15)',
+            self::TicketEventChange => 'rgba(251,146,60,0.15)',
+            self::ArtistAnnounced => 'rgba(176,96,255,0.15)',
         };
     }
 
@@ -120,6 +135,7 @@ enum NotificationType: string
             'Activité' => [self::FriendActivity, self::FriendSameEvent, self::FriendReaction, self::EventUpdated],
             'Rappels' => [self::EventDay, self::EventCompletion, self::EventAnniversary],
             'Rewind' => [self::RewindAvailable],
+            'Billetterie' => [self::TicketOnsale, self::TicketEventChange, self::ArtistAnnounced],
         ];
     }
 

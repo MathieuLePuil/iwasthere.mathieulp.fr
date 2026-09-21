@@ -597,6 +597,43 @@ class EventParticipationRepository extends ServiceEntityRepository
         return $counts;
     }
 
+    /**
+     * Les artistes déjà vus, par utilisateur ayant activé l'alerte « artistes
+     * déjà vus » — ou pour un seul utilisateur. Noms bruts du journal (« Muse »,
+     * « MUSE ») : c'est ArtistAnnouncer qui normalise et rapproche.
+     *
+     * @return array<string, list<string>> user_id → noms d'artistes distincts
+     */
+    public function findSeenArtists(?User $user = null): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->select('u.id AS user_id', 'e.artistName AS artist')
+            ->distinct()
+            ->join('p.event', 'e')
+            ->join('p.user', 'u')
+            ->where('e.category = :music')
+            ->andWhere('e.artistName IS NOT NULL')
+            ->andWhere('e.date < :today')
+            ->setParameter('music', EventCategory::Music->value)
+            ->setParameter('today', new \DateTimeImmutable('today'));
+
+        if ($user !== null) {
+            $qb->andWhere('p.user = :user')->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY);
+        } else {
+            $qb->andWhere('u.alertSeenArtists = true');
+        }
+
+        /** @var list<array{user_id: \Symfony\Component\Uid\Uuid, artist: string}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
+
+        $seen = [];
+        foreach ($rows as $row) {
+            $seen[$row['user_id']->toRfc4122()][] = $row['artist'];
+        }
+
+        return $seen;
+    }
+
     public function computeStats(User $user): array
     {
         $pastParts = $this->findPastParticipations($user);

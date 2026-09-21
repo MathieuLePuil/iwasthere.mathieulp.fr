@@ -197,6 +197,16 @@
         {% endif %}
     </div>
 
+    {# Alertes billetterie — le module Ticketmaster (voir docs/ticketmaster.md) #}
+    <a href="{{ path('app_alerts') }}" class="card flex items-center gap-3 no-underline">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: var(--positive-soft)">🎫</div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium fg-1">Alertes billetterie</p>
+            <p class="text-xs fg-3">Ouvertures Ticketmaster, nouvelles dates de tes artistes</p>
+        </div>
+        <span class="text-xs font-medium flex-shrink-0 fg-accent">Mes veilles →</span>
+    </a>
+
     {# Recent events #}
     {% if recent_past|length > 0 %}
     <div>

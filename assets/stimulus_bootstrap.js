@@ -25,6 +25,7 @@ import NavSelectController from './controllers/nav_select_controller.js';
 import InviteSelectController from './controllers/invite_select_controller.js';
 import PushBannerController from './controllers/push_banner_controller.js';
 import PushToggleController from './controllers/push_toggle_controller.js';
+import LiveSearchController from './controllers/live_search_controller.js';
 
 const app = startStimulusApp();
 app.register('event-type', EventTypeController);
@@ -53,3 +54,4 @@ app.register('nav-select', NavSelectController);
 app.register('invite-select', InviteSelectController);
 app.register('push-banner', PushBannerController);
 app.register('push-toggle', PushToggleController);
+app.register('live-search', LiveSearchController);

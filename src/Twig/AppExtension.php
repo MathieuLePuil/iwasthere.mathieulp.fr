@@ -13,6 +13,7 @@ use App\Notification\NotificationType;
 use App\Reaction\ReactionEmoji;
 use App\Repository\NotificationRepository;
 use App\Service\EventImageService;
+use App\Ticketmaster\ParisTime;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
@@ -136,6 +137,10 @@ class AppExtension extends AbstractExtension
             // La miniature d'une photo d'événement (480 px) pour les cartes ; la photo
             // elle-même pour celles d'avant les miniatures.
             new TwigFilter('thumb', $this->images->thumbUrl(...)),
+            // Un instant UTC en heure de Paris, en français : « sam. 3 oct. à 10h00 »
+            new TwigFilter('paris', ParisTime::dayAndTime(...)),
+            new TwigFilter('paris_day', ParisTime::day(...)),
+            new TwigFilter('paris_time', ParisTime::time(...)),
         ];
     }
 

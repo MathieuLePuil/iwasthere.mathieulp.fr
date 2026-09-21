@@ -177,7 +177,15 @@ self.addEventListener('push', function(event) {
         ]
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    // Les alertes billetterie portent une URL d'accusé de réception : sans lui
+    // sous 5 minutes, le serveur envoie l'e-mail de secours. Son échec ne doit
+    // jamais empêcher l'affichage.
+    const tasks = [self.registration.showNotification(title, options)];
+    if (data.ackUrl) {
+        tasks.push(fetch(data.ackUrl, { method: 'POST', credentials: 'same-origin' }).catch(() => {}));
+    }
+
+    event.waitUntil(Promise.all(tasks));
 });
 
 self.addEventListener('notificationclick', function(event) {

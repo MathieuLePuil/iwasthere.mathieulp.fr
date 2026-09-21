@@ -16,5 +16,7 @@ final readonly class SendPushNotification
         public string $body,
         public ?string $userId = null,
         public ?string $url = null,
+        /** URL que le service worker appelle à réception — l'accusé qui dispense de l'e-mail de secours */
+        public ?string $ackUrl = null,
     ) {}
 }

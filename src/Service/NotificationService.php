@@ -29,7 +29,7 @@ class NotificationService
     }
 
     /** @return array{sent: int, failed: int, message?: string} */
-    public function sendNotification(string $title, string $body, ?string $userId = null, ?string $url = null): array
+    public function sendNotification(string $title, string $body, ?string $userId = null, ?string $url = null, ?string $ackUrl = null): array
     {
         $subscriptions = $userId === null
             ? $this->subscriptions->findAll()
@@ -44,6 +44,7 @@ class NotificationService
             'body' => $body,
             'icon' => '/icons/icon-192.png',
             'url' => $url ?? '/home',
+            'ackUrl' => $ackUrl,
         ]);
 
         foreach ($subscriptions as $sub) {

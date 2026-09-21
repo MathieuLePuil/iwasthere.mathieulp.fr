@@ -4,15 +4,24 @@ declare(strict_types=1);
 
 namespace App\DataFixtures;
 
+use App\Entity\ArtistWatch;
 use App\Entity\AuditLog;
 use App\Entity\Event;
 use App\Entity\EventParticipation;
+use App\Entity\EventWatch;
 use App\Entity\Friend;
 use App\Entity\Notification;
 use App\Entity\Reaction;
+use App\Entity\TmEvent;
+use App\Entity\TmSaleWindow;
 use App\Entity\User;
 use App\Entity\Venue;
+use App\Entity\WatchNotification;
 use App\Notification\NotificationType;
+use App\Ticketmaster\AlertPlanner;
+use App\Ticketmaster\NameNormalizer;
+use App\Ticketmaster\SaleWindowType;
+use App\Ticketmaster\WatchNotificationType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -50,6 +59,7 @@ class AppFixtures extends Fixture
         $this->loadEvents($manager);
         $this->loadParticipationsReactionsAndNotifications($manager);
         $this->loadAuditLogs($manager);
+        $this->loadTicketmasterCatalog($manager);
 
         $manager->flush();
     }
@@ -469,5 +479,72 @@ class AppFixtures extends Fixture
 
             $manager->persist($log);
         }
+    }
+
+    /**
+     * Un extrait de catalogue Ticketmaster (module alertes billetterie), tel que
+     * app:ticketmaster:sync l'écrirait — sans clé API ni flux de 400 Mo pour la
+     * démo. Deux veilles pour l'admin, échéances calées par AlertPlanner, et
+     * une wishlist d'artistes (voir ArtistAnnouncer).
+     */
+    private function loadTicketmasterCatalog(ObjectManager $manager): void
+    {
+        $utc = new \DateTimeZone('UTC');
+        $now = new \DateTimeImmutable('now', $utc);
+
+        // [id, nom, salle, ville, ouverture (relatif), concert (relatif), statut, genre, artiste (attractions[])]
+        $defs = [
+            ['Z698xZC2Zdemo01', 'INDOCHINE - CENTRAL TOUR - INDOCHINE', 'Accor Arena', 'Paris', '+3 days 10:00', '+5 months', 'onsale', 'Rock', 'Indochine'],
+            ['Z698xZC2Zdemo02', 'Zaho de Sagazan', 'Zénith de Nantes Métropole', 'Saint-Herblain', '+1 day 10:00', '+4 months', 'onsale', 'Pop', 'Zaho de Sagazan'],
+            ['Z698xZC2Zdemo03', 'PNL', 'Stade de France', 'Saint-Denis', '+6 hours', '+6 months', 'onsale', 'Rap', 'PNL'],
+            ['Z698xZC2Zdemo04', 'Justice', 'Le Zénith', 'Paris', '-10 days 10:00', '+2 months', 'onsale', 'Electro', 'Justice'],
+            ['Z698xZC2Zdemo05', 'Angèle', 'Zénith de Lille', 'Lille', '+8 days 10:00', '+7 months', 'rescheduled', 'Pop', 'Angèle'],
+            ['Z698xZC2Zdemo06', 'U2', 'Paris La Défense Arena', 'Nanterre', '+20 days 10:00', '+9 months', 'onsale', 'Rock', 'U2'],
+            ['Z698xZC2Zdemo07', 'Le Roi Lion', 'Théâtre Mogador', 'Paris', '+2 days 10:00', '+3 months', 'onsale', 'Musical', null],
+        ];
+
+        $events = [];
+        foreach ($defs as [$id, $name, $venue, $city, $onsale, $start, $status, $genre, $artist]) {
+            $opens = (new \DateTimeImmutable($onsale, new \DateTimeZone('Europe/Paris')))->setTimezone($utc);
+            $concert = (new \DateTimeImmutable($start, new \DateTimeZone('Europe/Paris')))->setTime(20, 0);
+            $event = (new TmEvent($id))
+                ->setName($name)
+                ->setNameNormalized(NameNormalizer::normalize($name))
+                ->setStatus($status)
+                ->setEventStartUtc($concert->setTimezone($utc))
+                ->setEventStartLocalDate(\DateTimeImmutable::createFromFormat('!Y-m-d', $concert->format('Y-m-d')) ?: null)
+                ->setEventStartLocalTime('20:00:00')
+                ->setVenueName($venue)
+                ->setVenueCity($city)
+                ->setVenueTimezone('Europe/Paris')
+                ->setSegment($name === 'Le Roi Lion' ? 'Arts & Theatre' : 'Music')
+                ->setGenre($genre)
+                ->setUrl('https://www.ticketmaster.fr/fr/manifestation/' . strtolower(str_replace(' ', '-', $name)) . '/idmanif/' . substr($id, -2))
+                ->setSource('tmr')
+                ->setArtistName($artist)
+                ->setArtistsNormalized($artist === null ? null : ' | ' . NameNormalizer::normalize($artist) . ' | ')
+                ->setPayloadHash(md5($id . $onsale . $status));
+            $window = (new TmSaleWindow($event, SaleWindowType::Public, $opens))->setUrl($event->getUrl());
+            $manager->persist($event);
+            $manager->persist($window);
+            $events[$id] = $event;
+        }
+
+        foreach (['Z698xZC2Zdemo01', 'Z698xZC2Zdemo03'] as $id) {
+            $watch = new EventWatch($this->users['admin'], $events[$id]);
+            $manager->persist($watch);
+            $window = $events[$id]->getPublicSaleWindow();
+            if ($window !== null) {
+                foreach (AlertPlanner::plan($window->getStartsAtUtc(), $now, true, true) as $type => $at) {
+                    $manager->persist(new WatchNotification($watch, $window, WatchNotificationType::from($type), $at));
+                }
+            }
+        }
+
+        // Wishlist : deux artistes attendus, et l'alerte « déjà vus » activée
+        foreach (['Muse', 'Zaho de Sagazan'] as $artist) {
+            $manager->persist(new ArtistWatch($this->users['admin'], $artist));
+        }
+        $this->users['admin']->setAlertSeenArtists(true);
     }
 }

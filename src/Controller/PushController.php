@@ -6,12 +6,15 @@ namespace App\Controller;
 
 use App\Entity\PushSubscription;
 use App\Repository\PushSubscriptionRepository;
+use App\Repository\WatchNotificationRepository;
+use App\Ticketmaster\AckUrlSigner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Uid\Uuid;
 
 class PushController extends AppController
 {
@@ -46,5 +49,27 @@ class PushController extends AppController
         $em->flush();
 
         return new JsonResponse(['status' => 'success']);
+    }
+
+    /**
+     * Accusé de réception d'un push d'alerte billetterie, appelé par le service
+     * worker (voir sw.js.twig). Authentifié par la signature de l'URL, pas par
+     * la session ni le jeton CSRF (route exemptée dans CsrfProtectionListener).
+     * Sans cet accusé sous 5 minutes, l'e-mail de secours part.
+     */
+    #[Route('/push/ack/{batch}/{sig}', name: 'app_push_ack', methods: ['POST'])]
+    public function ack(string $batch, string $sig, AckUrlSigner $signer, WatchNotificationRepository $repo, EntityManagerInterface $em): Response
+    {
+        if (!Uuid::isValid($batch) || !$signer->isValid(Uuid::fromString($batch), $sig)) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
+        $now = new \DateTimeImmutable();
+        foreach ($repo->findByBatch(Uuid::fromString($batch)) as $notification) {
+            $notification->acknowledge($now);
+        }
+        $em->flush();
+
+        return new Response('', Response::HTTP_NO_CONTENT);
     }
 }
