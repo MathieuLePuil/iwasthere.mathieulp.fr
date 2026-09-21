@@ -220,6 +220,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 | `ticket_onsale` 🕐        | 24 h puis 1 h avant une ouverture de billetterie suivie  | `app:notifications:dispatch`   |
 | `ticket_event_change`     | Événement suivi annulé, reporté ou ouverture déplacée    | `app:ticketmaster:sync` + `app:notifications:dispatch` |
 | `artist_announced`        | Nouvelle date d'un artiste en wishlist ou déjà vu        | `app:ticketmaster:sync`        |
+| `announcement`            | Message libre de l'équipe (nouveauté, annonce)              | `app:notifications:announce`   |
 
 🕐 = rappel programmé, envoyé à l'heure choisie par l'utilisateur (`notifCompletionTime`,
 08:00 par défaut, heure française). Ces trois-là dépendent du cron ci-dessus.
@@ -235,6 +236,14 @@ Pour vérifier sans rien envoyer :
 php bin/console app:notifications:send-reminders --dry-run --user=@pseudo
 php bin/console app:notifications:send-reminders --dry-run --date=2026-09-17 --time=08:00
 php bin/console app:push:test --user=@pseudo --async "Test"   # chemin de prod complet
+```
+
+Pour annoncer une nouveauté à tout le monde (fil + push, type « Nouveautés de
+l'app » décochable dans les préférences) — se relire d'abord sur son propre compte :
+
+```bash
+php bin/console app:notifications:announce "Nouveauté sur l'app" "Soyez alerté quand vos artistes préférés débarquent" --url=/alerts --user=@pseudo
+php bin/console app:notifications:announce "Nouveauté sur l'app" "Soyez alerté quand vos artistes préférés débarquent" --url=/alerts   # confirme avant d'envoyer
 ```
 
 ### Déployer sans perdre de notification
@@ -265,6 +274,7 @@ docker compose exec php php bin/console doctrine:migrations:migrate --no-interac
 docker compose exec php php bin/phpunit                         # tests
 docker compose exec php php bin/console app:generate-vapid-keys # générer clés VAPID
 docker compose exec php php bin/console app:push:test <user>    # envoyer un push de test
+docker compose exec php php bin/console app:notifications:announce "Titre" "Contenu" --user=<user>   # annonce libre (fil + push)
 docker compose exec php php bin/console app:ticketmaster:sync --file=fr.json.gz   # catalogue Ticketmaster depuis un flux local
 docker compose exec php php bin/console app:notifications:dispatch --dry-run       # alertes billetterie qui partiraient
 ```

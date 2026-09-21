@@ -30,6 +30,8 @@ enum NotificationType: string
     case TicketOnsale = 'ticket_onsale';
     case TicketEventChange = 'ticket_event_change';
     case ArtistAnnounced = 'artist_announced';
+    /** Message libre de l'équipe à tout le monde (app:notifications:announce) */
+    case Announcement = 'announcement';
 
     /** Intitulé de la ligne dans les préférences */
     public function label(): string
@@ -49,6 +51,7 @@ enum NotificationType: string
             self::TicketOnsale => 'Ouverture de billetterie',
             self::TicketEventChange => 'Événement suivi modifié',
             self::ArtistAnnounced => 'Nouvelle date d\'un artiste',
+            self::Announcement => 'Nouveautés de l\'app',
         };
     }
 
@@ -70,6 +73,7 @@ enum NotificationType: string
             self::TicketOnsale => 'La veille (24 h) et l\'heure (1 h) avant une ouverture que tu suis',
             self::TicketEventChange => 'Annulation, report ou ouverture déplacée d\'un événement suivi',
             self::ArtistAnnounced => 'Un artiste de ta wishlist, ou que tu as déjà vu, annonce un concert en France',
+            self::Announcement => 'Une nouvelle fonctionnalité ou une annonce de l\'équipe',
         };
     }
 
@@ -90,6 +94,7 @@ enum NotificationType: string
             self::TicketOnsale => '🎫',
             self::TicketEventChange => '⚠️',
             self::ArtistAnnounced => '🎤',
+            self::Announcement => '✨',
         };
     }
 
@@ -111,6 +116,7 @@ enum NotificationType: string
             self::TicketOnsale => 'rgba(61,220,151,0.15)',
             self::TicketEventChange => 'rgba(251,146,60,0.15)',
             self::ArtistAnnounced => 'rgba(176,96,255,0.15)',
+            self::Announcement => 'rgba(251,191,36,0.15)',
         };
     }
 
@@ -136,6 +142,7 @@ enum NotificationType: string
             'Rappels' => [self::EventDay, self::EventCompletion, self::EventAnniversary],
             'Rewind' => [self::RewindAvailable],
             'Billetterie' => [self::TicketOnsale, self::TicketEventChange, self::ArtistAnnounced],
+            'Application' => [self::Announcement],
         ];
     }
 
