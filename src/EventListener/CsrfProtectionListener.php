@@ -21,14 +21,16 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
  * le cookie SameSite=Lax restant la seule barrière.
  *
  * Exemptés : le login et l'inscription, dont form_login et le composant Form
- * vérifient déjà leur propre jeton, et la réaction, qui a le sien depuis le début.
+ * vérifient déjà leur propre jeton, la réaction, qui a le sien depuis le début,
+ * et l'accusé de réception des pushes, appelé par le service worker hors de
+ * toute page et authentifié par la signature de son URL (AckUrlSigner).
  */
 #[AsEventListener(event: RequestEvent::class, priority: 6)]
 final class CsrfProtectionListener
 {
     public const TOKEN_ID = 'app';
 
-    private const EXEMPT_ROUTES = ['app_login', 'app_register', 'app_reaction_toggle'];
+    private const EXEMPT_ROUTES = ['app_login', 'app_register', 'app_reaction_toggle', 'app_push_ack'];
 
     public function __construct(private readonly CsrfTokenManagerInterface $tokens) {}
 

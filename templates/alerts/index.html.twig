@@ -1,0 +1,189 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Alertes billetterie — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-5">
+
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold fg-1 tracking-title">Alertes billetterie</h1>
+        <a href="{{ path('app_alerts_search') }}"
+           class="iwt-icon-btn text-lg font-bold leading-none fg-accent" aria-label="Suivre un événement">+</a>
+    </div>
+
+    {# ── Ce que le module couvre — et ne couvre pas ── #}
+    <div class="card" style="background: rgba(61,220,151,0.06); border: 1px solid rgba(61,220,151,0.25)">
+        <p class="text-sm font-medium fg-1">🎫 Prévenu 24 h puis 1 h avant l'ouverture</p>
+        <p class="text-xs mt-1 fg-3">
+            Alertes sur la <strong>mise en vente générale</strong> Ticketmaster — les préventes ne sont pas
+            couvertes, Ticketmaster ne les expose pas pour la France. L'alerte H-1 sert à être devant la
+            page à temps : elle affiche un compte à rebours et redirige automatiquement vers la réservation.
+        </p>
+    </div>
+
+    {# ── Artistes attendus : wishlist + artistes déjà vus (voir ArtistAnnouncer) ──
+       Une notification à la première date qui apparaît au catalogue ; de là,
+       « Suivre » pose la veille sur l'ouverture. #}
+    <div class="card" id="artists">
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="font-medium fg-1">🎤 Artistes attendus</h2>
+            <span class="text-xs fg-4">{{ wishlist|length }} en wishlist</span>
+        </div>
+        <p class="text-xs mb-4 fg-3">
+            Prévenu dès qu'une date apparaît sur Ticketmaster France pour un artiste de ta wishlist —
+            ou que tu as déjà vu, si tu l'actives.
+        </p>
+
+        {# Artistes déjà vus : opt-in, une ligne par artiste du journal et par tournée #}
+        <form method="post" action="{{ path('app_alerts_seen_toggle') }}" data-controller="auto-submit"
+              class="flex items-center justify-between gap-3 pb-4 mb-4 bb-subtle">
+            <label for="seen-toggle" class="flex-1 min-w-0">
+                <span class="block text-sm fg-2">Artistes que j'ai déjà vus</span>
+                <span class="block text-xs mt-0.5 fg-4">
+                    {% if seen_artists_count > 0 %}
+                        {{ seen_artists_count }} artiste{{ seen_artists_count > 1 ? 's' }} dans ton journal
+                    {% else %}
+                        Aucun concert passé dans ton journal pour l'instant
+                    {% endif %}
+                </span>
+            </label>
+            <label class="iwt-switch">
+                <input type="checkbox" id="seen-toggle" name="alert_seen_artists" value="1"
+                       data-action="change->auto-submit#submit" {{ app.user.alertSeenArtists ? 'checked' }}>
+                <span class="iwt-switch-track"><span class="iwt-switch-thumb"></span></span>
+            </label>
+        </form>
+
+        {# Wishlist : des pastilles, chacune avec sa croix #}
+        {% if wishlist|length > 0 %}
+        <div class="flex flex-wrap gap-2 mb-3">
+            {% for a in wishlist %}
+            <form method="post" action="{{ path('app_alerts_artist_delete', {id: a.id}) }}" class="iwt-pill active" style="padding-right: 6px">
+                <a href="{{ path('app_alerts_search', {q: a.artistName}) }}" class="no-underline" style="color: inherit">{{ a.artistName }}</a>
+                <button type="submit" class="w-5 h-5 rounded-full flex items-center justify-center" style="color: inherit; opacity: 0.7"
+                        aria-label="Retirer {{ a.artistName }} de la wishlist">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <form method="post" action="{{ path('app_alerts_artist_add') }}" class="flex gap-2">
+            <input type="text" name="artist" required maxlength="255" autocomplete="off"
+                   placeholder="{{ wishlist|length == 0 ? 'Un artiste que tu rêves de voir (ex. Muse)' : 'Ajouter un artiste' }}"
+                   class="input-field flex-1" aria-label="Artiste à ajouter à la wishlist">
+            <button type="submit" class="btn-secondary px-4 shrink-0">Ajouter</button>
+        </form>
+    </div>
+
+    <h2 class="font-medium fg-1 pt-1">Mes veilles</h2>
+
+    {% if watches|length == 0 %}
+        {{ m.empty_state(
+            '🎫',
+            'Aucune veille',
+            'Cherche un concert à venir et on te prévient avant l\'ouverture de sa billetterie.',
+            path('app_alerts_search'),
+            'Chercher un événement'
+        ) }}
+    {% else %}
+        <div class="space-y-3">
+        {% for watch in watches %}
+            {% set event = watch.event %}
+            {% set window = event.publicSaleWindow %}
+            {% set opened = window is not null and window.startsAtUtc <= now %}
+            {% set deadlines = pending[watch.id ~ ''] ?? [] %}
+            <div class="card" id="w-{{ watch.id }}" style="{% if not watch.active %}opacity: 0.7{% endif %}">
+                <div class="flex items-start gap-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm fg-1">{{ event.name }}</p>
+                        <p class="text-xs mt-0.5 fg-3">
+                            {{ event.place ?? 'Lieu à préciser' }}
+                            {% if event.eventStartLocal %}
+                                · concert le {{ event.eventStartLocal|date('d/m/Y') }}{% if event.hasEventStartTime %} à {{ event.eventStartLocal|date('H\\hi') }}{% endif %}
+                            {% endif %}
+                        </p>
+                        {% if window %}
+                        <p class="text-xs mt-1 fg-2">
+                            Ouverture : <strong>{{ window.startsAtUtc|paris }}</strong> (heure de Paris)
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% if event.url %}
+                    <a href="{{ event.url }}" target="_blank" rel="noopener" class="text-xs font-medium flex-shrink-0 fg-accent">Ticketmaster ↗</a>
+                    {% endif %}
+                </div>
+
+                {# ── État ── #}
+                <div class="mt-3 text-xs space-y-1">
+                    {% if event.cancelled %}
+                        <span class="badge badge-default">⚠️ Annulé — veille désactivée</span>
+                    {% elseif event.status == 'rescheduled' %}
+                        <span class="badge badge-default">📅 Reporté — veille maintenue</span>
+                    {% elseif not watch.active %}
+                        <span class="badge badge-default">Veille désactivée</span>
+                    {% elseif opened %}
+                        <span class="badge badge-default">Ouverture passée — aucune alerte ne partira</span>
+                    {% endif %}
+                    {% if watch.active and not opened %}
+                        {% if deadlines|length == 0 %}
+                            <p class="fg-4">Aucune alerte programmée{% if not watch.notifyJ1 and not watch.notifyH1 %} — active J-1 ou H-1 ci-dessous{% endif %}.</p>
+                        {% else %}
+                            <ul class="space-y-1">
+                            {% for d in deadlines %}
+                                <li class="fg-2">
+                                    {{ d.type.value == 'J1' ? (d.imminent ? '⏰ Ouverture imminente' : '🔔 J-1') : (d.type.value == 'H1' ? '⏱️ H-1' : d.type.value) }}
+                                    · {{ d.scheduledFor|paris }}
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {# ── Réglages ── #}
+                <form method="post" action="{{ path('app_alerts_settings', {id: watch.id}) }}"
+                      data-controller="auto-submit" class="mt-3 pt-3 bt-subtle space-y-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="j1-{{ watch.id }}" class="text-sm fg-2">Alerte J-1 (24 h avant)</label>
+                        <label class="iwt-switch">
+                            <input type="checkbox" id="j1-{{ watch.id }}" name="notify_j1" value="1"
+                                   data-action="change->auto-submit#submit" {{ watch.notifyJ1 ? 'checked' }} {{ not watch.active ? 'disabled' }}>
+                            <span class="iwt-switch-track"><span class="iwt-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="h1-{{ watch.id }}" class="text-sm fg-2">Alerte H-1 (1 h avant)</label>
+                        <label class="iwt-switch">
+                            <input type="checkbox" id="h1-{{ watch.id }}" name="notify_h1" value="1"
+                                   data-action="change->auto-submit#submit" {{ watch.notifyH1 ? 'checked' }} {{ not watch.active ? 'disabled' }}>
+                            <span class="iwt-switch-track"><span class="iwt-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="ch-{{ watch.id }}" class="text-sm fg-2">Canal</label>
+                        <select id="ch-{{ watch.id }}" name="channel" class="iwt-select" style="max-width: 60%; padding-left: 12px"
+                                data-action="change->auto-submit#submit" {{ not watch.active ? 'disabled' }}>
+                            {% for c in channels %}
+                            <option value="{{ c.value }}" {{ watch.channel == c ? 'selected' }}>{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+
+                <form method="post" action="{{ path('app_alerts_delete', {id: watch.id}) }}" class="mt-3"
+                      data-controller="confirm" data-action="submit->confirm#check"
+                      data-confirm-title-value="Ne plus suivre cet événement ?"
+                      data-confirm-body-value="Les alertes programmées seront annulées."
+                      data-confirm-label-value="Supprimer la veille">
+                    <button type="submit" class="text-xs font-medium fg-negative">Supprimer la veille</button>
+                </form>
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+
+    <p class="text-[11px] text-center fg-4 pb-4">Contenu événementiel fourni par Ticketmaster. Les dates d'ouverture sont affichées en heure de Paris.</p>
+</div>
+{% endblock %}

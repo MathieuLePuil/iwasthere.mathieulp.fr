@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ alert.title }}</title>
+    <style>
+        body { margin: 0; padding: 0; background: #0B0D10; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #E8EAF0; }
+        .wrapper { max-width: 480px; margin: 40px auto; padding: 0 16px; }
+        .card { background: #161820; border-radius: 20px; padding: 40px 32px; border: 1px solid rgba(255,255,255,0.06); }
+        .logo { font-size: 24px; font-weight: 900; color: #B060FF; letter-spacing: -0.5px; margin-bottom: 32px; }
+        h1 { font-size: 22px; font-weight: 700; margin: 0 0 12px; color: #E8EAF0; }
+        p { font-size: 15px; line-height: 1.6; color: #9BA3B8; margin: 0 0 24px; }
+        .item { border-top: 1px solid rgba(255,255,255,0.06); padding: 16px 0; }
+        .item h2 { font-size: 16px; font-weight: 600; margin: 0 0 6px; color: #E8EAF0; }
+        .item p { font-size: 14px; margin: 0 0 12px; }
+        .btn { display: inline-block; background: #3DDC97; color: #0B0D10; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 600; }
+        .footer { font-size: 12px; color: #4B5268; margin-top: 24px; text-align: center; }
+        .footer a { color: #9BA3B8; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="card">
+        <div class="logo">IWasThere</div>
+        <h1>🎫 {{ alert.title }}</h1>
+        {% if alert.items|length == 1 %}
+            <p>{{ alert.items[0].body }}</p>
+            <a href="{{ alert.items[0].url }}" class="btn">Ouvrir la page Ticketmaster</a>
+        {% else %}
+            <p>{{ alert.items|length }} événements que tu suis :</p>
+            {% for item in alert.items %}
+            <div class="item">
+                <h2>{{ item.title }}</h2>
+                <p>{{ item.body }}</p>
+                <a href="{{ item.url }}" class="btn">Ouvrir la page Ticketmaster</a>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="footer">
+        {% if fallback %}
+            Tu reçois cet e-mail parce que la notification push ne t'est pas parvenue.<br>
+        {% endif %}
+        Tu suis {{ alert.items|length > 1 ? 'ces événements' : 'cet événement' }} depuis tes veilles IWasThere.
+        Les alertes portent sur la mise en vente générale, pas sur les préventes.<br>
+        Le contenu événementiel provient de Ticketmaster.
+    </div>
+</div>
+</body>
+</html>

@@ -73,6 +73,16 @@
         </div>
     </div>
 
+    {# ── Alertes billetterie — veilles et wishlist (module Ticketmaster, voir docs/ticketmaster.md) ── #}
+    <a href="{{ path('app_alerts') }}" class="card flex items-center gap-3 no-underline mb-5">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: var(--positive-soft)">🎫</div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium fg-1">Alertes billetterie</p>
+            <p class="text-xs fg-3">Ouvertures Ticketmaster, wishlist d'artistes</p>
+        </div>
+        <span class="text-xs font-medium flex-shrink-0 fg-accent">Mes veilles →</span>
+    </a>
+
     {# ── Succès ──
        Un aperçu, pas le catalogue : les plus hauts paliers décrochés et le prochain
        à viser. Le reste vit sur app_profile_badges. Rien n'est stocké, tout se

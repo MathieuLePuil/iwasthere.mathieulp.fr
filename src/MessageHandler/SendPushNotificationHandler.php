@@ -24,6 +24,7 @@ final readonly class SendPushNotificationHandler
             $message->body,
             $message->userId,
             $message->url,
+            $message->ackUrl,
         );
 
         // En prod, monolog n'écrit qu'à partir du niveau error : un warning ici

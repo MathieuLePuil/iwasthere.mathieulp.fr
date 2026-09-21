@@ -89,6 +89,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 5, nullable: true, options: ['default' => '08:00'])]
     private ?string $notifCompletionTime = '08:00';
 
+    /**
+     * Prévenir quand un artiste déjà vu (journal) annonce une date en France.
+     * Opt-in : c'est potentiellement une notification par artiste du journal
+     * et par tournée, on ne l'impose à personne. La wishlist (ArtistWatch)
+     * est l'autre source, explicite, du même signal.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $alertSeenArtists = false;
+
     /** Les rôles que l'admin peut attribuer ; voir getRoles() pour leur traduction Symfony. */
     public const ROLES = ['user', 'superAdmin'];
 
@@ -349,6 +358,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function wantsPush(NotificationType $type): bool
     {
         return (bool) ($this->notifPrefs[$type->value] ?? true);
+    }
+
+    public function isAlertSeenArtists(): bool
+    {
+        return $this->alertSeenArtists;
+    }
+
+    public function setAlertSeenArtists(bool $alertSeenArtists): static
+    {
+        $this->alertSeenArtists = $alertSeenArtists;
+
+        return $this;
     }
 
     public function getNotifCompletionTime(): ?string

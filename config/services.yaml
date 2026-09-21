@@ -11,6 +11,16 @@ parameters:
     vapid_public_key: '%env(default::VAPID_PUBLIC_KEY)%'
     vapid_private_key: '%env(default::VAPID_PRIVATE_KEY)%'
     vapid_subject: '%env(default::VAPID_SUBJECT)%'
+    ticketmaster_api_key: '%env(default:ticketmaster_api_key_default:TICKETMASTER_API_KEY)%'
+    ticketmaster_api_key_default: ''
+    # Segments du catalogue gardés par la synchronisation, en plus de ceux déjà
+    # suivis par une veille active. « all » pour tout le flux (~61 000 événements).
+    ticketmaster_segments: '%env(default:ticketmaster_segments_default:TICKETMASTER_SEGMENTS)%'
+    ticketmaster_segments_default: 'Music'
+    # Lot 3, mode « journalisation seule » : les échéances sont consignées à
+    # l'heure prévue au lieu d'être envoyées — pour vérifier le calage sur
+    # quelques ouvertures réelles avant d'alerter les utilisateurs.
+    ticketmaster_alerts_log_only: '%env(bool:default::TICKETMASTER_ALERTS_LOG_ONLY)%'
 
 services:
     # default configuration for services in *this* file
@@ -32,3 +42,7 @@ services:
             $vapidPublicKey: '%vapid_public_key%'
             $vapidPrivateKey: '%vapid_private_key%'
             $vapidSubject: '%vapid_subject%'
+
+    App\Ticketmaster\FeedDownloader:
+        arguments:
+            $apiKey: '%ticketmaster_api_key%'
