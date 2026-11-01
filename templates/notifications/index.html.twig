@@ -96,9 +96,11 @@
                             {% else %}
                             <div class="flex gap-2 mt-2 notif-actions">
                                 <form method="post" action="{{ path('app_event_together_yes', {id: notif.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                     <button class="btn-primary text-xs py-1.5 px-3">Oui, ensemble</button>
                                 </form>
                                 <form method="post" action="{{ path('app_event_together_no', {id: notif.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                     <button class="btn-secondary text-xs py-1.5 px-3">Non, chacun de son côté</button>
                                 </form>
                             </div>
@@ -108,9 +110,11 @@
                         {% if notif.type == 'friend_tagged_in_event' and notif.data %}
                         <div class="flex gap-2 mt-2 notif-actions">
                             <form method="post" action="{{ path('app_event_tag_accept', {id: notif.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                 <button class="btn-primary text-xs py-1.5 px-3">Ajouter à mon compte</button>
                             </form>
                             <form method="post" action="{{ path('app_event_tag_decline', {id: notif.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
                                 <button class="btn-secondary text-xs py-1.5 px-3">Ignorer</button>
                             </form>
                         </div>

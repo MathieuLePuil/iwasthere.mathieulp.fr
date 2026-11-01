@@ -12,6 +12,7 @@
     </div>
 
     <form method="post" class="space-y-5" data-controller="form-loader souvenir-gate event-form">
+        <input type="hidden" name="_token" value="{{ csrf_token('app') }}">
 
         {# Event info — date + type #}
         <div class="card space-y-4">

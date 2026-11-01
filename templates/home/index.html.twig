@@ -128,11 +128,12 @@
                 </div>
             </div>
             <div class="iwt-hero-body">
-                <div class="iwt-countdown" data-controller="countdown" data-countdown-date-value="{{ next_event.event.startDateTime|date('Y-m-d\\TH:i:s') }}">
-                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="days">--</span><span class="iwt-countdown-lbl">jours</span></div>
-                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="hours">--</span><span class="iwt-countdown-lbl">h</span></div>
-                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="minutes">--</span><span class="iwt-countdown-lbl">min</span></div>
-                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="seconds">--</span><span class="iwt-countdown-lbl">sec</span></div>
+                <div class="iwt-countdown" data-controller="countdown" data-countdown-date-value="{{ next_event.event.startDateTime|date('c') }}">
+                    {% set fallback_days = ((next_event.event.startDateTime|date('U') - 'now'|date('U')) / 86400)|round(0, 'floor') %}
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="days">{{ fallback_days }}</span><span class="iwt-countdown-lbl">jours</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="hours">00</span><span class="iwt-countdown-lbl">h</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="minutes">00</span><span class="iwt-countdown-lbl">min</span></div>
+                    <div class="iwt-countdown-cell"><span class="iwt-countdown-num" data-countdown-target="seconds">00</span><span class="iwt-countdown-lbl">sec</span></div>
                 </div>
                 <a href="{{ path('app_event_show', {id: next_event.event.id}) }}"
                    class="text-sm font-medium text-right block fg-accent">

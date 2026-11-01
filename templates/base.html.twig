@@ -61,6 +61,9 @@
         <link rel="apple-touch-icon" href="{{ asset('images/icons/apple-touch-icon.png') }}">
         {# Polices servies d'ici (assets/fonts) : plus d'appel à Google à chaque page. #}
         <link rel="stylesheet" href="{{ asset('styles/fonts.css') }}">
+        {# Charger le CSS directement : le module data: généré par l'importmap
+           est interdit par notre CSP et bloquerait tout le JavaScript. #}
+        <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
         <title>{% block title %}IWasThere{% endblock %}</title>
         {% block meta %}
         <meta name="description" content="IWasThere — ton journal d'expériences live : concerts, festivals, matchs.">
