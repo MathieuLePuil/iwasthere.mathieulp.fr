@@ -1,0 +1,19 @@
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - src
+    symfony:
+        # Le container compilé (généré par `bin/console cache:warmup` en mode debug) ;
+        # bin/phpstan s'en charge et pointe la variable dessus.
+        containerXmlPath: %env.PHPSTAN_CONTAINER_XML%
+    doctrine:
+        objectManagerLoader: tests/object-manager.php
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # Les tableaux de stats et de vues sont documentés à l'usage, pas par
+        # génériques : une valeur par clé, pas un type par tableau.
+        - identifier: missingType.iterableValue

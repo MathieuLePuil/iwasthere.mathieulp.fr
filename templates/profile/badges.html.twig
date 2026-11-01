@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Succès — IWasThere{% endblock %}
+
+{% block body %}
+{# Clés des succès déjà décrochés : le contrôleur les compare à ce que le
+   navigateur a déjà vu pour ne fêter (confettis + pop) que les nouveaux. #}
+{% set earned_keys = [] %}
+{% for family in badges.families %}{% for t in family.tiers %}{% if t.earned %}{% set earned_keys = earned_keys|merge([t.badge.value]) %}{% endif %}{% endfor %}{% endfor %}
+<div class="px-4 py-5" data-controller="celebrate" data-celebrate-keys-value="{{ earned_keys|json_encode }}">
+
+    {{ m.back_button(path('app_profile'), 'Mon Profil') }}
+
+    {# ── En-tête : où en est-on sur l'ensemble du catalogue ── #}
+    <div class="mt-4 mb-5">
+        <h1 class="text-xl font-semibold fg-1 tracking-title">Succès</h1>
+        <p class="text-sm mt-0.5 fg-3">
+            {% if badges.earned_count == 0 %}
+                Aucun succès décroché pour l'instant — il y en a {{ badges.total_count }} à aller chercher.
+            {% else %}
+                {{ badges.earned_count }} succès sur {{ badges.total_count }} décroché{{ badges.earned_count > 1 ? 's' : '' }}.
+            {% endif %}
+        </p>
+        {# aria-hidden : la phrase juste au-dessus dit déjà la même chose, en mieux. #}
+        <div class="mt-3 h-1.5 rounded-full overflow-hidden sf-3" aria-hidden="true">
+            <div class="h-full rounded-full" style="width: {{ (badges.earned_count / badges.total_count * 100)|round }}%; background: var(--positive)"></div>
+        </div>
+    </div>
+
+    {# ── Une section par famille, paliers du plus bas au plus haut ──
+       Trois états par palier : décroché, en cours (le premier non atteint, avec sa
+       progression), puis les suivants, verrouillés et sans chiffres — ils ne se
+       jouent qu'une fois le palier courant passé. #}
+    {% for family in badges.families %}
+    <div class="mb-5">
+        <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 sf-2">{{ family.icon }}</div>
+            <h2 class="font-medium flex-1 fg-1">{{ family.name }}</h2>
+            <span class="text-xs font-medium fg-4">{{ family.earned_count }}/{{ family.total }}</span>
+        </div>
+
+        <div class="card card-flush">
+            {% for t in family.tiers %}
+            <div class="px-4 py-3" style="border-bottom: {% if not loop.last %}1px solid var(--border-subtle){% else %}none{% endif %}{% if t.earned %}; background: var(--positive-soft){% endif %}">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                         {% if t.earned %}data-badge-key="{{ t.badge.value }}"{% endif %}
+                         style="{% if t.earned %}background: rgba(61,220,151,0.14); border: 1px solid rgba(61,220,151,0.3){% else %}background: var(--bg-2); border: 1px solid var(--border-subtle); filter: grayscale(1); opacity: {{ t.locked_ahead ? '0.4' : '0.65' }}{% endif %}">{{ t.badge.icon }}</div>
+
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate" style="color: {{ t.earned ? 'var(--fg-1)' : (t.locked_ahead ? 'var(--fg-3)' : 'var(--fg-2)') }}">{{ t.badge.label }}</p>
+                        <p class="text-xs truncate fg-4">{{ t.badge.description }}</p>
+                    </div>
+
+                    {% if t.earned %}
+                        <svg class="w-5 h-5 flex-shrink-0 fg-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Décroché"><path d="M20 6L9 17l-5-5"/></svg>
+                    {% elseif t.locked_ahead %}
+                        <svg class="w-4 h-4 flex-shrink-0 fg-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Verrouillé"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    {% else %}
+                        <span class="text-xs font-medium flex-shrink-0 fg-3">{{ t.value }}/{{ t.target }}</span>
+                    {% endif %}
+                </div>
+
+                {% if not t.earned and not t.locked_ahead %}
+                {# aria-hidden : la progression est déjà lue juste au-dessus en « 48/50 » #}
+                <div class="mt-2 h-1 rounded-full overflow-hidden sf-3" aria-hidden="true">
+                    <div class="h-full rounded-full" style="width: {{ t.percent }}%; background: var(--positive); opacity: 0.55"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <p class="text-xs text-center pb-2 fg-4">
+        Les succès se recalculent à chaque visite depuis tes événements archivés.
+    </p>
+
+</div>
+{% endblock %}

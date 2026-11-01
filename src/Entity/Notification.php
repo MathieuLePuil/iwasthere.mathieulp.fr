@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
+#[ORM\Index(name: 'idx_notification_unread', columns: ['recipient_id', 'is_read'])]
+#[ORM\Index(name: 'idx_notification_dedupe', columns: ['recipient_id', 'type', 'dedupe_key'])]
 class Notification
 {
     #[ORM\Id]
@@ -35,6 +37,13 @@ class Notification
 
     #[ORM\Column(options: ['default' => false])]
     private bool $isRead = false;
+
+    /**
+     * Clé « une seule fois » (activity:…, memory:…, day:…) : indexée, elle
+     * remplace le balayage du JSON qu'imposait sa place dans `data`.
+     */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $dedupeKey = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -118,6 +127,18 @@ class Notification
     public function setIsRead(bool $isRead): static
     {
         $this->isRead = $isRead;
+
+        return $this;
+    }
+
+    public function getDedupeKey(): ?string
+    {
+        return $this->dedupeKey;
+    }
+
+    public function setDedupeKey(?string $dedupeKey): static
+    {
+        $this->dedupeKey = $dedupeKey;
 
         return $this;
     }

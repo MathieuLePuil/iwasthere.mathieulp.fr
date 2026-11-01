@@ -8,40 +8,19 @@ L'interface d'administration est accessible à l'URL :
 /admin
 ```
 
-L'accès est restreint aux utilisateurs ayant le rôle `ROLE_ADMIN`.
+L'accès est restreint aux comptes dont la colonne `user.role` vaut `superAdmin`
+(traduit en `ROLE_SUPER_ADMIN` par `User::getRoles()`).
 
 ---
 
 ## Comment créer un compte administrateur
 
-### Méthode 1 — Via la console Symfony (recommandée)
+1. Crée d'abord un compte utilisateur normal (via `/register` ou Google).
+2. Promeus-le depuis la console :
 
 ```bash
-php bin/console app:create-admin --email=admin@example.com --password=motdepasse
-```
-
-> Si cette commande n'existe pas, utilise la méthode 2.
-
-### Méthode 2 — Via la base de données directement
-
-1. Crée d'abord un compte utilisateur normal (via `/register` ou Google OAuth).
-
-2. Ouvre phpMyAdmin ou une console SQL, et exécute :
-
-```sql
-UPDATE user
-SET roles = '["ROLE_ADMIN"]'
-WHERE email = 'ton.email@example.com';
-```
-
-Remplace `ton.email@example.com` par l'adresse email du compte à promouvoir.
-
-### Méthode 3 — Via Symfony Console (Doctrine)
-
-```bash
-# Dans le container Docker
-docker compose exec php php bin/console doctrine:query:sql \
-  "UPDATE user SET roles='[\"ROLE_ADMIN\"]' WHERE email='ton.email@example.com'"
+php bin/console app:user:promote ton.email@example.com   # ou @pseudo
+php bin/console app:user:promote @pseudo --demote        # pour retirer le rôle
 ```
 
 ---
@@ -52,7 +31,7 @@ Une fois connecté en tant qu'admin :
 
 1. Va dans **Utilisateurs** (`/admin/users`)
 2. Clique sur le nom de l'utilisateur à promouvoir
-3. Dans la fiche utilisateur, clique sur **Promouvoir en Admin**
+3. Dans la fiche utilisateur, **Modifier**, puis le champ **Rôle** (`Super Admin`)
 
 ---
 
@@ -70,12 +49,12 @@ Une fois connecté en tant qu'admin :
 
 ## Sécurité
 
-- Seuls les comptes avec `ROLE_ADMIN` peuvent accéder à `/admin/*`
+- Seuls les comptes avec `ROLE_SUPER_ADMIN` peuvent accéder à `/admin/*`
 - La configuration se trouve dans `config/packages/security.yaml` :
 
 ```yaml
 access_control:
-    - { path: ^/admin, roles: ROLE_ADMIN }
+    - { path: ^/admin, roles: ROLE_SUPER_ADMIN }
 ```
 
 - Toutes les actions admin sont tracées dans la table `audit_log`

@@ -1,0 +1,15 @@
+{# Les pastilles de réaction d'une participation : une par emoji déjà posé, aucune
+   s'il n'y en a pas. Rendu ici et par ReactionController::toggle, qui renvoie ce
+   même fragment après chaque bascule — d'où le fichier séparé plutôt qu'une boucle
+   dans la macro : le balisage n'a qu'un seul endroit où vivre.
+   Variables : p (participation), state (emoji => {count, mine}) #}
+{% for emoji, s in state %}
+    <button type="button" class="iwt-reaction{{ s.mine ? ' is-mine' }}"
+            data-action="reaction#toggle"
+            data-reaction-emoji-param="{{ emoji }}"
+            aria-pressed="{{ s.mine ? 'true' : 'false' }}"
+            aria-label="{{ emoji }} — {{ s.count }} réaction{{ s.count > 1 ? 's' }}{{ s.mine ? ', dont la tienne' }}">
+        <span class="iwt-reaction-emoji" aria-hidden="true">{{ emoji }}</span>
+        <span class="iwt-reaction-count">{{ s.count }}</span>
+    </button>
+{% endfor %}

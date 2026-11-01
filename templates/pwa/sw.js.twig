@@ -1,0 +1,223 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Service worker IWasThere
+//
+// Deux rôles :
+//   1. Push (notifications) — inchangé, voir plus bas.
+//   2. Mode hors-ligne — cacher l'app-shell (CSS/JS/polices) et les dernières pages
+//      visitées, pour rouvrir ses souvenirs sans réseau (typiquement en festival, là
+//      où le réseau est saturé). Stratégies :
+//        · pages (navigations + visites Turbo) → réseau d'abord, cache en repli ;
+//        · assets générés (CSS, JS, polices)     → cache d'abord, revalidation en fond.
+//
+// VERSION est l'empreinte de ce fichier, posée par PwaController : toute
+// modification de la logique de cache purge les anciens caches « iwt-* » à
+// l'activation, sans rien avoir à bumper à la main.
+//
+// Ce fichier est un template Twig (la seule expression Twig est VERSION) ;
+// il est servi sur /sw.js avec le bon Content-Type.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const VERSION = '{{ version }}';
+const PAGES_CACHE = 'iwt-pages-' + VERSION;
+const ASSETS_CACHE = 'iwt-assets-' + VERSION;
+const SHELL_CACHE = 'iwt-shell-' + VERSION;
+
+const OFFLINE_URL = '/offline';
+
+// Nombre max de pages gardées hors-ligne — assez pour un historique de navigation
+// récent sans laisser le cache grossir indéfiniment.
+const MAX_PAGES = 40;
+
+// Précache minimal : la page de repli et quelques icônes à chemin stable. On reste
+// court volontairement — un seul asset manquant ne doit pas faire échouer l'install
+// (d'où allSettled plutôt que cache.addAll, tout-ou-rien).
+const SHELL_ASSETS = [
+    OFFLINE_URL,
+    '/manifest.json',
+    '/icons/icon-192.png',
+    '/icons/apple-touch-icon.png',
+];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(SHELL_CACHE)
+            .then((cache) => Promise.allSettled(SHELL_ASSETS.map((url) => cache.add(url))))
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    const keep = [PAGES_CACHE, ASSETS_CACHE, SHELL_CACHE];
+    event.waitUntil(
+        caches.keys()
+            .then((keys) => Promise.all(
+                keys.filter((k) => k.startsWith('iwt-') && !keep.includes(k))
+                    .map((k) => caches.delete(k))
+            ))
+            .then(() => self.clients.claim())
+    );
+});
+
+// ── Cache offline ──────────────────────────────────────────────────────────────
+
+function isPageRequest(request) {
+    return request.mode === 'navigate'
+        || (request.headers.get('accept') || '').includes('text/html');
+}
+
+// Garde le cache de pages sous MAX_PAGES, en évinçant les plus anciennes (les clés
+// sont renvoyées dans l'ordre d'insertion).
+async function trimPages() {
+    const cache = await caches.open(PAGES_CACHE);
+    const keys = await cache.keys();
+    for (const key of keys.slice(0, keys.length - MAX_PAGES)) {
+        await cache.delete(key);
+    }
+}
+
+// Pages qui ne doivent jamais rester lisibles hors-ligne sur un appareil partagé :
+// le fil de notifications, les réglages, l'admin, et les écrans de connexion.
+// Le serveur les envoie aussi en Cache-Control: no-store, respecté ci-dessous.
+const NEVER_CACHE = ['/notifications', '/settings', '/admin', '/login', '/register', '/forgot-password', '/reset-password'];
+
+function isCacheablePage(url, response) {
+    if (NEVER_CACHE.some((prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + '/'))) return false;
+    const cc = response.headers.get('cache-control') || '';
+    return !/no-store/i.test(cc);
+}
+
+// Réseau d'abord : on veut toujours la version fraîche quand il y a du réseau, et on
+// ne bascule sur le cache que hors-ligne. On ne mémorise que les pages complètes et
+// propres (200, same-origin) — jamais les redirections d'auth (302 vers /login).
+async function networkFirstPage(request) {
+    const cache = await caches.open(PAGES_CACHE);
+    try {
+        const response = await fetch(request);
+        if (response && response.status === 200 && response.type === 'basic'
+            && isCacheablePage(new URL(request.url), response)) {
+            cache.put(request, response.clone());
+            trimPages();
+        }
+        return response;
+    } catch (e) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const offline = await caches.match(OFFLINE_URL);
+        return offline || Response.error();
+    }
+}
+
+// Cache d'abord, revalidation en fond : réponse instantanée depuis le cache, mise à
+// jour silencieuse pour la prochaine fois.
+async function staleWhileRevalidate(request, cacheName) {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    const network = fetch(request).then((response) => {
+        if (response && (response.status === 200 || response.type === 'opaque')) {
+            cache.put(request, response.clone());
+        }
+        return response;
+    }).catch(() => cached);
+    return cached || network;
+}
+
+self.addEventListener('fetch', (event) => {
+    const request = event.request;
+    if (request.method !== 'GET') return;
+
+    const url = new URL(request.url);
+    const sameOrigin = url.origin === self.location.origin;
+
+    // Pages (navigations plein écran + visites Turbo, toutes en Accept: text/html).
+    if (sameOrigin && isPageRequest(request)) {
+        event.respondWith(networkFirstPage(request));
+        return;
+    }
+
+    // Assets générés par l'asset-mapper (chemins /assets/…, hachés donc immuables).
+    if (sameOrigin && url.pathname.startsWith('/assets/')) {
+        event.respondWith(staleWhileRevalidate(request, ASSETS_CACHE));
+        return;
+    }
+
+});
+
+// À la déconnexion, la page de login envoie ce message : les pages du compte qui
+// vient de partir ne doivent pas rester consultables hors-ligne par le suivant.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'clear-pages') {
+        event.waitUntil(caches.delete(PAGES_CACHE));
+    }
+});
+
+// ── Push (notifications) ─────────────────────────────────────────────────────────
+
+self.addEventListener('push', function(event) {
+    if (!(self.Notification && self.Notification.permission === 'granted')) {
+        return;
+    }
+
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || "IWasThere";
+    const message = data.body || "Nouvelle notification";
+    const icon = data.icon || "/icons/icon-192.png";
+
+    const options = {
+        body: message,
+        icon: icon,
+        badge: icon,
+        vibrate: [200, 100, 200],
+        tag: 'iwt-notification',
+        renotify: true,
+        requireInteraction: true,
+        data: { url: data.url || '/home' },
+        actions: [
+            { action: 'view', title: 'Voir l\'app' },
+            { action: 'close', title: 'Fermer' }
+        ]
+    };
+
+    // Les alertes billetterie portent une URL d'accusé de réception : sans lui
+    // sous 5 minutes, le serveur envoie l'e-mail de secours. Son échec ne doit
+    // jamais empêcher l'affichage.
+    const tasks = [self.registration.showNotification(title, options)];
+    if (data.ackUrl) {
+        tasks.push(fetch(data.ackUrl, { method: 'POST', credentials: 'same-origin' }).catch(() => {}));
+    }
+
+    event.waitUntil(Promise.all(tasks));
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+
+    if (event.action === 'close') {
+        return;
+    }
+
+    const targetUrl = new URL(
+        (event.notification.data && event.notification.data.url) || '/home',
+        self.location.origin
+    ).href;
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(function(clientList) {
+                for (let i = 0; i < clientList.length; i++) {
+                    const client = clientList[i];
+                    if ('focus' in client) {
+                        const focused = client.focus();
+                        if ('navigate' in client) {
+                            return focused.then(function(c) {
+                                return (c || client).navigate(targetUrl);
+                            });
+                        }
+                        return focused;
+                    }
+                }
+                if (clients.openWindow) {
+                    return clients.openWindow(targetUrl);
+                }
+            })
+    );
+});

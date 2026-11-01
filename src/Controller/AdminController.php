@@ -6,17 +6,20 @@ namespace App\Controller;
 
 use App\Entity\AuditLog;
 use App\Entity\Event;
-use App\Entity\EventParticipation;
 use App\Entity\User;
 use App\Entity\Venue;
+use App\Event\EventType;
+use App\Http\Input;
+use App\Participation\CompanionSync;
+use App\Participation\ParticipationService;
 use App\Repository\AuditLogRepository;
 use App\Repository\EventParticipationRepository;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use App\Repository\VenueRepository;
+use App\Service\AccountDeletionService;
 use App\Service\SetlistFmService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,8 +28,10 @@ use Symfony\Component\Uid\Uuid;
 
 #[IsGranted('ROLE_SUPER_ADMIN')]
 #[Route('/admin')]
-class AdminController extends AbstractController
+class AdminController extends AppController
 {
+    private const PER_PAGE = 50;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
     ) {}
@@ -40,7 +45,7 @@ class AdminController extends AbstractController
         ?string $newValue = null,
     ): void {
         $log = new AuditLog();
-        $log->setSuperAdminUserId($this->getUser()->getId())
+        $log->setSuperAdminUserId($this->user()->getId())
             ->setAction($action)
             ->setEntityType($entityType)
             ->setEntityId($entityId)
@@ -57,9 +62,9 @@ class AdminController extends AbstractController
         VenueRepository $venueRepo,
     ): Response {
         return $this->render('admin/dashboard.html.twig', [
-            'total_users' => count($userRepo->findAll()),
-            'total_events' => count($eventRepo->findAll()),
-            'total_venues' => count($venueRepo->findAll()),
+            'total_users' => $userRepo->count([]),
+            'total_events' => $eventRepo->count([]),
+            'total_venues' => $venueRepo->count([]),
         ]);
     }
 
@@ -88,15 +93,34 @@ class AdminController extends AbstractController
     }
 
     #[Route('/users/{id}/edit', name: 'app_admin_user_edit', methods: ['GET', 'POST'])]
-    public function editUser(User $user, Request $request): Response
+    public function editUser(User $user, Request $request, UserRepository $userRepo, CompanionSync $companions): Response
     {
         if ($request->isMethod('POST')) {
             $old = ['email' => $user->getEmail(), 'role' => $user->getRole(), 'displayName' => $user->getDisplayName()];
 
-            $user->setDisplayName((string) $request->request->get('display_name', $user->getDisplayName()));
-            $user->setEmail((string) $request->request->get('email', $user->getEmail()));
-            $user->setBio($request->request->get('bio') ?: null);
-            $user->setRole((string) $request->request->get('role', $user->getRole()));
+            $email = mb_strtolower(Input::text($request->request->get('email'), 180) ?? '');
+            $role = (string) $request->request->get('role', $user->getRole());
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->addFlash('error', 'Adresse email invalide.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+            $taken = $userRepo->findOneByEmail($email);
+            if ($taken !== null && $taken !== $user) {
+                $this->addFlash('error', 'Cette adresse est déjà utilisée par un autre compte.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+            if (!in_array($role, User::ROLES, true)) {
+                $this->addFlash('error', 'Rôle inconnu.');
+
+                return $this->redirectToRoute('app_admin_user_edit', ['id' => $user->getId()]);
+            }
+
+            $user->setDisplayName(Input::text($request->request->get('display_name'), 100) ?? $user->getDisplayName());
+            $user->setEmail($email);
+            $user->setBio(Input::text($request->request->get('bio'), 1000));
+            $user->setRole($role);
 
             if ($old['email'] !== $user->getEmail()) {
                 $this->logAction('update', 'User', (string) $user->getId(), 'email', $old['email'], $user->getEmail());
@@ -106,6 +130,7 @@ class AdminController extends AbstractController
             }
             if ($old['displayName'] !== $user->getDisplayName()) {
                 $this->logAction('update', 'User', (string) $user->getId(), 'displayName', $old['displayName'], $user->getDisplayName());
+                $companions->rename($user);
             }
 
             $this->em->flush();
@@ -118,16 +143,17 @@ class AdminController extends AbstractController
     }
 
     #[Route('/users/{id}/delete', name: 'app_admin_user_delete', methods: ['POST'])]
-    public function deleteUser(User $user): Response
+    public function deleteUser(User $user, AccountDeletionService $accountDeletion): Response
     {
-        if ($user === $this->getUser()) {
+        if ($user === $this->user()) {
             $this->addFlash('error', 'Tu ne peux pas supprimer ton propre compte depuis l\'admin.');
+
             return $this->redirectToRoute('app_admin_users');
         }
 
+        // Journaliser avant : l'entité n'a plus d'id lisible une fois supprimée.
         $this->logAction('delete', 'User', (string) $user->getId(), null, $user->getEmail());
-        $this->em->remove($user);
-        $this->em->flush();
+        $accountDeletion->delete($user);
         $this->addFlash('success', 'Utilisateur supprimé.');
 
         return $this->redirectToRoute('app_admin_users');
@@ -138,12 +164,19 @@ class AdminController extends AbstractController
     #[Route('/events', name: 'app_admin_events')]
     public function events(Request $request, EventRepository $eventRepo): Response
     {
-        $q = $request->query->get('q', '');
+        $q = (string) $request->query->get('q', '');
+        $page = max(1, $request->query->getInt('page', 1));
         $events = $q
-            ? $eventRepo->search($q)
-            : $eventRepo->findBy([], ['createdAt' => 'DESC']);
+            ? $eventRepo->search($q, 50)
+            : $eventRepo->findBy([], ['createdAt' => 'DESC'], self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $totalPages = $q ? 1 : max(1, (int) ceil($eventRepo->count([]) / self::PER_PAGE));
 
-        return $this->render('admin/events.html.twig', ['events' => $events, 'q' => $q]);
+        return $this->render('admin/events.html.twig', [
+            'events' => $events,
+            'q' => $q,
+            'page' => min($page, $totalPages),
+            'total_pages' => $totalPages,
+        ]);
     }
 
     #[Route('/events/{id}', name: 'app_admin_event_show')]
@@ -161,22 +194,19 @@ class AdminController extends AbstractController
         if ($request->isMethod('POST')) {
             $old = $event->getArtistName() ?? $event->getTournamentName();
 
-            $dateStr = $request->request->get('date');
-            if ($dateStr) {
-                $event->setDate(new \DateTimeImmutable($dateStr));
+            if ($date = Input::date($request->request->get('date'))) {
+                $event->setDate($date);
             }
-            $event->setArtistName($request->request->get('artist_name') ?: null);
-            $event->setTournamentName($request->request->get('tournament_name') ?: null);
-            $event->setTeams($request->request->get('teams') ?: null);
-            $event->setType((string) $request->request->get('type', $event->getType()));
+            $event->setArtistName(Input::text($request->request->get('artist_name'), 255));
+            $event->setTournamentName(Input::text($request->request->get('tournament_name'), 255));
+            $event->setTeams(Input::text($request->request->get('teams'), 255));
+            $type = EventType::tryFrom((string) $request->request->get('type', ''));
+            if ($type !== null) {
+                $event->setType($type->value)->setCategory($type->category()->value);
+            }
 
-            $venueId = $request->request->get('venue_id');
-            if ($venueId) {
-                $venue = $venueRepo->find($venueId);
-                $event->setVenue($venue);
-            } else {
-                $event->setVenue(null);
-            }
+            $venueId = Input::uuid($request->request->get('venue_id'));
+            $event->setVenue($venueId ? $venueRepo->find($venueId) : null);
 
             $event->setUpdatedAt(new \DateTime());
             $this->logAction('update', 'Event', (string) $event->getId(), null, $old, $event->getArtistName() ?? $event->getTournamentName());
@@ -193,12 +223,12 @@ class AdminController extends AbstractController
     }
 
     #[Route('/events/{id}/participations/{pid}/delete', name: 'app_admin_participation_delete', methods: ['POST'])]
-    public function deleteParticipation(Event $event, string $pid, EventParticipationRepository $partRepo): Response
+    public function deleteParticipation(Event $event, string $pid, EventParticipationRepository $partRepo, ParticipationService $participations): Response
     {
-        $participation = $partRepo->find($pid);
+        $participation = Uuid::isValid($pid) ? $partRepo->find($pid) : null;
         if ($participation && $participation->getEvent()->getId()->equals($event->getId())) {
             $this->logAction('delete', 'EventParticipation', $pid);
-            $this->em->remove($participation);
+            $participations->remove($participation);
             $this->em->flush();
             $this->addFlash('success', 'Participation supprimée.');
         }
@@ -222,10 +252,10 @@ class AdminController extends AbstractController
     }
 
     #[Route('/events/{id}/delete', name: 'app_admin_event_delete', methods: ['POST'])]
-    public function deleteEvent(Event $event, EventParticipationRepository $participationRepo): Response
+    public function deleteEvent(Event $event, EventParticipationRepository $participationRepo, ParticipationService $participations): Response
     {
         foreach ($participationRepo->findByEvent($event) as $participation) {
-            $this->em->remove($participation);
+            $participations->remove($participation);
         }
         $this->logAction('delete', 'Event', (string) $event->getId(), null, $event->getArtistName() ?? $event->getTournamentName());
         $this->em->remove($event);
@@ -240,12 +270,19 @@ class AdminController extends AbstractController
     #[Route('/venues', name: 'app_admin_venues')]
     public function venues(Request $request, VenueRepository $venueRepo): Response
     {
-        $q = $request->query->get('q', '');
+        $q = (string) $request->query->get('q', '');
+        $page = max(1, $request->query->getInt('page', 1));
         $venues = $q
-            ? $venueRepo->search($q)
-            : $venueRepo->findBy([], ['name' => 'ASC']);
+            ? $venueRepo->search($q, 50)
+            : $venueRepo->findBy([], ['name' => 'ASC'], self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $totalPages = $q ? 1 : max(1, (int) ceil($venueRepo->count([]) / self::PER_PAGE));
 
-        return $this->render('admin/venues.html.twig', ['venues' => $venues, 'q' => $q]);
+        return $this->render('admin/venues.html.twig', [
+            'venues' => $venues,
+            'q' => $q,
+            'page' => min($page, $totalPages),
+            'total_pages' => $totalPages,
+        ]);
     }
 
     #[Route('/venues/{id}/edit', name: 'app_admin_venue_edit', methods: ['GET', 'POST'])]
@@ -254,14 +291,12 @@ class AdminController extends AbstractController
         if ($request->isMethod('POST')) {
             $old = $venue->getName();
 
-            $venue->setName((string) $request->request->get('name', $venue->getName()));
-            $venue->setAddress((string) $request->request->get('address', $venue->getAddress()));
-            $venue->setCity((string) $request->request->get('city', $venue->getCity()));
-            $venue->setCountry((string) $request->request->get('country', $venue->getCountry()));
-            $venue->setLatitude((float) $request->request->get('latitude', $venue->getLatitude()));
-            $venue->setLongitude((float) $request->request->get('longitude', $venue->getLongitude()));
-            $venue->setCapacity($request->request->get('capacity') !== '' ? (int) $request->request->get('capacity') : null);
-            $venue->setVenueType($request->request->get('venue_type') ?: null);
+            $venue->setName(Input::text($request->request->get('name'), 255) ?? $venue->getName());
+            $venue->setAddress(Input::text($request->request->get('address'), 255) ?? '');
+            $venue->setLatitude(max(-90.0, min(90.0, (float) $request->request->get('latitude', $venue->getLatitude()))));
+            $venue->setLongitude(max(-180.0, min(180.0, (float) $request->request->get('longitude', $venue->getLongitude()))));
+            $venue->setCapacity(Input::int($request->request->get('capacity'), 1, 1000000));
+            $venue->setVenueType(Input::text($request->request->get('venue_type'), 20));
             $venue->setUpdatedAt(new \DateTime());
 
             $this->logAction('update', 'Venue', (string) $venue->getId(), 'name', $old, $venue->getName());

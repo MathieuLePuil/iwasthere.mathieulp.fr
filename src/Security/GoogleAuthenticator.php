@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Security;
 
 use App\Entity\User;
@@ -9,9 +11,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use KnpU\OAuth2ClientBundle\Security\Authenticator\OAuth2Authenticator;
 use League\OAuth2\Client\Provider\GoogleUser;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
@@ -23,12 +27,17 @@ use Symfony\Component\Security\Http\Util\TargetPathTrait;
 class GoogleAuthenticator extends OAuth2Authenticator
 {
     use TargetPathTrait;
+
+    /** Passe à true quand ce login vient de créer le compte, pour router vers l'onboarding. */
+    private bool $isNewUser = false;
+
     public function __construct(
         private ClientRegistry $clientRegistry,
         private EntityManagerInterface $em,
         private RouterInterface $router,
         private UserRepository $userRepository,
         private AvatarService $avatarService,
+        private LoggerInterface $logger,
     ) {}
 
     public function supports(Request $request): ?bool
@@ -51,6 +60,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 if ($existingUser) {
                     $this->syncAvatar($existingUser, $googleUser);
                     $this->em->flush();
+
                     return $existingUser;
                 }
 
@@ -60,15 +70,22 @@ class GoogleAuthenticator extends OAuth2Authenticator
                     $existingUser->setGoogleId($googleUser->getId());
                     $this->syncAvatar($existingUser, $googleUser);
                     $this->em->flush();
+
                     return $existingUser;
                 }
 
                 // Create new user
+                $this->isNewUser = true;
                 $user = new User();
                 $user->setGoogleId($googleUser->getId());
                 $user->setEmail($googleUser->getEmail());
-                $user->setDisplayName($googleUser->getName() ?? $googleUser->getEmail());
-                $baseUsername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $googleUser->getEmail())[0]));
+                $user->setDisplayName(mb_substr($googleUser->getName() ?? $googleUser->getEmail(), 0, 100));
+                // Même alphabet et même longueur que l'inscription classique (et que la
+                // route /p/{pseudo}) : un pseudo vide ou trop long n'aurait pas de page.
+                $baseUsername = substr(strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode('@', $googleUser->getEmail())[0]) ?? ''), 0, 24);
+                if (strlen($baseUsername) < 3) {
+                    $baseUsername = 'user';
+                }
                 $user->setUsername($this->generateUniqueUsername($baseUsername));
 
                 $this->em->persist($user);
@@ -86,8 +103,8 @@ class GoogleAuthenticator extends OAuth2Authenticator
 
     private function syncAvatar(User $user, GoogleUser $googleUser): void
     {
-        // Don't overwrite a manually uploaded avatar
-        if ($user->getAvatarUrl() && str_starts_with($user->getAvatarUrl(), '/uploads/avatars/')) {
+        // Une photo déjà en place (téléversée ou déjà synchronisée) n'est pas écrasée
+        if ($user->getAvatarUrl()) {
             return;
         }
 
@@ -96,7 +113,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
             return;
         }
 
-        $localPath = $this->avatarService->downloadFromUrl($remoteUrl, (string) $user->getId());
+        $localPath = $this->avatarService->downloadFromUrl($remoteUrl, $user);
         if ($localPath) {
             $user->setAvatarUrl($localPath);
         }
@@ -110,6 +127,7 @@ class GoogleAuthenticator extends OAuth2Authenticator
             $username = $base . $counter;
             $counter++;
         }
+
         return $username;
     }
 
@@ -117,7 +135,14 @@ class GoogleAuthenticator extends OAuth2Authenticator
     {
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             $this->removeTargetPath($request->getSession(), $firewallName);
+
             return new RedirectResponse($targetPath);
+        }
+
+        // Compte tout juste créé via Google : même mini-parcours que l'inscription
+        // classique, plutôt qu'un accueil vide.
+        if ($this->isNewUser) {
+            return new RedirectResponse($this->router->generate('app_onboarding'));
         }
 
         return new RedirectResponse($this->router->generate('app_home'));
@@ -125,7 +150,16 @@ class GoogleAuthenticator extends OAuth2Authenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        $request->getSession()->set('oauth_error', $exception->getMessage());
+        // Le détail (réponse Google, réseau) va dans le journal ; l'utilisateur voit
+        // un message qu'il peut suivre, dans le flash que le layout affiche déjà —
+        // l'ancien `oauth_error` en session n'était lu par aucun template.
+        $this->logger->warning('Connexion Google refusée', ['exception' => $exception]);
+
+        $session = $request->getSession();
+        if ($session instanceof FlashBagAwareSessionInterface) {
+            $session->getFlashBag()->add('error', 'La connexion avec Google n\'a pas abouti. Réessaie, ou connecte-toi avec ton email.');
+        }
+
         return new RedirectResponse($this->router->generate('app_login'));
     }
 }

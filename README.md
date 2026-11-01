@@ -132,13 +132,13 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 
    ⚠️ **Une fois les clés VAPID en prod, ne JAMAIS les changer.** Les abonnements existants seraient invalidés et chaque utilisateur devrait réactiver les notifications. Sauvegarde la paire dans ton gestionnaire de secrets.
 
-3. **Migration de base.** Le rebuild a (re)créé la table `push_subscription`. À déployer :
+3. **Migration de base.** Les abonnements push vivent dans la table `push_subscription` (entité `PushSubscription`). À déployer :
 
    ```bash
    php bin/console doctrine:migrations:migrate --no-interaction
    ```
 
-4. **Service worker.** Le fichier `public/sw.js` doit être servi avec :
+4. **Service worker.** `/sw.js` est rendu par `PwaController` depuis `templates/pwa/sw.js.twig` (sa version est l'empreinte du fichier) et servi avec :
    - `Content-Type: application/javascript`
    - **scope `/`** (déjà géré par défaut puisque le fichier est à la racine de `public/`)
    - pas de `Cache-Control: no-store` agressif côté CDN — sinon les nouvelles versions du SW ne sont pas récupérées.
@@ -152,7 +152,7 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
    Vérifie qu'ils existent en prod (`public/icons/`).
 
 7. **Test final en prod.** Une fois déployé :
-   - Sur iPhone : ouvrir Safari → `https://iwasthere.mathieulp.fr` → bouton Partager → « Sur l'écran d'accueil ». Ouvrir l'icône installée. Accepter la popup. Puis :
+   - Sur iPhone : ouvrir Safari → `https://iwasthereapp.app` → bouton Partager → « Sur l'écran d'accueil ». Ouvrir l'icône installée. Accepter la popup. Puis :
 
      ```bash
      php bin/console app:push:test <ton-username> "Push prod OK"
@@ -160,17 +160,106 @@ Le système de notifications push utilise la spec Web Push (compatible Chrome, F
 
    - Sur Chrome desktop : accepter la popup, puis lancer la même commande.
 
-8. **Maintenance.** Le `PushService` supprime automatiquement de la base les abonnements expirés (HTTP 410 / 404 du push server). Aucune commande de purge n'est nécessaire.
+8. **Maintenance.** `NotificationService` supprime automatiquement de la base les abonnements expirés (HTTP 410 / 404 du push server). Aucune commande de purge n'est nécessaire.
+
+9. **Crons.** ⚠️ **Sans eux, aucun push ne part.** Deux lignes, chacune protégée par
+   un `flock` pour qu'un passage ne chevauche pas le précédent :
+
+   ```cron
+   * * * * * /usr/bin/flock -n /chemin/var/messenger-worker.lock /usr/bin/php /chemin/bin/console messenger:consume async --env=prod --time-limit=3600 --memory-limit=128M --quiet >> /chemin/var/log/messenger-worker.log 2>&1
+   * * * * * /usr/bin/flock -n /chemin/var/reminders.lock /usr/bin/php /chemin/bin/console app:notifications:send-reminders --env=prod --quiet >> /chemin/var/log/reminders.log 2>&1
+   30 4 * * * /usr/bin/php /chemin/bin/console app:notifications:purge --env=prod --quiet >> /chemin/var/log/purge.log 2>&1
+   17 * * * * /usr/bin/php /chemin/bin/console app:ticketmaster:sync --env=prod >> /chemin/var/log/tm-sync.log 2>&1
+   * * * * * /usr/bin/php /chemin/bin/console app:notifications:dispatch --env=prod --quiet >> /chemin/var/log/tm-dispatch.log 2>&1
+   ```
+
+   Les deux dernières lignes sont le module d'alertes billetterie Ticketmaster
+   (synchronisation horaire du catalogue, envoi des alertes à la minute) — voir
+   [docs/ticketmaster.md](docs/ticketmaster.md). Elles ont leur propre verrou.
+
+   La troisième ligne, chaque nuit, efface les notifications lues depuis plus de
+   90 jours : le fil n'est pas une archive, et chaque recherche par destinataire
+   grossirait sinon avec l'historique.
+
+   Le premier consomme la file `async` : c'est lui qui envoie réellement les pushes,
+   toutes catégories confondues. Le second produit les rappels programmés. Les deux
+   tournent chaque minute — les rappels partent à l'heure choisie par chaque
+   utilisateur, à la minute près.
+
+10. **Mise à jour du code.** `bin/deploy` enchaîne tout dans le bon ordre
+    (dépendances, arrêt du worker, migrations, assets, cache, OPcache). Le détail,
+    pour savoir pourquoi l'ordre compte : Le pool PHP-FPM tourne avec
+    `opcache.validate_timestamps = 0` : sans reset, FPM continue de servir
+    l'ancien container compilé et cherche des fichiers `var/cache/prod/ContainerXXX/`
+    que `cache:clear` vient de supprimer → **500 aléatoires** dès qu'un service pas
+    encore chargé est demandé (typiquement sur un POST). `opcache_reset()` est
+    exécuté *dans* FPM via son socket, sans root ni endpoint web.
+
+    ```bash
+    pkill -TERM -f '[m]essenger:consume'   # le worker crasherait sur un cache vidé sous ses pieds ; le cron le relance
+    php bin/console cache:clear --env=prod
+    bin/opcache-reset                        # sinon l'ancien code reste en mémoire
+    ```
+
+    (Le `[m]` évite que `pkill -f` ne tue le shell qui contient lui-même le motif.)
 
 ### Quand un push est-il envoyé ?
 
-| Événement déclencheur                  | Conditions                                                                  |
-|----------------------------------------|------------------------------------------------------------------------------|
-| Demande d'ami reçue                    | Destinataire a `notifFriendRequestEnabled = true`                            |
-| Demande d'ami acceptée                 | Toujours envoyé au demandeur initial                                         |
-| Ajouté en ami à un événement (tag)     | Destinataire a `notifFriendRequestEnabled = true`                            |
+| Type (`NotificationType`) | Déclencheur                                              | Produit par                    |
+|---------------------------|----------------------------------------------------------|--------------------------------|
+| `friend_request`          | Quelqu'un envoie une demande d'ami                       | `ProfileController`            |
+| `friend_accepted`         | La demande est acceptée                                  | `ProfileController`, `NotificationsController` |
+| `friend_tagged_in_event`  | Un ami t'ajoute comme accompagnant                       | `EventController`, `ProfileController` |
+| `friend_activity`         | Un ami ajoute un événement ou publie un souvenir         | `ActivityNotifier`             |
+| `friend_same_event`       | Deux amis sur le même événement (« vous y allez ensemble ? ») | `ActivityNotifier`, `EventController` |
+| `friend_reaction`         | Un ami réagit à un événement de ton journal              | `ReactionService`              |
+| `event_day` 🕐            | Le matin de l'événement                                  | `app:notifications:send-reminders` |
+| `event_completion` 🕐     | Les jours suivants, tant que la fiche n'est pas notée    | `app:notifications:send-reminders` |
+| `event_anniversary` 🕐    | Un événement vécu un jour comme aujourd'hui              | `app:notifications:send-reminders` |
+| `rewind_available`        | Publication du Rewind (déclenchement manuel)             | `app:rewind:unlock`            |
+| `ticket_onsale` 🕐        | 24 h puis 1 h avant une ouverture de billetterie suivie  | `app:notifications:dispatch`   |
+| `ticket_event_change`     | Événement suivi annulé, reporté ou ouverture déplacée    | `app:ticketmaster:sync` + `app:notifications:dispatch` |
+| `artist_announced`        | Nouvelle date d'un artiste en wishlist ou déjà vu        | `app:ticketmaster:sync`        |
+| `announcement`            | Message libre de l'équipe (nouveauté, annonce)              | `app:notifications:announce`   |
 
-Ces préférences se règlent dans **Paramètres → Préférences de notifications**.
+🕐 = rappel programmé, envoyé à l'heure choisie par l'utilisateur (`notifCompletionTime`,
+08:00 par défaut, heure française). Ces trois-là dépendent du cron ci-dessus.
+
+Les préférences se règlent dans **Paramètres → Notifications**. Elles ne coupent que
+le push : le fil in-app reste exhaustif — sauf pour les trois rappels programmés, qui
+ne sont pas produits du tout quand ils sont décochés (le rappel *est* la notification,
+il n'y a pas de fait sous-jacent à archiver).
+
+Pour vérifier sans rien envoyer :
+
+```bash
+php bin/console app:notifications:send-reminders --dry-run --user=@pseudo
+php bin/console app:notifications:send-reminders --dry-run --date=2026-09-17 --time=08:00
+php bin/console app:push:test --user=@pseudo --async "Test"   # chemin de prod complet
+```
+
+Pour annoncer une nouveauté à tout le monde (fil + push, type « Nouveautés de
+l'app » décochable dans les préférences) — se relire d'abord sur son propre compte :
+
+```bash
+php bin/console app:notifications:announce "Nouveauté sur l'app" "Soyez alerté quand vos artistes préférés débarquent" --url=/alerts --user=@pseudo
+php bin/console app:notifications:announce "Nouveauté sur l'app" "Soyez alerté quand vos artistes préférés débarquent" --url=/alerts   # confirme avant d'envoyer
+```
+
+### Déployer sans perdre de notification
+
+Un `cache:clear` retire au worker en cours ses fichiers de conteneur : il meurt en
+plein traitement et le message reste réservé côté base. Arrête-le d'abord, le cron le
+relancera dans la minute :
+
+```bash
+pkill -TERM -f 'bin/console messenger:consume'
+php bin/console cache:clear --env=prod && php bin/console cache:warmup --env=prod
+```
+
+Si le worker meurt malgré tout, le transport rend le message consommable au bout de
+`redeliver_timeout` (300 s, voir `config/packages/messenger.yaml`) — la notification
+arrive en retard, elle n'est pas perdue.
 
 ---
 
@@ -185,6 +274,9 @@ docker compose exec php php bin/console doctrine:migrations:migrate --no-interac
 docker compose exec php php bin/phpunit                         # tests
 docker compose exec php php bin/console app:generate-vapid-keys # générer clés VAPID
 docker compose exec php php bin/console app:push:test <user>    # envoyer un push de test
+docker compose exec php php bin/console app:notifications:announce "Titre" "Contenu" --user=<user>   # annonce libre (fil + push)
+docker compose exec php php bin/console app:ticketmaster:sync --file=fr.json.gz   # catalogue Ticketmaster depuis un flux local
+docker compose exec php php bin/console app:notifications:dispatch --dry-run       # alertes billetterie qui partiraient
 ```
 
 ---
@@ -219,6 +311,8 @@ compose.override.yaml      # Ports exposés (dev uniquement)
 | `VAPID_PRIVATE_KEY`    | Clé privée VAPID (push)                      | Oui            |
 | `VAPID_SUBJECT`        | Contact VAPID (`mailto:...` valide)          | Oui            |
 | `MAILER_DSN`           | DSN du serveur SMTP                          | Oui            |
+| `TICKETMASTER_API_KEY` | Clé Discovery API (alertes billetterie)      | Si le module est activé |
+| `TICKETMASTER_ALERTS_LOG_ONLY` | `1` : alertes journalisées, pas envoyées (mise en service) | Non |
 
 ---
 

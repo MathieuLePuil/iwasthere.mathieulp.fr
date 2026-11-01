@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service;
+
+use App\Entity\User;
+use App\Participation\CompanionSync;
+use App\Repository\EventParticipationRepository;
+use App\Repository\ReactionRepository;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * Supprime un compte et tout ce qui le référence.
+ *
+ * User ne mappe aucune association et toutes les clés étrangères vers `user` sont
+ * en RESTRICT : un `remove($user)` seul part en violation de contrainte dès que le
+ * compte a la moindre participation, notification ou relation d'amitié — donc pour
+ * tout compte réel. Le ménage est fait ici, explicitement.
+ *
+ * Passer ces clés en ON DELETE CASCADE aurait été plus court mais faux :
+ * event.participant_count est dénormalisé et maintenu à la main
+ * (cf. EventController::delete), la base l'aurait laissé gonflé sur chaque
+ * événement fréquenté par le compte supprimé.
+ */
+class AccountDeletionService
+{
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly EventParticipationRepository $participationRepo,
+        private readonly ReactionRepository $reactionRepo,
+        private readonly AvatarService $avatars,
+        private readonly EventImageService $images,
+        private readonly CompanionSync $companions,
+    ) {}
+
+    public function delete(User $user): void
+    {
+        // Tout ou rien : si une contrainte oubliée saute sur le dernier DELETE, les
+        // compteurs déjà décrémentés ne doivent pas rester faux.
+        $this->em->wrapInTransaction(function () use ($user): void {
+            foreach ($this->participationRepo->findAllByUser($user) as $participation) {
+                $event = $participation->getEvent();
+                $event->setParticipantCount(max(0, $event->getParticipantCount() - 1));
+                // Les fichiers ne sont pas dans la transaction : une photo effacée avant un
+                // rollback serait perdue, mais une photo orpheline sur le disque est pire.
+                $this->images->delete($participation);
+            }
+            $this->avatars->delete($user);
+            // Les « Avec qui » des autres ne doivent pas garder un fantôme
+            $this->companions->forget($user);
+            $this->em->flush();
+
+            $id = $user->getId()->toBinary();
+
+            // DQL et non remove() ligne à ligne : l'UnitOfWork ne garantit pas que les
+            // enfants partent avant le parent, et c'est précisément l'ordre qui compte ici.
+            // Les réactions d'abord : elles pointent sur les participations, dans les deux
+            // sens (celles que le compte a posées, celles qu'il a reçues).
+            $this->reactionRepo->deleteAllForUser($user);
+            $this->deleteAll('App\Entity\EventParticipation p', 'p.user = :id', $id);
+            $this->deleteAll('App\Entity\Notification n', 'n.recipient = :id', $id);
+            // Les deux sens : la liste d'amis du compte, et les entrées des autres qui pointent vers lui.
+            $this->deleteAll('App\Entity\Friend f', 'f.owner = :id OR f.friendUser = :id', $id);
+            // push_subscription : clé étrangère en ON DELETE CASCADE, la base s'en charge.
+
+            $this->em->remove($user);
+            $this->em->flush();
+        });
+    }
+
+    private function deleteAll(string $from, string $where, string $id): void
+    {
+        $this->em->createQuery("DELETE FROM {$from} WHERE {$where}")
+            ->setParameter('id', $id, ParameterType::BINARY)
+            ->execute();
+    }
+}

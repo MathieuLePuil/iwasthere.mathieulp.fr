@@ -31,9 +31,6 @@ class Friend
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $status = null;
 
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $displayName = null;
-
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -92,18 +89,6 @@ class Friend
     public function setStatus(?string $status): static
     {
         $this->status = $status;
-
-        return $this;
-    }
-
-    public function getDisplayName(): ?string
-    {
-        return $this->displayName;
-    }
-
-    public function setDisplayName(?string $displayName): static
-    {
-        $this->displayName = $displayName;
 
         return $this;
     }

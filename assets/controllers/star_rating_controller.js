@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
+    static targets = ['none'];
+
     connect() {
         this.stars = Array.from(this.element.querySelectorAll('.rating-star'));
         this.labels = Array.from(this.element.querySelectorAll('label'));
@@ -16,9 +18,15 @@ export default class extends Controller {
         });
     }
 
+    /* « Retirer la note » : coche la valeur vide, que le serveur lit comme un effacement. */
+    clear() {
+        if (this.hasNoneTarget) this.noneTarget.checked = true;
+        this.updateFromSelected();
+    }
+
     updateFromSelected() {
         const checked = this.element.querySelector('input:checked');
-        this.highlight(checked ? parseInt(checked.value) : 0);
+        this.highlight(checked && checked.value ? parseInt(checked.value) : 0);
     }
 
     highlight(upTo) {

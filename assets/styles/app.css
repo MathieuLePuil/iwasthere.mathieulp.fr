@@ -7,6 +7,7 @@
 :root {
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
 }
 
 /* ── Semantic tokens — dark (default) ── */
@@ -30,28 +31,74 @@
   --positive-soft: rgba(176, 96, 255, 0.14);
   --negative:      #E89B8E;
   --negative-soft: rgba(232, 155, 142, 0.14);
+
+  /* Texte posé SUR un aplat --positive. En sombre le violet est clair (#B060FF),
+     le noir y contraste le mieux (5.3:1). Ce token bascule au blanc en clair, où
+     le violet devient foncé — voir l'override du bloc light. */
+  --on-positive: #0B0D10;
+
+  /* Couleur secondaire par type d'événement : une teinte propre à chaque type,
+     déclinée en accent (texte/trait) + -soft (aplat de fond des badges/chips).
+     Un seul jeu de tokens sert PARTOUT — badges, graphes de répartition — pour
+     qu'un même type porte toujours exactement la même couleur. Football passe au
+     bleu (et non plus au vert) pour ne pas se confondre avec le vert-sauge du
+     rugby. Tout est réécrit dans le bloc clair pour tenir sur piste claire. */
+  --type-concert:  #C890FF; --type-concert-soft:  rgba(176, 96, 255, 0.15);
+  --type-festival: #D6714A; --type-festival-soft: rgba(214, 113, 74, 0.14);
+  --type-football: #60A5FA; --type-football-soft: rgba(96, 165, 250, 0.14);
+  --type-rugby:    #A8B89A; --type-rugby-soft:    rgba(168, 184, 154, 0.14);
+  --type-tennis:   #F4D04A; --type-tennis-soft:   rgba(244, 208, 74, 0.12);
+  --type-basket:   #F0955A; --type-basket-soft:   rgba(240, 149, 90, 0.14);
+  --type-default:  #8B95A1; --type-default-soft:  rgba(139, 149, 161, 0.18);
+
+  --rating:       #FBBF24;
 }
 
-/* ── Semantic tokens — light ── */
+/* ── Semantic tokens — light ──
+   Le canvas doit rester nettement sous le blanc des cartes : à #FAFAF7 le rapport
+   n'était que de 1.046, les cartes ne se détachaient pas. Toute l'échelle descend
+   ensemble, sinon --bg-2 (champs, surfaces en retrait) repasserait au-dessus du
+   canvas et la profondeur s'inverserait. */
 :root[data-theme="light"] {
-  --bg-0: #FAFAF7;
+  --bg-0: #EFEFEA;
   --bg-1: #FFFFFF;
-  --bg-2: #F2F2EE;
-  --bg-3: #E6E6E0;
+  --bg-2: #E7E7E1;
+  --bg-3: #DBDBD4;
 
   --fg-1: #0B0D10;
-  --fg-2: rgba(11, 13, 16, 0.68);
-  --fg-3: rgba(11, 13, 16, 0.44);
-  --fg-4: rgba(11, 13, 16, 0.24);
+  --fg-2: rgba(11, 13, 16, 0.72);
+  /* .44 tombait à 3.0:1 sur blanc — sous le seuil AA (4.5) alors que --fg-3 porte
+     tout le petit texte (sous-titres, méta). .58 le remonte à 4.8:1. */
+  --fg-3: rgba(11, 13, 16, 0.58);
+  --fg-4: rgba(11, 13, 16, 0.40);
 
-  --border-subtle:  rgba(11, 13, 16, 0.06);
-  --border-default: rgba(11, 13, 16, 0.10);
-  --border-strong:  rgba(11, 13, 16, 0.18);
+  --border-subtle:  rgba(11, 13, 16, 0.10);
+  --border-default: rgba(11, 13, 16, 0.16);
+  --border-strong:  rgba(11, 13, 16, 0.26);
 
   --positive:      #7B2FBE;
   --positive-soft: rgba(123, 47, 190, 0.10);
   --negative:      #C8654F;
   --negative-soft: rgba(200, 101, 79, 0.10);
+
+  /* Le violet clair passe au violet foncé : le noir n'y ferait plus que 2.67:1
+     (texte noir sur bouton violet). Le blanc y remonte à 7:1. Le --negative reste
+     assez clair (#C8654F) pour garder du texte noir — 4.84:1, AA validé. */
+  --on-positive: #FFFFFF;
+
+  /* Versions foncées des teintes de type : les pastels (bleu, sauge, jaune, et
+     l'ambre du « N ★ » qui tombait à 1.7:1) disparaissaient sur piste claire —
+     le jaune tennis avait la même luminance que le fond. Ces valeurs tiennent
+     l'AA (4.5:1) en texte de badge sur carte blanche. */
+  --type-concert:  #7B2FBE; --type-concert-soft:  rgba(123, 47, 190, 0.10);
+  --type-festival: #B4451E; --type-festival-soft: rgba(180, 69, 30, 0.10);
+  --type-football: #2563EB; --type-football-soft: rgba(37, 99, 235, 0.10);
+  --type-rugby:    #5A6A2E; --type-rugby-soft:    rgba(90, 106, 46, 0.12);
+  --type-tennis:   #806600; --type-tennis-soft:   rgba(128, 102, 0, 0.10);
+  --type-basket:   #B45A1E; --type-basket-soft:   rgba(180, 90, 30, 0.10);
+  --type-default:  var(--fg-2); --type-default-soft: rgba(11, 13, 16, 0.06);
+
+  --rating:       #B45309;
 }
 
 /* ── Tailwind theme remapping ── */
@@ -91,19 +138,17 @@
 
 @layer base {
   html {
-    /* svh = "small viewport height" = correct value in iOS PWA standalone */
-    height: 100vh;
-    height: 100svh;
-    background-color: var(--bg-0); /* fills any gap that appears on iOS */
+    /* Même architecture que myrenault (la PWA de référence qui fonctionne) :
+       AUCUNE contrainte de hauteur, AUCUN app-shell. Le document scrolle
+       nativement et le canvas remplit tout l'écran jusqu'au bord physique.
+       C'était aussi l'architecture d'origine du projet, avant la régression. */
+    background-color: var(--bg-0);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   body {
-    /* Prevent body from ever scrolling — only <main> scrolls */
-    height: 100%;
-    overflow: hidden;
     background-color: var(--bg-0);
     color: var(--fg-1);
     margin: 0;
@@ -113,7 +158,67 @@
     outline: 2px solid rgba(176, 96, 255, 0.5);
     outline-offset: 2px;
   }
+  /* Les choix rendus par un bouton radio caché (.sr-only / .peer) : le focus clavier
+     se voit sur l'élément visible qui suit, sinon on tabule dans le vide. */
+  .sr-only:focus-visible + *,
+  .peer:focus-visible + * {
+    outline: 2px solid rgba(176, 96, 255, 0.5);
+    outline-offset: 2px;
+  }
+  /* Coupe le zoom au double-tap (ce que faisait maximum-scale=1) sans interdire le
+     pinch-zoom, que Chrome Android bloquait avec — WCAG 1.4.4. */
+  body { touch-action: manipulation; }
 }
+
+/* L'attribut hidden l'emporte sur les utilitaires d'affichage (.flex, .block…) :
+   sans ça, un élément « hidden » qui porte .flex reste visible. */
+[hidden] { display: none !important; }
+
+/* ── Utilitaires de thème ──
+   Couleurs et surfaces des templates, en classes : huit cents styles inline
+   (`style="color: var(--fg-3)"`) répétaient les mêmes cinq combinaisons, que le
+   thème clair ne pouvait pas réécrire et qu'une CSP ne peut pas admettre. */
+.fg-1 { color: var(--fg-1); }
+.fg-2 { color: var(--fg-2); }
+.fg-3 { color: var(--fg-3); }
+.fg-4 { color: var(--fg-4); }
+.fg-accent { color: var(--positive); }
+.fg-negative { color: var(--negative); }
+.fg-warning { color: #FBBF24; }
+.fg-info { color: #60A5FA; }
+.sf-2 { background: var(--bg-2); }
+.sf-3 { background: var(--bg-3); }
+.sf-1-bordered { background: var(--bg-1); border: 1px solid var(--border-subtle); }
+.chip-accent { background: var(--positive-soft); color: var(--positive); }
+.card-flush { padding: 0; overflow: hidden; }
+.bt-subtle { border-top: 1px solid var(--border-subtle); }
+.bb-subtle { border-bottom: 1px solid var(--border-subtle); }
+.tracking-title { letter-spacing: -0.01em; }
+.font-mono-iwt { font-family: var(--font-mono); }
+:root[data-theme="light"] .fg-warning { color: #92400E; }
+:root[data-theme="light"] .fg-info { color: #1D4ED8; }
+
+/* ── Choix de type (formulaire d'événement) ──
+   L'état sélectionné est une classe, posée au rendu et par le contrôleur event-form,
+   plutôt que des couleurs inline que le thème clair ne pouvait pas réécrire. */
+.iwt-type-btn { border-color: var(--border-default); background: var(--bg-2); }
+.iwt-type-btn.is-selected { border-color: var(--positive); background: var(--positive-soft); }
+
+/* ── Interrupteur (notifications push) ── */
+.iwt-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+.iwt-switch input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.iwt-switch-track {
+  width: 48px; height: 26px; border-radius: 999px; position: relative; display: block;
+  background: var(--bg-3); transition: background .2s;
+}
+.iwt-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--fg-4); transition: transform .2s, background .2s;
+}
+.iwt-switch input:checked + .iwt-switch-track { background: rgba(61, 220, 151, 0.30); }
+.iwt-switch input:checked + .iwt-switch-track .iwt-switch-thumb { background: var(--positive); transform: translateX(22px); }
+.iwt-switch input:disabled + .iwt-switch-track { opacity: 0.45; }
+.iwt-switch input:focus-visible + .iwt-switch-track { outline: 2px solid rgba(176, 96, 255, 0.5); outline-offset: 2px; }
 
 /* bg-white override — Tailwind hardcodes 'white', not a theme variable */
 .bg-white { background-color: var(--bg-1) !important; }
@@ -126,19 +231,182 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* ── Bottom navigation — original style: full-width bar, translucent + blur,
+   fixed over the natively-scrolling document (exact myrenault architecture:
+   normal-flow body + fixed overlay nav). ── */
 .app-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   background: color-mix(in srgb, var(--bg-0) 80%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-subtle);
+  /* Compact home-indicator clearance: the full inset is 34px on iPhone (native
+     tab-bar standard) but reads as a dead band; 12px keeps the labels just
+     above the indicator line. 0 in Safari/desktop where the inset is 0. */
+  padding-bottom: min(env(safe-area-inset-bottom, 0px), 12px);
 }
 
-/* En mode PWA standalone, ajouter l'espace home-indicator. En mode navigateur Safari,
-   on ne touche pas au safe-area car la toolbar Safari crée déjà son propre espace. */
-@media (display-mode: standalone) {
-  .app-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+.app-nav-inner {
+  display: flex;
+  align-items: stretch;
+  height: 4rem;
+  max-width: 32rem;
+  margin-inline: auto;
+  padding-inline: 0.5rem;
+}
+
+.app-nav-link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-4);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease;
+}
+
+.app-nav-link.is-active {
+  color: var(--positive);
+}
+
+/* ── Bannière d'installation PWA ──
+   Fixée juste au-dessus de la barre de navigation. Masquée par défaut (hidden), le
+   contrôleur install-prompt retire l'attribut puis ajoute .is-visible pour l'entrée. */
+.iwt-install {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem);
+  z-index: 40;
+  max-width: 32rem;
+  margin-inline: auto;
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  /* État d'entrée : décalé vers le bas et transparent, .is-visible remet à zéro. */
+  transform: translateY(12px);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.iwt-install.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+.iwt-install-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+}
+.iwt-install-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.iwt-install-body { flex: 1; min-width: 0; }
+.iwt-install-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fg-1);
+  line-height: 1.3;
+}
+.iwt-install-sub {
+  font-size: 0.75rem;
+  color: var(--fg-3);
+  line-height: 1.4;
+  margin-top: 0.125rem;
+}
+.iwt-install-share {
+  display: inline-block;
+  vertical-align: -0.2em;
+  color: var(--positive);
+}
+.iwt-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+.iwt-install-cta { white-space: nowrap; }
+.iwt-install-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.iwt-install-close:active { opacity: 0.6; }
+
+/* ── Onboarding — cartes du mini-parcours d'accueil ── */
+.onb-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-subtle);
+  transition: transform 120ms, border-color 120ms;
+}
+.onb-card:active { transform: scale(0.99); }
+.onb-card--primary {
+  border-color: color-mix(in srgb, var(--positive) 45%, transparent);
+  background: linear-gradient(180deg, var(--positive-soft) 0%, var(--bg-1) 120%);
+}
+.onb-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+.onb-card--primary .onb-step {
+  background: var(--positive);
+  color: var(--on-positive);
+}
+.onb-card-body { flex: 1; min-width: 0; }
+.onb-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg-1);
+  line-height: 1.3;
+}
+.onb-card-sub {
+  font-size: 0.8125rem;
+  color: var(--fg-3);
+  line-height: 1.45;
+  margin-top: 0.15rem;
+}
+.onb-card-arrow {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  color: var(--positive);
 }
 
 /* ── Components ── */
@@ -147,7 +415,7 @@
   /* Buttons */
   .btn-primary {
     background-color: var(--positive);
-    color: #0B0D10;
+    color: var(--on-positive);
     padding-inline: 1rem;
     padding-block: 0.5rem;
     border-radius: 999px;
@@ -164,6 +432,17 @@
   }
   .btn-primary:hover { opacity: 0.9; }
   .btn-primary:active { scale: 0.97; opacity: 0.85; }
+  /* État désactivé : on n'atténue pas le violet (une opacité globale le délave en
+     lavande pâle et grise le texte), on bascule sur un aplat neutre lisible qui se
+     lit clairement comme « inactif ». Retour au violet plein dès que réactivé. */
+  .btn-primary:disabled,
+  .btn-primary[disabled] {
+    background-color: var(--bg-3);
+    color: var(--fg-4);
+    opacity: 1;
+    scale: 1;
+    cursor: not-allowed;
+  }
 
   .btn-secondary {
     background-color: var(--bg-2);
@@ -182,6 +461,30 @@
     transition: opacity 120ms;
   }
   .btn-secondary:active { opacity: 0.7; }
+
+  /* Loading state applied by the form-loader Stimulus controller */
+  .btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+  }
+  .btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.1em;
+    height: 1.1em;
+    margin: -0.55em 0 0 -0.55em;
+    border-radius: 50%;
+    border: 2px solid var(--on-positive);
+    border-top-color: transparent;
+    animation: btn-spin 0.6s linear infinite;
+  }
+  .btn-secondary.btn-loading::after {
+    border-color: var(--fg-2);
+    border-top-color: transparent;
+  }
 
   .btn-danger {
     background-color: var(--negative);
@@ -207,6 +510,35 @@
     border-radius: 12px;
     padding: 1rem;
   }
+
+  /* Pages légales : prose sobre, lisible en clair comme en sombre */
+  .iwt-legal h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-1);
+    margin-bottom: 0.4rem;
+  }
+  .iwt-legal p {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .iwt-legal p + p { margin-top: 0.6rem; }
+  .iwt-legal ul {
+    list-style: disc;
+    padding-left: 1.1rem;
+    margin-top: 0.4rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .iwt-legal li + li { margin-top: 0.35rem; }
+  .iwt-legal a {
+    color: var(--positive);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .iwt-legal strong { color: var(--fg-1); font-weight: 600; }
 
   /* Input */
   .input-field {
@@ -249,11 +581,15 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .badge-concert  { background: rgba(176, 96, 255, 0.15); color: #C890FF; }
-  .badge-festival { background: rgba(232, 155, 142, 0.14); color: #E89B8E; }
-  .badge-football { background: rgba(74, 222, 128, 0.12);  color: #7EE8A2; }
-  .badge-rugby    { background: rgba(163, 177, 138, 0.14); color: #A8B89A; }
-  .badge-tennis   { background: rgba(234, 179, 8, 0.12);   color: #F4D04A; }
+  /* Un badge = la couleur secondaire de son type (accent + aplat -soft). Les
+     tokens basculent seuls en clair, donc plus besoin d'override par thème. */
+  .badge-concert  { background: var(--type-concert-soft);  color: var(--type-concert); }
+  .badge-festival { background: var(--type-festival-soft); color: var(--type-festival); }
+  .badge-football { background: var(--type-football-soft); color: var(--type-football); }
+  .badge-rugby    { background: var(--type-rugby-soft);    color: var(--type-rugby); }
+  .badge-tennis   { background: var(--type-tennis-soft);   color: var(--type-tennis); }
+  .badge-basket   { background: var(--type-basket-soft);   color: var(--type-basket); }
+  .badge-default  { background: var(--type-default-soft);  color: var(--type-default); }
 
   /* Section title */
   .section-title {
@@ -310,6 +646,85 @@
     position: relative;
   }
   .iwt-icon-btn:hover { background: var(--bg-3); }
+
+  /* Modal de configuration — <dialog> natif, centré par le navigateur */
+  .iwt-dialog {
+    margin: auto;
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    background: var(--bg-1);
+    color: var(--fg-1);
+    padding: 1.25rem;
+    width: calc(100vw - 2.5rem);
+    max-width: 400px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  }
+  .iwt-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  /* Reaction pills (feed) */
+  .iwt-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-2);
+    color: var(--fg-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
+  }
+  .iwt-reaction:active { transform: scale(0.92); }
+  .iwt-reaction.is-mine {
+    background: var(--positive-soft);
+    border-color: var(--positive);
+    color: var(--positive);
+  }
+  .iwt-reaction-emoji { font-size: 0.875rem; }
+  /* Le compteur à zéro n'est pas rendu : la pastille reste une pastille, sans « 0 » */
+  .iwt-reaction-count:empty { display: none; }
+  /* Le « + » : même gabarit que les pastilles, mais discret tant qu'on n'y touche pas */
+  .iwt-reaction-add {
+    color: var(--fg-4);
+    padding: 0.25rem 0.5rem;
+  }
+  .iwt-reaction-add:hover { color: var(--fg-2); background: var(--bg-3); }
+
+  /* Sélecteur d'emoji (bottom sheet) */
+  .iwt-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    margin: 0.25rem 0 1rem;
+  }
+  .iwt-emoji-choice {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: 0.875rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-2);
+    cursor: pointer;
+    transition: background 120ms, transform 80ms;
+  }
+  .iwt-emoji-choice:hover { background: var(--bg-3); }
+  .iwt-emoji-choice:active { transform: scale(0.9); }
+  .iwt-emoji-custom {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .iwt-emoji-custom .input-field { flex: 1; }
 
   /* Segmented control */
   .iwt-segmented {
@@ -368,6 +783,94 @@
     border-color: transparent;
   }
 
+  /* ── Barre de filtres unifiée (musique / sport / historique) ── */
+
+  /* Rangée de catégories : défile horizontalement sans barre visible */
+  .iwt-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .iwt-chips::-webkit-scrollbar { display: none; }
+
+  /* Ligne « tri + année » : deux menus déroulants qui se combinent */
+  .iwt-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Menu déroulant natif habillé comme une puce. Icône fixe à gauche
+     (calendrier / tri) + chevron à droite, portés par background-image
+     pour rester indépendants de l'option sélectionnée. */
+  .iwt-select {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 50%;
+    padding: 7px 30px 7px 32px;
+    border-radius: 999px;
+    background-color: var(--bg-1);
+    background-repeat: no-repeat, no-repeat;
+    background-position: right 11px center, left 11px center;
+    background-size: 13px, 14px;
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-2);
+    cursor: pointer;
+    text-overflow: ellipsis;
+    transition: all 120ms;
+  }
+  .iwt-select:focus-visible {
+    outline: none;
+    border-color: var(--positive);
+  }
+  /* Un filtre non-défaut : même mise en avant que les puces actives */
+  .iwt-select.is-active {
+    background-color: var(--positive-soft);
+    color: var(--positive);
+    border-color: transparent;
+  }
+  /* Chevron (commun) + icône de gauche (propre à chaque menu). Le gris neutre
+     #8B95A1 tient sur les deux thèmes. */
+  .iwt-select--sort {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B95A1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B95A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16M7 4l-3 3M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3'/%3E%3C/svg%3E");
+  }
+  .iwt-select--year {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B95A1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B95A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+  }
+
+  /* Résumé : nombre de résultats + réinitialisation des filtres */
+  .iwt-result-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--fg-3);
+    padding: 2px 2px 0;
+  }
+  .iwt-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--positive);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
   /* Year group header */
   .iwt-year {
     display: flex;
@@ -424,10 +927,11 @@
   }
   /* Type-specific art tag accent colors */
   .iwt-hero-art-tag--concert  { color: #C890FF; background: rgba(176, 96, 255, 0.12); }
-  .iwt-hero-art-tag--festival { color: #F0B0A0; background: rgba(232, 155, 142, 0.12); }
+  .iwt-hero-art-tag--festival { color: #E19779; background: rgba(214, 113, 74, 0.12); }
   .iwt-hero-art-tag--football { color: #7EE8A2; background: rgba(74, 222, 128, 0.10); }
   .iwt-hero-art-tag--rugby    { color: #B0BC9A; background: rgba(163, 177, 138, 0.10); }
   .iwt-hero-art-tag--tennis   { color: #F4D04A; background: rgba(234, 179, 8, 0.10); }
+  .iwt-hero-art-tag--basket   { color: #F0955A; background: rgba(240, 149, 90, 0.10); }
   .iwt-hero-body {
     padding: 14px 16px 18px;
     display: flex;
@@ -503,7 +1007,7 @@
   .iwt-reminder-sub { font-size: 12px; color: var(--fg-2); }
   .iwt-reminder-cta {
     background: var(--positive);
-    color: #0B0D10;
+    color: var(--on-positive);
     border: none;
     border-radius: 999px;
     padding: 7px 12px;
@@ -594,35 +1098,710 @@
 }
 
 /* ── Poster art backgrounds ── */
+/* Teinte déterministe par évènement : `event_hue()` pose --evt-hue (0-359) sur
+   l'élément, et --evt-tint décline deux halos discrets (accent + complémentaire
+   à +150°) qu'on empile AU-DESSUS du dégradé de type. Résultat : chaque poster
+   sans photo garde l'identité couleur de son type mais gagne une nuance propre
+   au nom, au lieu d'un aplat identique et un peu terne. Volontairement léger
+   (alpha ~0.14) pour rester une nuance, pas une couleur franche. Le fallback de
+   teinte évite d'invalider tout le `background` quand --evt-hue n'est pas posé.
+   Les substitutions var() se résolvant au point d'usage, --evt-tint défini ici
+   lit bien le --evt-hue propre à chaque élément. */
+:root {
+  --evt-tint:
+    radial-gradient(115% 90% at 85% 8%,  hsl(var(--evt-hue, 210) 68% 58% / 0.16) 0%, transparent 55%),
+    radial-gradient(105% 80% at 8% 96%,  hsl(calc(var(--evt-hue, 210) + 150) 60% 55% / 0.10) 0%, transparent 55%);
+}
 .poster-concert, .poster-music {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 50% 0%, #07334A 0%, transparent 65%),
     linear-gradient(180deg, #061119 0%, #04070A 100%);
 }
 .poster-festival {
   background:
-    radial-gradient(120% 80% at 10% 10%, #5C0A0A 0%, transparent 55%),
-    radial-gradient(120% 100% at 95% 90%, #2A0F0A 0%, transparent 60%),
-    linear-gradient(135deg, #1A0808 0%, #0B0405 100%);
+    var(--evt-tint),
+    radial-gradient(120% 80% at 10% 10%, #5C3120 0%, transparent 55%),
+    radial-gradient(120% 100% at 95% 90%, #2A160F 0%, transparent 60%),
+    linear-gradient(135deg, #1A0E09 0%, #0B0604 100%);
 }
 .poster-football {
   background:
+    var(--evt-tint),
     radial-gradient(140% 80% at 50% 100%, #0E2E1A 0%, transparent 60%),
     radial-gradient(120% 80% at 10% 10%, #1B2638 0%, transparent 55%),
     linear-gradient(180deg, #050912 0%, #020407 100%);
 }
 .poster-rugby {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 30% 80%, #2A3010 0%, transparent 55%),
     linear-gradient(180deg, #0A0F03 0%, #030500 100%);
 }
 .poster-tennis {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 80% 80%, #321414 0%, transparent 60%),
     linear-gradient(180deg, #160808 0%, #060304 100%);
 }
+.poster-basket {
+  background:
+    var(--evt-tint),
+    radial-gradient(120% 80% at 70% 90%, #3A1E0C 0%, transparent 60%),
+    linear-gradient(180deg, #140A04 0%, #060302 100%);
+}
 .poster-default {
   background:
+    var(--evt-tint),
     radial-gradient(120% 80% at 30% 20%, #1F1F2A 0%, transparent 60%),
     linear-gradient(180deg, #0A0A12 0%, #050507 100%);
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Rewind : le bandeau d'accueil ──
+   Le Rewind est un moment à part, il ne suit donc pas les tokens de thème :
+   même carte violette en clair comme en sombre, pour qu'elle accroche l'œil. */
+.rewind-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #B060FF 0%, #5B21B6 60%, #3B0764 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 34px rgba(123, 47, 190, 0.32);
+}
+
+.rewind-card-badge {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.375rem;
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* Reflet qui balaie la carte, assez lent pour ne pas distraire du reste */
+.rewind-card-shine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+  animation: rewind-shine 4.5s ease-in-out infinite;
+}
+
+@keyframes rewind-shine {
+  0%        { transform: translateX(-160%); }
+  55%, 100% { transform: translateX(340%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rewind-card-shine { animation: none; opacity: 0; }
+}
+
+/* ── Notifications : carte entièrement cliquable ──
+   Le lien couvre la carte sous le contenu ; les formulaires d'action repassent
+   au-dessus, sinon un <a> englobant avalerait leurs clics (et imbriquer un
+   <form> dans un <a> est invalide). */
+.notif-stretch {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.notif-actions {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Segmented control (choix du thème) ──
+   Radios masqués mais bien présents : le clavier et les lecteurs d'écran gardent
+   le groupe natif, seul l'habillage change. */
+.iwt-segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+
+.iwt-segmented-option {
+  flex: 1;
+  cursor: pointer;
+}
+
+.iwt-segmented-option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.iwt-segmented-option span {
+  display: block;
+  padding: 0.5rem 0.25rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-3);
+  white-space: nowrap;
+  transition: background 140ms, color 140ms;
+}
+
+.iwt-segmented-option input:checked + span {
+  background: var(--bg-0);
+  color: var(--fg-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* En sombre la pastille recule vers le fond de page ; en clair il faut l'inverse —
+   elle monte vers le blanc, sinon --bg-0 sur --bg-2 ne ferait que 1.08 de rapport. */
+:root[data-theme="light"] .iwt-segmented-option input:checked + span {
+  background: var(--bg-1);
+  box-shadow: 0 1px 3px rgba(11, 13, 16, 0.12);
+}
+
+.iwt-segmented-option input:focus-visible + span {
+  outline: 2px solid rgba(176, 96, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* ── Bottom sheet de confirmation ──
+   Remplace confirm() natif, qui affiche l'URL du site et casse l'illusion d'app.
+   Ouverte par le contrôleur Stimulus « confirm » ; .is-open déclenche l'entrée. */
+.iwt-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.iwt-sheet-backdrop.is-open { opacity: 1; }
+
+.iwt-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 51;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border-default);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.iwt-sheet.is-open { transform: translateY(0); }
+
+/* Feuille qu'on peut faire glisser vers le bas pour la fermer : le geste nous
+   revient au lieu de défiler la page. Le champ de saisie reste focusable —
+   touch-action ne gouverne que le défilement et le zoom, pas les taps. */
+.iwt-sheet--draggable { touch-action: none; }
+
+.iwt-sheet-grabber {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 0.875rem;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.iwt-sheet-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg-1);
+  text-align: center;
+}
+
+.iwt-sheet-body {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--fg-3);
+  text-align: center;
+}
+
+.iwt-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.iwt-sheet-actions .btn-primary,
+.iwt-sheet-actions .btn-secondary,
+.iwt-sheet-actions .btn-danger {
+  padding-block: 0.875rem;
+  font-size: 0.9375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iwt-sheet, .iwt-sheet-backdrop { transition: none; }
+}
+
+/* ── Flash messages ──
+   Les couleurs vivaient en style inline dans le template : impossible à surcharger
+   par thème, donc le mode clair affichait du texte noir sur fond vert foncé (1.1:1).
+   Chaque variante expose ses couleurs en variables, le thème clair les réécrit. */
+.iwt-flash {
+  position: fixed;
+  inset-inline: 1rem;
+  top: calc(4rem + env(safe-area-inset-top, 0px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--flash-bg) 90%, transparent);
+  border: 1px solid var(--flash-border);
+  box-shadow: var(--flash-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.iwt-flash-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--flash-icon);
+}
+
+.iwt-flash-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+/* Variantes — sombre (défaut) */
+.iwt-flash--success { --flash-bg: #0d1f12; --flash-border: rgba(74, 222, 128, 0.35); --flash-icon: #4ADE80; }
+.iwt-flash--error   { --flash-bg: #1f0d0d; --flash-border: rgba(232, 155, 142, 0.35); --flash-icon: #E89B8E; }
+.iwt-flash--warning { --flash-bg: #1c1600; --flash-border: rgba(251, 191, 36, 0.35); --flash-icon: #FBBF24; }
+.iwt-flash--info    { --flash-bg: #0d1220; --flash-border: rgba(96, 165, 250, 0.35); --flash-icon: #60A5FA; }
+
+/* Variantes — clair : fonds teintés pâles, icônes assombries pour rester lisibles */
+:root[data-theme="light"] .iwt-flash { --flash-shadow: 0 8px 24px rgba(11, 13, 16, 0.12); }
+:root[data-theme="light"] .iwt-flash--success { --flash-bg: #E7F7ED; --flash-border: rgba(21, 128, 61, 0.32); --flash-icon: #15803D; }
+:root[data-theme="light"] .iwt-flash--error   { --flash-bg: #FDECEA; --flash-border: rgba(180, 64, 42, 0.32); --flash-icon: #B4402A; }
+:root[data-theme="light"] .iwt-flash--warning { --flash-bg: #FDF4E3; --flash-border: rgba(180, 83, 9, 0.32); --flash-icon: #B45309; }
+:root[data-theme="light"] .iwt-flash--info    { --flash-bg: #E9F1FE; --flash-border: rgba(29, 78, 216, 0.30); --flash-icon: #1D4ED8; }
+
+/* Les badges de type n'ont plus d'override clair : ils lisent les tokens
+   --type-*(-soft), déjà rebasculés en versions foncées AA dans le bloc clair. */
+
+/* ── Art-tags (pastille de type sur l'affiche) — clair ──
+   Cas particulier : le tag surmonte tantôt une affiche sombre (hero d'accueil),
+   tantôt le fond clair de la page (fiche event, où le dégradé a déjà viré au
+   canevas). Un fond translucide ne peut pas être lisible des deux côtés — en clair
+   on le rend donc opaque : pastille pâle pleine + texte foncé, lisible quel que
+   soit l'arrière-plan. */
+:root[data-theme="light"] .iwt-hero-art-tag--concert  { background: #F3E9FC; color: #7B2FBE; }
+:root[data-theme="light"] .iwt-hero-art-tag--festival { background: #FBEBE1; color: #B4451E; }
+:root[data-theme="light"] .iwt-hero-art-tag--football { background: #E4F5EA; color: #15803D; }
+:root[data-theme="light"] .iwt-hero-art-tag--rugby    { background: #EFF1E7; color: #5A6A2E; }
+:root[data-theme="light"] .iwt-hero-art-tag--tennis   { background: #F7F0D6; color: #806600; }
+:root[data-theme="light"] .iwt-hero-art-tag--basket   { background: #FBEADF; color: #B45A1E; }
+
+/* ── Transitions de page ──
+   Turbo 8 rend chaque visite dans document.startViewTransition() grâce à la meta
+   view-transition de base.html.twig ; il ne reste qu'à habiller les pseudo-éléments.
+   Sans règle ici l'API ferait déjà un fondu croisé, mais sur toute la fenêtre : le
+   header et la nav clignoteraient à chaque navigation. Les nommer les sort du snapshot
+   « root » et leur donne leur propre groupe, qui se morphe sur place — la pastille
+   active de la nav passe en fondu pendant que le contenu, lui seul, glisse.
+   Turbo teste déjà prefers-reduced-motion avant de déclencher la transition ; la garde
+   ci-dessous protège le cas où l'effet viendrait d'ailleurs (transition inter-documents). */
+@media (prefers-reduced-motion: no-preference) {
+  /* Sortie plus courte que l'entrée : le contenu sortant libère l'écran vite, l'entrant
+     prend son temps — c'est ce décalage qui donne le ressenti natif plutôt qu'un
+     fondu symétrique qui traîne. */
+  ::view-transition-old(root) {
+    animation: iwt-page-out 110ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: iwt-page-in 220ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+}
+
+@keyframes iwt-page-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes iwt-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+#app-header { view-transition-name: app-header; }
+#app-nav    { view-transition-name: app-nav; }
+
+/* ── Complétion guidée (le flow du lendemain, J+1) ──
+   Un mini-parcours en étapes : une seule visible à la fois, pilotée par le
+   contrôleur Stimulus « completion ». S'appuie sur les tokens de thème, donc
+   fonctionne en clair comme en sombre sans règle dédiée. */
+.cmpl {
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: 0.5rem 1.25rem 2rem;
+}
+
+.cmpl-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+.cmpl-close {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--fg-3);
+  text-decoration: none;
+}
+.cmpl-close:active { opacity: 0.6; }
+.cmpl-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.cmpl-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--positive);
+  transition: width 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.cmpl-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--fg-4);
+  flex-shrink: 0;
+  min-width: 2.2rem;
+  text-align: right;
+}
+.cmpl-count b { color: var(--fg-1); font-weight: 600; }
+
+.cmpl-stage { position: relative; }
+
+/* Une étape = une carte plein écran ; masquée tant qu'elle n'est pas active */
+.cmpl-step { display: none; }
+.cmpl-step.is-active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 13rem);
+  animation: cmpl-in 0.34s cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes cmpl-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cmpl-head { text-align: center; margin-bottom: 1.5rem; }
+.cmpl-kicker {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--positive);
+  margin-bottom: 0.45rem;
+}
+.cmpl-h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg-1);
+  line-height: 1.2;
+}
+.cmpl-sub {
+  font-size: 0.875rem;
+  color: var(--fg-3);
+  margin-top: 0.45rem;
+  line-height: 1.45;
+}
+
+/* Intro & fin */
+.cmpl-poster {
+  height: 150px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.cmpl-poster-emoji {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45));
+}
+.cmpl-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+  text-align: center;
+  line-height: 1.15;
+}
+.cmpl-lead {
+  text-align: center;
+  color: var(--fg-3);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-top: 0.6rem;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+/* Étoiles */
+.cmpl-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+}
+.cmpl-star-lbl { cursor: pointer; padding: 0.15rem; -webkit-tap-highlight-color: transparent; }
+.cmpl-star-lbl [data-star] {
+  width: 2.85rem;
+  height: 2.85rem;
+  display: block;
+  transition: color 0.16s ease, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cmpl-star-lbl:active [data-star] { transform: scale(0.88); }
+.cmpl-rating-hint {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  min-height: 1.3em;
+  color: var(--fg-4);
+  transition: color 0.16s ease;
+}
+
+/* Score & vainqueur */
+.cmpl-score {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding-block: 1rem;
+}
+.cmpl-mini-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--fg-3);
+  margin: 1.25rem 0 0.6rem;
+}
+.cmpl-winner { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.cmpl-winner-opt { cursor: pointer; }
+.cmpl-winner-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 14px;
+  border: 2px solid var(--border-default);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+.cmpl-winner-opt input:checked + .cmpl-winner-box {
+  border-color: var(--positive);
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+
+.cmpl-textarea { resize: none; min-height: 8rem; line-height: 1.55; }
+
+/* Setlist retrouvée */
+.cmpl-setlist {
+  background: var(--bg-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 0.5rem 1.1rem;
+}
+.cmpl-setlist ol { margin: 0; padding: 0; list-style: none; }
+.cmpl-setlist li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  color: var(--fg-1);
+}
+.cmpl-setlist li:last-child { border-bottom: none; }
+.cmpl-setlist-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--fg-4);
+  width: 1.25rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.cmpl-setlist-more {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--positive);
+  font-weight: 500;
+  margin-top: 0.75rem;
+}
+
+/* Photo */
+.cmpl-photo-frame {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 0.875rem;
+  border: 1px solid var(--border-subtle);
+}
+.cmpl-photo-img { display: block; width: 100%; max-height: 260px; object-fit: cover; }
+.cmpl-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem;
+  border-radius: 16px;
+  border: 1.5px dashed var(--border-default);
+  background: var(--bg-2);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.14s, background 0.14s;
+}
+.cmpl-dropzone:hover { border-color: var(--border-strong); }
+.cmpl-dropzone:active { background: var(--bg-3); }
+.cmpl-dropzone-txt { font-weight: 600; font-size: 0.95rem; color: var(--fg-2); }
+.cmpl-dropzone-sub { font-size: 0.78rem; color: var(--fg-4); }
+
+.cmpl-error {
+  color: var(--negative);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Barre d'actions — collée en bas de l'étape pour un ressenti d'app */
+.cmpl-nav {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 1.75rem;
+}
+.cmpl-cta { flex: 1; }
+.cmpl-skip { flex: 0 0 auto; padding-inline: 1.4rem; }
+.cmpl-nav .btn-primary,
+.cmpl-nav .btn-secondary {
+  padding-block: 0.85rem;
+  font-size: 0.95rem;
+}
+
+/* Écran de fin */
+.cmpl-done {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cmpl-done > *:not(.cmpl-confetti) { position: relative; z-index: 1; }
+.cmpl-done-badge {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 999px;
+  background: var(--positive-soft);
+  border: 1px solid color-mix(in srgb, var(--positive) 30%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 1.5rem;
+  animation: cmpl-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cmpl-done .cmpl-nav { flex-direction: column; width: 100%; max-width: 20rem; margin-inline: auto; margin-top: 2rem; }
+.cmpl-done .cmpl-nav .cmpl-skip { padding-inline: 1rem; }
+
+@keyframes cmpl-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Récompense — la pastille d'un succès tout juste décroché « rebondit » à
+   l'apparition (piloté par celebrate_controller, qui pose aussi --pop-delay pour
+   décaler chaque badge neuf). Un halo bref accompagne le rebond. */
+.iwt-earned-pop {
+  transform-origin: center;
+  animation: iwt-earned-pop 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: var(--pop-delay, 0ms);
+}
+@keyframes iwt-earned-pop {
+  0%   { transform: scale(0.55); box-shadow: 0 0 0 0 color-mix(in srgb, var(--positive) 55%, transparent); }
+  55%  { transform: scale(1.2); }
+  100% { transform: scale(1); box-shadow: 0 0 0 10px color-mix(in srgb, var(--positive) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iwt-earned-pop { animation: none; }
+}
+
+/* Confettis — chaque brin reçoit sa position, sa teinte et son tempo en inline */
+.cmpl-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.cmpl-confetti span {
+  position: absolute;
+  top: -12%;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: cmpl-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes cmpl-fall {
+  0%   { transform: translateY(0) rotate(0); opacity: 0.95; }
+  100% { transform: translateY(115vh) rotate(720deg); opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmpl-step.is-active,
+  .cmpl-done-badge { animation: none; }
+  .cmpl-confetti { display: none; }
+  .cmpl-fill { transition: none; }
 }

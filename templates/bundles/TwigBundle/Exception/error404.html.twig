@@ -1,0 +1,9 @@
+{% extends '@Twig/Exception/error.html.twig' %}
+
+{% block title %}Introuvable — IWasThere{% endblock %}
+{% block glyph %}🎫{% endblock %}
+{% block heading %}Cette page n'existe pas{% endblock %}
+{% block message %}L'événement a peut-être été retiré, ou le pseudo a changé. Le lien que tu as suivi ne mène plus nulle part.{% endblock %}
+{% block secondary %}
+    {% if app.user %}<a href="{{ path('app_feed') }}" class="btn-secondary py-3 no-underline">Voir le fil</a>{% endif %}
+{% endblock %}

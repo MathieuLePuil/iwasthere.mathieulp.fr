@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\User;
@@ -8,12 +10,15 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -47,6 +52,8 @@ class SecurityController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $em,
+        Security $security,
+        RateLimiterFactoryInterface $registerLimiter,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
@@ -56,14 +63,27 @@ class SecurityController extends AbstractController
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
 
+        if ($form->isSubmitted() && !$registerLimiter->create($request->getClientIp() ?? 'unknown')->consume()->isAccepted()) {
+            $this->addFlash('error', 'Trop d\'inscriptions depuis cette adresse. Réessaie dans une heure.');
+
+            return $this->redirectToRoute('app_register');
+        }
+
         if ($form->isSubmitted() && $form->isValid()) {
             $hashedPassword = $passwordHasher->hashPassword($user, $form->get('plainPassword')->getData());
             $user->setPassword($hashedPassword);
             $em->persist($user);
             $em->flush();
 
-            $this->addFlash('success', 'Compte créé avec succès ! Bienvenue sur IWasThere.');
-            return $this->redirectToRoute('app_home');
+            // Connexion immédiate : le mini-parcours d'accueil est derrière ROLE_USER,
+            // sans ça la redirection rebondirait sur /login. Le nom de l'authenticator
+            // est obligatoire : le firewall « main » en a plusieurs (form_login +
+            // GoogleAuthenticator), sinon Security::login lève « Too many authenticators ».
+            $security->login($user, 'form_login');
+
+            // Nouveau compte, donc journal vide : on l'envoie sur le mini-parcours
+            // d'accueil plutôt que sur un accueil sans contenu.
+            return $this->redirectToRoute('app_onboarding');
         }
 
         return $this->render('security/register.html.twig', [
@@ -72,13 +92,18 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/register/check-username', name: 'app_register_check_username')]
-    public function checkUsername(Request $request, UserRepository $userRepo): JsonResponse
+    public function checkUsername(Request $request, UserRepository $userRepo, RateLimiterFactoryInterface $usernameCheckLimiter): JsonResponse
     {
-        $username = trim($request->query->get('username', ''));
+        if (!$usernameCheckLimiter->create($request->getClientIp() ?? 'unknown')->consume()->isAccepted()) {
+            return $this->json(['available' => null], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
+        $username = mb_strtolower(trim($request->query->get('username', '')));
         if (strlen($username) < 3) {
             return $this->json(['available' => null]);
         }
         $taken = $userRepo->findOneBy(['username' => $username]) !== null;
+
         return $this->json(['available' => !$taken]);
     }
 
@@ -88,18 +113,34 @@ class SecurityController extends AbstractController
         UserRepository $userRepo,
         EntityManagerInterface $em,
         MailerInterface $mailer,
+        RateLimiterFactoryInterface $forgotPasswordLimiter,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
         }
 
         if ($request->isMethod('POST')) {
-            $emailAddress = trim((string) $request->request->get('email', ''));
+            $emailAddress = mb_strtolower(trim((string) $request->request->get('email', '')));
+
+            // Comptée par adresse IP et par email visé : ni arroser une boîte, ni
+            // tester des adresses en série. Le message reste le même que pour un
+            // envoi, pour ne rien révéler.
+            $ip = $request->getClientIp() ?? 'unknown';
+            if (!$forgotPasswordLimiter->create($ip)->consume()->isAccepted()
+                || !$forgotPasswordLimiter->create('email:' . $emailAddress)->consume()->isAccepted()) {
+                $this->addFlash('success', 'Si un compte existe avec cette adresse, tu recevras un email dans quelques instants.');
+
+                return $this->redirectToRoute('app_forgot_password');
+            }
+
             $user = $userRepo->findOneByEmail($emailAddress);
 
             if ($user) {
+                // Seul le haché est stocké : une lecture de la base ne donne pas de
+                // lien de réinitialisation valide. Le jeton en clair ne vit que
+                // dans l'email.
                 $token = bin2hex(random_bytes(32));
-                $user->setPasswordResetToken($token)
+                $user->setPasswordResetToken(hash('sha256', $token))
                     ->setPasswordResetTokenExpiresAt(new \DateTimeImmutable('+1 hour'));
                 $em->flush();
 
@@ -115,7 +156,7 @@ class SecurityController extends AbstractController
                 ]);
 
                 $email = (new Email())
-                    ->from('noreply@iwasthere.app')
+                    ->from(new Address('noreply@iwasthereapp.app', 'IWasThere'))
                     ->to($emailAddress)
                     ->subject('Réinitialisation de ton mot de passe — IWasThere')
                     ->html($html);
@@ -129,6 +170,7 @@ class SecurityController extends AbstractController
 
             // Always show the same message to prevent email enumeration
             $this->addFlash('success', 'Si un compte existe avec cette adresse, tu recevras un email dans quelques instants.');
+
             return $this->redirectToRoute('app_forgot_password');
         }
 
@@ -147,10 +189,13 @@ class SecurityController extends AbstractController
             return $this->redirectToRoute('app_home');
         }
 
-        $user = $userRepo->findOneBy(['passwordResetToken' => $token]);
+        $user = preg_match('/^[a-f0-9]{64}$/', $token)
+            ? $userRepo->findOneBy(['passwordResetToken' => hash('sha256', $token)])
+            : null;
 
         if (!$user || !$user->isPasswordResetTokenValid()) {
             $this->addFlash('error', 'Ce lien est invalide ou a expiré. Redemande une réinitialisation.');
+
             return $this->redirectToRoute('app_forgot_password');
         }
 
@@ -160,11 +205,13 @@ class SecurityController extends AbstractController
 
             if (strlen($newPassword) < 8) {
                 $this->addFlash('error', 'Le mot de passe doit faire au moins 8 caractères.');
+
                 return $this->render('security/reset_password.html.twig', ['token' => $token]);
             }
 
             if ($newPassword !== $confirm) {
                 $this->addFlash('error', 'Les mots de passe ne correspondent pas.');
+
                 return $this->render('security/reset_password.html.twig', ['token' => $token]);
             }
 
@@ -174,6 +221,7 @@ class SecurityController extends AbstractController
             $em->flush();
 
             $this->addFlash('success', 'Mot de passe mis à jour ! Tu peux maintenant te connecter.');
+
             return $this->redirectToRoute('app_login');
         }
 
@@ -197,6 +245,7 @@ class SecurityController extends AbstractController
     public function refreshGoogleAvatar(Request $request, ClientRegistry $clientRegistry): Response
     {
         $this->saveTargetPath($request->getSession(), 'main', $this->generateUrl('app_settings'));
+
         return $clientRegistry->getClient('google')->redirect(['email', 'profile'], []);
     }
 }

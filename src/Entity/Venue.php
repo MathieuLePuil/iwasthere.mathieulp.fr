@@ -26,12 +26,6 @@ class Venue
     #[ORM\Column(length: 255)]
     private string $address;
 
-    #[ORM\Column(length: 100)]
-    private string $city;
-
-    #[ORM\Column(length: 100)]
-    private string $country;
-
     #[ORM\Column]
     private float $latitude;
 
@@ -97,30 +91,6 @@ class Venue
     public function setAddress(string $address): static
     {
         $this->address = $address;
-
-        return $this;
-    }
-
-    public function getCity(): string
-    {
-        return $this->city;
-    }
-
-    public function setCity(string $city): static
-    {
-        $this->city = $city;
-
-        return $this;
-    }
-
-    public function getCountry(): string
-    {
-        return $this->country;
-    }
-
-    public function setCountry(string $country): static
-    {
-        $this->country = $country;
 
         return $this;
     }

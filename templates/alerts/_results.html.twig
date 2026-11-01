@@ -1,0 +1,131 @@
+{# Les résultats de la recherche — rechargés seuls au fil de la saisie (live-search, ?fragment=1) #}
+{% set base = criteria.toQuery %}
+
+{# En mode artiste, la wishlist à portée de main : avec ou sans résultat, on peut
+   demander à être prévenu de la prochaine date d'un artiste. Les noms proposés
+   sont ceux du catalogue (nom entier), le terme saisi ne sert qu'à défaut. #}
+{% if wishable %}
+    {% set back = path('app_alerts_search', base|merge({page: page > 1 ? page : null})) %}
+    <div class="px-4 py-3 rounded-2xl mb-3" style="background: rgba(176,96,255,0.08); border: 1px solid rgba(176,96,255,0.25)">
+        <div class="flex items-center gap-3">
+            <span class="text-lg flex-shrink-0">🎤</span>
+            <div class="flex-1 min-w-0">
+                {% if wished %}
+                    <p class="text-sm font-medium fg-1">« {{ wished.artistName }} » est dans ta wishlist</p>
+                    <p class="text-xs fg-3">Tu seras prévenu à sa prochaine date en France.</p>
+                {% else %}
+                    <p class="text-sm font-medium fg-1">Prévenu des prochaines dates ?</p>
+                    <p class="text-xs fg-3">{{ suggested|length > 0 ? 'Ajoute l\'artiste à ta wishlist : on te dira dès qu\'une nouvelle date apparaît.' : 'Ajoute « ' ~ criteria.query|trim ~ ' » à ta wishlist : on te dira dès qu\'une date apparaît.' }}</p>
+                {% endif %}
+            </div>
+            {% if wished %}
+                <form method="post" action="{{ path('app_alerts_artist_delete', {id: wished.id}) }}">
+                    <input type="hidden" name="_back" value="{{ back }}">
+                    <button type="submit" class="iwt-pill active">✓ Wishlist</button>
+                </form>
+            {% elseif suggested|length == 0 %}
+                <form method="post" action="{{ path('app_alerts_artist_add') }}">
+                    <input type="hidden" name="artist" value="{{ criteria.query|trim }}">
+                    <input type="hidden" name="_back" value="{{ back }}">
+                    <button type="submit" class="iwt-pill">+ Wishlist</button>
+                </form>
+            {% endif %}
+        </div>
+        {% if not wished and suggested|length > 0 %}
+            <div class="iwt-chips mt-2.5">
+                {% for name in suggested %}
+                <form method="post" action="{{ path('app_alerts_artist_add') }}">
+                    <input type="hidden" name="artist" value="{{ name }}">
+                    <input type="hidden" name="_back" value="{{ back }}">
+                    <button type="submit" class="iwt-pill">+ {{ name }}</button>
+                </form>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% if events|length == 0 %}
+    <div class="flex flex-col items-center justify-center py-12 px-8 text-center">
+        <div class="text-5xl mb-4">🔎</div>
+        <h3 class="text-base font-semibold mb-2 fg-1">
+            {{ criteria.isFiltered ? 'Aucun résultat' : (criteria.wantsOpen ? 'Rien en vente pour l\'instant' : 'Aucune ouverture à venir') }}
+        </h3>
+        <p class="text-sm fg-3">
+            {% if criteria.isFiltered %}
+                {{ criteria.byArtist and criteria.query != '' ? 'Aucun artiste de ce nom — essaie « Nom d\'événement ou salle », une autre ville, ou « Tous les segments ».' : 'Essaie un autre nom, une autre ville — ou bascule sur « Tous les segments ».' }}
+            {% else %}
+                Le catalogue se remplit à chaque synchronisation horaire.
+            {% endif %}
+        </p>
+    </div>
+{% else %}
+    <div class="iwt-result-line mb-3">
+        <span>{{ total }} {{ total > 1 ? 'concerts' : 'concert' }}{% if criteria.query == '' and not criteria.isFiltered %} · {{ criteria.wantsOpen ? 'déjà en vente' : 'prochaines ouvertures' }}{% endif %}</span>
+    </div>
+
+    <div class="card card-flush">
+    {% for event in events %}
+        {% set window = event.publicSaleWindow %}
+        {% set watch = followed[event.eventId] ?? null %}
+        <div class="flex items-start gap-3 px-4 py-3 bb-subtle">
+            <div class="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center sf-2">
+                {% if event.eventStartLocal %}
+                <span class="text-xs font-semibold text-center leading-tight fg-2" style="font-family: var(--font-mono)">
+                    {{ event.eventStartLocal|date('d') }}<br><span style="font-size:9px; opacity:0.6">{{ event.eventStartLocal|date('M')|upper }}</span>
+                </span>
+                {% else %}
+                <span class="text-base">🎫</span>
+                {% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm fg-1">{{ event.name }}</p>
+                {% if event.artistLabel %}<p class="text-xs fg-2">🎤 {{ event.artistLabel }}</p>{% endif %}
+                <p class="text-xs mt-0.5 fg-3">
+                    {{ event.place ?? 'Lieu à préciser' }}
+                    {% if event.eventStartLocal %}
+                        · {{ event.eventStartLocal|date('d/m/Y') }}{% if event.hasEventStartTime %} {{ event.eventStartLocal|date('H\\hi') }}{% endif %}
+                    {% endif %}
+                </p>
+                {% if window %}
+                <p class="text-xs mt-1 {{ window.startsAtUtc > now ? 'fg-accent' : 'fg-2' }}">
+                    {% if window.startsAtUtc > now %}
+                        Ouverture {{ window.startsAtUtc|paris }}
+                    {% else %}
+                        En vente depuis le {{ window.startsAtUtc|paris_day }}
+                    {% endif %}
+                </p>
+                {% endif %}
+                <p class="text-[11px] mt-1 fg-4">
+                    {{ event.status }}{% if event.genre and event.genre != 'Undefined' %} · {{ event.genre }}{% endif %}
+                    {% set n = offers[event.eventId] ?? 1 %}
+                    {% if n > 1 %} · <span title="Ticketmaster publie une offre par type de billet (standard, loges, hospitalité…) ; l'alerte suit celle qui ouvre en premier">{{ n }} offres regroupées</span>{% endif %}
+                    {% if event.url %} · <a href="{{ event.url }}" target="_blank" rel="noopener" class="fg-3">page officielle ↗</a>{% endif %}
+                </p>
+            </div>
+            <div class="flex-shrink-0">
+                {% if watch %}
+                    <a href="{{ path('app_alerts', {_fragment: 'w-' ~ watch.id}) }}" class="iwt-pill active">✓ Suivi</a>
+                {% else %}
+                    <form method="post" action="{{ path('app_alerts_follow', {eventId: event.eventId}) }}">
+                        <input type="hidden" name="_back" value="{{ path('app_alerts_search', base|merge({page: page > 1 ? page : null})) }}">
+                        <button type="submit" class="iwt-pill">Suivre</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between mt-3 text-xs fg-3">
+        {% if page > 1 %}
+            <a href="{{ path('app_alerts_search', base|merge({page: page - 1})) }}" class="iwt-pill" data-action="click->live-search#page">← Précédents</a>
+        {% else %}<span></span>{% endif %}
+        <span>Page {{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+            <a href="{{ path('app_alerts_search', base|merge({page: page + 1})) }}" class="iwt-pill" data-action="click->live-search#page">Suivants →</a>
+        {% else %}<span></span>{% endif %}
+    </div>
+    {% endif %}
+{% endif %}

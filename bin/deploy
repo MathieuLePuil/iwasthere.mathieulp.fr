@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# Déploiement en place (le dépôt est le webroot) — toutes les étapes, dans le
+# bon ordre. Chacune a déjà manqué au moins une fois :
+#   - le worker Messenger meurt si on vide le cache sous ses pieds (le cron le
+#     relance dans la minute) ;
+#   - les assets compilés s'accumulent (soixante builds CSS fin juillet) ;
+#   - le pool PHP-FPM a opcache.validate_timestamps=0 : sans opcache-reset,
+#     l'ancien container reste en mémoire et cherche des fichiers supprimés
+#     par cache:clear → 500 sur la première requête qui touche un service.
+#
+# Usage : bin/deploy [--no-migrate]
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+MIGRATE=1
+[[ "${1:-}" == "--no-migrate" ]] && MIGRATE=0
+
+echo "→ dépendances"
+composer install --no-interaction --no-scripts --optimize-autoloader --quiet
+
+echo "→ arrêt du worker Messenger (le cron le relance)"
+pkill -TERM -f '[m]essenger:consume' || true
+
+if [[ $MIGRATE == 1 ]]; then
+    echo "→ migrations"
+    php bin/console doctrine:migrations:migrate --no-interaction --env=prod --allow-no-migration
+fi
+
+echo "→ assets (Tailwind + asset-mapper, dossier vidé avant)"
+chmod +x var/tailwind/*/tailwindcss-* 2>/dev/null || true
+php bin/console tailwind:build --env=prod
+rm -rf public/assets
+php bin/console asset-map:compile --env=prod
+
+echo "→ cache"
+php bin/console cache:clear --env=prod
+php bin/console cache:warmup --env=prod
+
+echo "→ OPcache de PHP-FPM"
+bin/opcache-reset
+
+echo "✓ déployé ($(git rev-parse --short HEAD))"

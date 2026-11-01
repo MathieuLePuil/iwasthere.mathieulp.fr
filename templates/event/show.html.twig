@@ -6,14 +6,20 @@
 {% block body %}
 <div class="pb-6">
 
-    {# Hero header #}
-    <div class="relative" style="height: 80px; overflow: hidden; isolation: isolate">
-        <div class="absolute inset-0 poster-{{ event.type ?? 'default' }}"></div>
-        <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,13,16,0) 0%, var(--bg-0) 100%); z-index: 1"></div>
+    {# Hero header — artist photo when available, else type-colored poster #}
+    <div class="relative" style="height: {{ event.artistImageUrl ? '190px' : '80px' }}; overflow: hidden; isolation: isolate">
+        {% if event.artistImageUrl %}
+        <div class="absolute inset-0" style="background: url('{{ event.artistImageUrl }}') center 25% / cover no-repeat"></div>
+        {% else %}
+        <div class="absolute inset-0 poster-{{ event.type ?? 'default' }}" style="--evt-hue: {{ event_hue(event) }}"></div>
+        {% endif %}
+        <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,13,16,0) {{ event.artistImageUrl ? '40%' : '0%' }}, var(--bg-0) 100%); z-index: 1"></div>
 
         {# Back + actions #}
         <div class="absolute top-4 left-4 z-10">
-            <a href="{{ app.request.headers.get('referer') ? 'javascript:history.back()' : path('app_home') }}"
+            {# Vrai lien vers la catégorie plutôt qu'un history.back() : le bouton reste
+               valide en arrivée directe (notif, lien partagé, PWA relancée). #}
+            <a href="{{ path(event.category == 'sport' ? 'app_sport' : 'app_music') }}"
                class="iwt-icon-btn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m15 6-6 6 6 6"/>
@@ -32,29 +38,29 @@
     </div>
 
     {# Title block #}
-    {% set type_emoji = {'concert': '🎤', 'festival': '🎪', 'football': '⚽', 'rugby': '🏉', 'tennis': '🎾'} %}
+    {% set type_emoji = {} %}{% for t in event_types() %}{% set type_emoji = type_emoji|merge({(t.value): t.emoji}) %}{% endfor %}
     <div class="px-4 -mt-2 mb-4" style="position: relative; z-index: 2">
         <div class="flex items-center gap-2 mb-1">
             <span class="iwt-hero-art-tag iwt-hero-art-tag--{{ event.type ?? 'default' }}">{{ type_emoji[event.type] ?? '🎫' }} {{ event.type|capitalize }}</span>
         </div>
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--fg-1); letter-spacing: -0.01em">
+        <h1 class="text-2xl font-semibold tracking-tight fg-1 tracking-title">
             {{ event.artistName ?? event.tournamentName ?? 'Événement' }}
         </h1>
         {% if event.teams %}
-            <p class="text-sm mt-0.5" style="color: var(--fg-2)">{{ event.teams }}</p>
+            <p class="text-sm mt-0.5 fg-2">{{ event.teams }}</p>
         {% endif %}
-        <div class="flex items-center gap-3 mt-2 text-sm" style="color: var(--fg-3)">
+        <div class="flex items-center gap-3 mt-2 text-sm fg-3">
             <span>📅 {{ event.date|date('d/m/Y') }}</span>
         </div>
         {% if event.venue %}
-        <p class="text-sm mt-1" style="color: var(--fg-3)">📍 {{ event.venue.name }}{% if event.venue.city %}, {{ event.venue.city }}{% endif %}</p>
+        <p class="text-sm mt-1 fg-3">📍 {{ event.venue.name }}</p>
         {% endif %}
         {% if event.tourName %}
-        <p class="text-sm mt-1" style="color: var(--fg-3)">🎫 {{ event.tourName }}</p>
+        <p class="text-sm mt-1 fg-3">🎫 {{ event.tourName }}</p>
         {% endif %}
 
         <div class="flex items-center gap-4 mt-3">
-            <span class="text-xs" style="color: var(--fg-4)">👥 {{ event.participantCount }} participant{{ event.participantCount > 1 ? 's' : '' }}</span>
+            <span class="text-xs fg-4">👥 {{ event.participantCount }} participant{{ event.participantCount > 1 ? 's' : '' }}</span>
             {% if not participation %}
             <a href="{{ path('app_event_edit', {id: event.id}) }}"
                class="btn-primary text-sm flex-1 text-center">
@@ -62,6 +68,69 @@
             </a>
             {% endif %}
         </div>
+
+        {# « Ajouter au calendrier » — seulement sur un événement à venir : exporter un
+           concert d'il y a trois ans n'a rien à faire dans un agenda. Un lien simple et
+           non un bouton JS : le téléchargement du .ics est ce que le navigateur et iOS
+           savent déjà rediriger vers l'app d'agenda. data-turbo=false pour que Turbo
+           laisse passer le téléchargement au lieu d'essayer d'en faire une visite. #}
+        {% if not event.isPast %}
+        <a href="{{ path('app_event_calendar', {id: event.id}) }}"
+           data-turbo="false"
+           class="btn-secondary w-full flex items-center justify-center gap-2 mt-3 py-3 no-underline">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+            <span class="text-sm font-medium">Ajouter au calendrier</span>
+        </a>
+        {% endif %}
+
+        {# My photo of the event — only once the event is past #}
+        {% if participation and event.isPast and participation.imageUrl %}
+        <div class="relative mt-3 rounded-2xl overflow-hidden" style="border: 1px solid var(--border-subtle)">
+            <img src="{{ participation.imageUrl }}"
+                 alt="Ma photo de {{ event.artistName ?? event.tournamentName ?? 'l\'événement' }}"
+                 class="w-full object-cover block" style="max-height: 280px">
+            <div class="absolute top-2.5 right-2.5 flex gap-2">
+                <form method="post" action="{{ path('app_event_image', {id: event.id}) }}" enctype="multipart/form-data" data-controller="auto-submit">
+                    <label class="iwt-icon-btn cursor-pointer" title="Changer la photo">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                            <circle cx="12" cy="13" r="3"/>
+                        </svg>
+                        <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                               class="sr-only" data-action="change->auto-submit#submit">
+                    </label>
+                </form>
+                <form method="post" action="{{ path('app_event_image_delete', {id: event.id}) }}"
+                      data-controller="confirm" data-action="submit->confirm#check"
+                      data-confirm-title-value="Supprimer ta photo ?"
+                      data-confirm-body-value="Elle sera retirée de cet événement."
+                      data-confirm-label-value="Supprimer">
+                    <button type="submit" class="iwt-icon-btn" title="Supprimer la photo">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% elseif participation and event.isPast %}
+        <form method="post" action="{{ path('app_event_image', {id: event.id}) }}" enctype="multipart/form-data" class="mt-3" data-controller="auto-submit">
+            <label class="flex items-center justify-center gap-2.5 py-4 rounded-2xl cursor-pointer select-none transition-all"
+                   style="border: 1.5px dashed var(--border-default); background: var(--bg-2)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                    <circle cx="12" cy="13" r="3"/>
+                </svg>
+                <span class="text-sm font-medium fg-3">Ajouter une photo</span>
+                <span class="text-xs fg-4">· optionnel</span>
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                       class="sr-only" data-action="change->auto-submit#submit">
+            </label>
+        </form>
+        {% endif %}
     </div>
 
     <div class="px-4 space-y-3">
@@ -70,30 +139,41 @@
         {% if participation %}
         <div class="card">
             <div class="flex items-center justify-between mb-3">
-                <h2 class="font-medium text-sm" style="color: var(--fg-1)">Ma fiche</h2>
+                <h2 class="font-medium text-sm fg-1">Ma fiche</h2>
                 <a href="{{ path('app_event_edit', {id: event.id}) }}"
-                   class="text-xs font-medium" style="color: var(--positive)">Modifier</a>
+                   class="text-xs font-medium fg-accent">Modifier</a>
             </div>
 
             {% if participation.rating %}
                 <div class="flex items-center gap-2 mb-2">
                     {{ m.star_rating(participation.rating) }}
-                    <span class="text-sm" style="color: var(--fg-3)">{{ participation.rating }}/5</span>
+                    <span class="text-sm fg-3">{{ participation.rating }}/5</span>
                 </div>
+            {% elseif event.isPast %}
+                <a href="{{ path('app_event_complete', {id: event.id}) }}"
+                   class="flex items-center gap-3 -m-1 mb-1 p-3 rounded-xl no-underline transition-colors"
+                   style="background: var(--positive-soft); border: 1px solid rgba(176,96,255,0.18)">
+                    <span class="text-xl flex-shrink-0">✨</span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-medium fg-1">Complète ta fiche</span>
+                        <span class="block text-xs mt-0.5 fg-3">Note, souvenir, photo — en deux minutes</span>
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
             {% else %}
-                <p class="text-sm mb-2" style="color: var(--fg-3)">⭐ Note non renseignée</p>
+                <p class="text-sm mb-2 fg-3">📅 À venir — tu pourras noter l'événement une fois passé</p>
             {% endif %}
 
             {% if participation.comment %}
-            <p class="text-sm mb-3 italic" style="color: var(--fg-2)">"{{ participation.comment }}"</p>
+            <p class="text-sm mb-3 italic fg-2">"{{ participation.comment }}"</p>
             {% endif %}
 
-            <div class="grid grid-cols-2 gap-2 text-xs" style="color: var(--fg-3)">
+            <div class="grid grid-cols-2 gap-2 text-xs fg-3">
                 {% if participation.duration %}
                 <span>⏱ {{ (participation.duration // 60) ~ 'h' }}{% if participation.duration % 60 %}{{ '%02d'|format(participation.duration % 60) }}{% endif %}</span>
                 {% endif %}
-{% if participation.finalScore %}
-                <span>🏆 {{ participation.finalScore }}</span>
+{% if event.finalScore %}
+                <span>🏆 {{ event.finalScore }}</span>
                 {% endif %}
             </div>
 
@@ -103,19 +183,19 @@
         {# Friends who attended #}
         {% if participation and participation.friends|length > 0 %}
         <div class="card">
-            <h2 class="font-medium text-sm mb-3" style="color: var(--fg-1)">👥 Avec qui</h2>
+            <h2 class="font-medium text-sm mb-3 fg-1">👥 Avec qui</h2>
             <div class="flex flex-wrap gap-2">
                 {% for friend in participation.friends %}
                 {% if friend.type == 'app' %}
                     <a href="{{ path('app_profile_view', {username: friend.username}) }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium no-underline"
-                       style="background: var(--positive-soft); color: var(--positive)">
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium no-underline chip-accent"
+                      >
                         {{ friend.displayName }}
                     </a>
                 {% else %}
-                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium"
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium" title="Pas sur IWasThere"
                           style="background: var(--bg-3); color: var(--fg-2)">
-                        {{ friend.name }}
+                        <span aria-hidden="true">·</span> {{ friend.name }}
                     </span>
                 {% endif %}
                 {% endfor %}
@@ -123,26 +203,98 @@
         </div>
         {% endif %}
 
+        {# Souvenir ticket — only once the event is past #}
+        {# Le tableau de score n'a de sens que si les deux camps et le score sont connus ;
+           getScoreline() renvoie null sinon, et le ticket retombe sur la mise en page
+           « concert » sans panneau. #}
+        {% set sl = event.category == 'sport' ? event.scoreline : null %}
+        {% set ticket_title = event.category == 'sport'
+            ? (event.tournamentName ?: event.teams ?: 'Match')
+            : (event.artistName ?: 'Événement') %}
+        {# Un match n'a pas de tournée : la ligne sous le titre rappelle les équipes, sauf
+           quand le tableau de score les affiche déjà ou qu'elles servent déjà de titre. #}
+        {% set ticket_subtitle = event.category == 'sport'
+            ? ((sl or not event.tournamentName) ? '' : (event.teams ?: ''))
+            : (event.tourName ?: '') %}
+        {% if participation and not event.isPast %}
+        <div class="card w-full flex items-center gap-3 opacity-60">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 sf-3">
+                <span class="text-xl">🎟️</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm fg-2">Ticket souvenir</p>
+                <p class="text-xs mt-0.5 fg-4">Disponible une fois l'événement passé</p>
+            </div>
+        </div>
+        {% elseif participation %}
+        <div data-controller="ticket"
+             data-ticket-artist-value="{{ ticket_title }}"
+             data-ticket-tour-value="{{ ticket_subtitle }}"
+             data-ticket-venue-value="{{ event.venue ? event.venue.name : '' }}"
+             data-ticket-date-value="{{ event.date|date('Y-m-d') }}"
+             data-ticket-time-value="{{ event.startTime ? event.startTime|date('H:i') : '' }}"
+             data-ticket-type-value="{{ event.type }}"
+             data-ticket-image-value="{{ participation.imageUrl ?? '' }}"
+             data-ticket-artist-image-value="{{ event.artistImageUrl ?? '' }}"
+             data-ticket-team1-value="{{ sl ? sl.team1 : '' }}"
+             data-ticket-team2-value="{{ sl ? sl.team2 : '' }}"
+             data-ticket-score-value="{{ sl ? sl.score : '' }}"
+             data-ticket-winner-value="{{ sl and sl.winner ? sl.winner : 0 }}">
+
+            <button type="button" data-action="ticket#open" class="card w-full flex items-center gap-3 text-left cursor-pointer">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: var(--positive-soft)">
+                    <span class="text-xl">🎟️</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm fg-1">Ticket souvenir</p>
+                    <p class="text-xs mt-0.5 fg-3">Génère ton ticket collector à enregistrer</p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+                    <path d="m9 6 6 6-6 6"/>
+                </svg>
+            </button>
+
+            <div data-ticket-target="modal"
+                 data-action="touchstart->ticket#touchStart touchend->ticket#touchEnd"
+                 class="hidden fixed inset-0 z-50 flex-col items-center justify-center px-6"
+                 style="background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px)">
+                <img data-ticket-target="preview" alt="Ticket souvenir"
+                     data-action="click->ticket#previewClick"
+                     class="rounded-2xl w-auto"
+                     style="max-height: 60vh; max-width: 100%; box-shadow: 0 24px 80px rgba(0,0,0,0.6)">
+                <div data-ticket-target="dots" class="mt-4"></div>
+                <div class="w-full max-w-sm mt-4 space-y-2">
+                    <button type="button" data-action="ticket#save" class="btn-primary w-full py-3">
+                        Enregistrer dans la galerie
+                    </button>
+                    <button type="button" data-action="ticket#close" class="btn-secondary w-full py-2.5">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {# Setlist #}
         {% if event.setlist|length > 0 %}
         <div class="card">
-            <h2 class="font-medium text-sm mb-3" style="color: var(--fg-1)">
+            <h2 class="font-medium text-sm mb-3 fg-1">
                 Setlist
                 {% if event.setlistSource == 'setlist_fm' %}
-                    <span class="text-xs font-normal ml-1" style="color: var(--fg-4)">via Setlist.fm</span>
+                    <span class="text-xs font-normal ml-1 fg-4">via Setlist.fm</span>
                 {% endif %}
             </h2>
             <ol>
                 {% for i, song in event.setlistNormalized %}
-                <li class="flex items-start gap-3 text-sm py-2" style="border-bottom: 1px solid var(--border-subtle)">
-                    <span class="w-5 text-right flex-shrink-0 text-xs mt-0.5" style="color: var(--fg-4); font-family: var(--font-mono)">{{ i + 1 }}</span>
+                <li class="flex items-start gap-3 text-sm py-2 bb-subtle">
+                    <span class="w-5 text-right flex-shrink-0 text-xs mt-0.5 fg-4 font-mono-iwt">{{ i + 1 }}</span>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span style="color: {% if song.tape %}var(--fg-3){% else %}var(--fg-1){% endif %}; {% if song.tape %}font-style: italic{% endif %}">{{ song.name }}</span>
                             {% if song.tape %}<span class="text-[10px] px-1.5 py-0.5 rounded" style="background: var(--bg-3); color: var(--fg-4)">tape</span>{% endif %}
                         </div>
-                        {% if song.with %}<p class="text-xs mt-0.5" style="color: var(--fg-3)">avec {{ song.with }}</p>{% endif %}
-                        {% if song.info %}<p class="text-xs mt-0.5 italic" style="color: var(--fg-4)">{{ song.info }}</p>{% endif %}
+                        {% if song.with %}<p class="text-xs mt-0.5 fg-3">avec {{ song.with }}</p>{% endif %}
+                        {% if song.info %}<p class="text-xs mt-0.5 italic fg-4">{{ song.info }}</p>{% endif %}
                     </div>
                 </li>
                 {% endfor %}
@@ -153,15 +305,15 @@
                 <ol>
                     {% set encoreOffset = event.setlistNormalized|length %}
                     {% for i, song in event.setlistEncoresNormalized %}
-                    <li class="flex items-start gap-3 text-sm py-2" style="border-bottom: 1px solid var(--border-subtle)">
-                        <span class="w-5 text-right flex-shrink-0 text-xs mt-0.5" style="color: var(--fg-4); font-family: var(--font-mono)">{{ encoreOffset + i + 1 }}</span>
+                    <li class="flex items-start gap-3 text-sm py-2 bb-subtle">
+                        <span class="w-5 text-right flex-shrink-0 text-xs mt-0.5 fg-4 font-mono-iwt">{{ encoreOffset + i + 1 }}</span>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span style="color: {% if song.tape %}var(--fg-3){% else %}var(--fg-1){% endif %}; {% if song.tape %}font-style: italic{% endif %}">{{ song.name }}</span>
                                 {% if song.tape %}<span class="text-[10px] px-1.5 py-0.5 rounded" style="background: var(--bg-3); color: var(--fg-4)">tape</span>{% endif %}
                             </div>
-                            {% if song.with %}<p class="text-xs mt-0.5" style="color: var(--fg-3)">avec {{ song.with }}</p>{% endif %}
-                            {% if song.info %}<p class="text-xs mt-0.5 italic" style="color: var(--fg-4)">{{ song.info }}</p>{% endif %}
+                            {% if song.with %}<p class="text-xs mt-0.5 fg-3">avec {{ song.with }}</p>{% endif %}
+                            {% if song.info %}<p class="text-xs mt-0.5 italic fg-4">{{ song.info }}</p>{% endif %}
                         </div>
                     </li>
                     {% endfor %}
@@ -170,7 +322,7 @@
             {% endif %}
             {% if event.setlistUrl %}
             <a href="{{ event.setlistUrl }}" target="_blank" rel="noopener"
-               class="mt-3 text-xs font-medium block text-right" style="color: var(--positive)">
+               class="mt-3 text-xs font-medium block text-right fg-accent">
                 Voir sur Setlist.fm →
             </a>
             {% endif %}
@@ -178,36 +330,45 @@
         {% elseif event.category == 'music' %}
         <div class="card text-center py-6">
             <p class="text-3xl mb-2">🎵</p>
-            <p class="text-sm font-medium" style="color: var(--fg-2)">Setlist non disponible</p>
-            {% if event.setlistRetryCount < 24 and event.date < date() %}
-            <p class="text-xs mt-1" style="color: var(--fg-4)">Recherche automatique en cours sur Setlist.fm…</p>
+            <p class="text-sm font-medium fg-2">Setlist non disponible</p>
+            {% if not event.isPast %}
+            <p class="text-xs mt-1 fg-4">Elle sera disponible une fois l'événement passé</p>
+            {% elseif event.setlistRetryCount < 24 and event.date < date() %}
+            <p class="text-xs mt-1 fg-4">Recherche automatique en cours sur Setlist.fm…</p>
             {% else %}
-            <a href="{{ path('app_event_edit', {id: event.id}) }}" class="text-xs font-medium mt-2 block" style="color: var(--positive)">
+            <a href="{{ path('app_event_edit', {id: event.id}) }}" class="text-xs font-medium mt-2 block fg-accent">
                 + Ajouter manuellement
             </a>
             {% endif %}
         </div>
         {% endif %}
 
-        {# All participants #}
-        {% if all_participations|length > 1 %}
+        {# All participants — ceux que la confidentialité de chacun laisse voir #}
+        {% if all_participations|length + hidden_count > 1 %}
         <div class="card">
-            <h2 class="font-medium text-sm mb-3" style="color: var(--fg-1)">Participants ({{ all_participations|length }})</h2>
+            <h2 class="font-medium text-sm mb-3 fg-1">Participants ({{ all_participations|length + hidden_count }})</h2>
             <div class="space-y-3">
                 {% for p in all_participations %}
                 {% if p.user != app.user %}
                 <div class="flex items-center gap-3">
                     {{ m.avatar(p.user, 'sm') }}
                     <div class="flex-1">
-                        <p class="text-sm font-medium" style="color: var(--fg-1)">{{ p.user.displayName }}</p>
-                        <p class="text-xs" style="color: var(--fg-4)">@{{ p.user.username }}</p>
+                        <p class="text-sm font-medium fg-1">{{ p.user.displayName }}</p>
+                        <p class="text-xs fg-4">@{{ p.user.username }}</p>
                     </div>
-                    {% if p.visibility == 'public' and p.rating %}
+                    {# La liste est déjà filtrée par l'audience de chaque compte
+                       (EventController::show) : qui est visible ici l'est avec sa note. #}
+                    {% if p.rating %}
                         {{ m.star_rating(p.rating) }}
                     {% endif %}
                 </div>
                 {% endif %}
                 {% endfor %}
+                {% if hidden_count > 0 %}
+                <p class="text-xs fg-4">
+                    {{ hidden_count > 1 ? 'et ' ~ hidden_count ~ ' autres personnes' : 'et une autre personne' }} dont le journal n'est pas visible pour toi
+                </p>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -218,16 +379,19 @@
             <div class="flex items-start gap-3">
                 <span class="text-2xl">🎟️</span>
                 <div class="flex-1">
-                    <p class="text-sm font-medium" style="color: var(--fg-1)">
+                    <p class="text-sm font-medium fg-1">
                         {{ tagged_in.user.displayName }} t'a ajouté à cet événement
                     </p>
-                    <p class="text-xs mt-0.5" style="color: var(--fg-3)">Tu apparais dans sa liste « Avec qui »</p>
+                    <p class="text-xs mt-0.5 fg-3">Tu apparais dans sa liste « Avec qui »</p>
                     <div class="flex gap-2 mt-3">
                         <a href="{{ path('app_event_edit', {id: event.id}) }}" class="btn-primary text-sm py-2 px-4">
                             J'y étais aussi !
                         </a>
                         <form method="post" action="{{ path('app_event_participation_remove_me', {id: tagged_in.id}) }}"
-                              onsubmit="return confirm('Te retirer de cet événement ?')">
+                              data-controller="confirm" data-action="submit->confirm#check"
+                              data-confirm-title-value="Te retirer de cet événement ?"
+                              data-confirm-body-value="Tu n'apparaîtras plus dans la liste « Avec qui » de {{ tagged_in.user.displayName }}."
+                              data-confirm-label-value="Me retirer">
                             <button type="submit" class="btn-secondary text-sm py-2 px-4">Se retirer</button>
                         </form>
                     </div>
@@ -239,7 +403,10 @@
         {# Delete button #}
         {% if participation %}
         <form method="post" action="{{ path('app_event_delete', {id: event.id}) }}"
-              onsubmit="return confirm('Supprimer cet événement de ton journal ?')">
+              data-controller="confirm" data-action="submit->confirm#check"
+              data-confirm-title-value="Supprimer de ton journal ?"
+              data-confirm-body-value="{{ event.artistName ?? event.tournamentName ?? 'Cet événement' }} et ta fiche seront définitivement perdus."
+              data-confirm-label-value="Supprimer">
             <button type="submit" class="btn-danger w-full py-3 opacity-60">
                 Supprimer de mon journal
             </button>

@@ -23,61 +23,6 @@ class FriendRepository extends ServiceEntityRepository
     /**
      * @return Friend[]
      */
-    public function findByOwner(User $owner): array
-    {
-        return $this->createQueryBuilder('f')
-            ->andWhere('f.owner = :owner')
-            ->setParameter('owner', $owner->getId()->toBinary(), ParameterType::BINARY)
-            ->orderBy('f.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Friend[]
-     */
-    public function findConfirmedByOwner(User $owner): array
-    {
-        return $this->createQueryBuilder('f')
-            ->andWhere('f.owner = :owner')
-            ->andWhere('f.status = :status')
-            ->setParameter('owner', $owner->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'confirmed')
-            ->orderBy('f.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Friend[]
-     */
-    public function findPendingRequestsForUser(User $user): array
-    {
-        return $this->createQueryBuilder('f')
-            ->andWhere('f.friendUser = :user')
-            ->andWhere('f.status = :status')
-            ->setParameter('user', $user->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('status', 'pending')
-            ->orderBy('f.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    public function findOneByOwnerAndFriendUser(User $owner, User $friendUser): ?Friend
-    {
-        return $this->createQueryBuilder('f')
-            ->where('f.owner = :owner')
-            ->andWhere('f.friendUser = :friend')
-            ->setParameter('owner', $owner->getId()->toBinary(), ParameterType::BINARY)
-            ->setParameter('friend', $friendUser->getId()->toBinary(), ParameterType::BINARY)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
-     * @return Friend[]
-     */
     public function findConfirmedFriends(User $user): array
     {
         return $this->createQueryBuilder('f')
@@ -94,6 +39,24 @@ class FriendRepository extends ServiceEntityRepository
     /**
      * @return Friend[]
      */
+    /**
+     * Les ids des amis confirmés, indexés pour un test d'appartenance en O(1).
+     *
+     * @return array<string, true>
+     */
+    public function findConfirmedFriendIds(User $user): array
+    {
+        $ids = [];
+        foreach ($this->findConfirmedFriends($user) as $rel) {
+            $other = $rel->getOwner()->getId()->equals($user->getId()) ? $rel->getFriendUser() : $rel->getOwner();
+            if ($other !== null) {
+                $ids[(string) $other->getId()] = true;
+            }
+        }
+
+        return $ids;
+    }
+
     public function findPendingReceived(User $user): array
     {
         return $this->createQueryBuilder('f')
@@ -133,6 +96,7 @@ class FriendRepository extends ServiceEntityRepository
     public function areFriends(User $a, User $b): bool
     {
         $rel = $this->findRelationship($a, $b);
+
         return $rel !== null && $rel->getStatus() === 'confirmed';
     }
 }

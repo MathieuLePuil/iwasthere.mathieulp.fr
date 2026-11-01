@@ -1,0 +1,91 @@
+{% extends 'base.html.twig' %}
+{% import 'components/_macros.html.twig' as m %}
+
+{% block title %}Suivre un événement — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-4 py-5 space-y-4">
+
+    {{ m.back_button(path('app_alerts'), 'Mes veilles') }}
+
+    <h1 class="text-2xl font-semibold fg-1 tracking-title">Suivre un événement</h1>
+    <p class="text-xs fg-3">
+        Catalogue Ticketmaster France, mis à jour chaque heure. Choisis un événement, on te prévient
+        24 h puis 1 h avant l'ouverture de sa billetterie (mise en vente générale).
+    </p>
+
+    {% set base = criteria.toQuery %}
+    <form method="get" action="{{ path('app_alerts_search') }}"
+          data-controller="live-search"
+          data-live-search-results-value="#tm-results"
+          class="space-y-3">
+
+        <input type="search" name="q" value="{{ criteria.query }}" autocomplete="off" autofocus
+               placeholder="{{ criteria.byArtist ? 'Nom de l\'artiste (ex. Muse)' : 'Événement, tournée, salle…' }}"
+               class="input-field" data-action="input->live-search#search" aria-label="Rechercher un événement">
+
+        {# Ce que désigne le terme : un artiste (défaut — « Muse » ne renvoie pas les musées) ou n'importe quoi #}
+        <div class="iwt-chips">
+            <a href="{{ path('app_alerts_search', base|merge({mode: null, page: null})) }}"
+               class="iwt-pill{{ criteria.byArtist ? ' active' : '' }}"
+               data-action="click->live-search#pick" data-param="mode" data-value="">🎤 Artiste</a>
+            <a href="{{ path('app_alerts_search', base|merge({mode: 'all', page: null})) }}"
+               class="iwt-pill{{ not criteria.byArtist ? ' active' : '' }}"
+               data-action="click->live-search#pick" data-param="mode" data-value="all">Nom d'événement ou salle</a>
+        </div>
+
+        {# Segment : Music par défaut, bascule vers les autres #}
+        <div class="iwt-chips">
+            {% set segment_options = ['Music']|merge(segments|filter(s => s != 'Music'))|merge(['all']) %}
+            {% for s in segment_options %}
+                <a href="{{ path('app_alerts_search', base|merge({segment: s == 'Music' ? null : s, page: null})) }}"
+                   class="iwt-pill{{ criteria.segment == s ? ' active' : '' }}"
+                   data-action="click->live-search#pick" data-param="segment" data-value="{{ s == 'Music' ? '' : s }}">
+                    {{ s == 'Music' ? '🎵 Musique' : (s == 'all' ? 'Tous les segments' : s) }}
+                </a>
+            {% endfor %}
+        </div>
+
+        {# Ouverture à venir (défaut) / déjà en vente #}
+        <div class="iwt-chips">
+            <a href="{{ path('app_alerts_search', base|merge({onsale: null, page: null})) }}"
+               class="iwt-pill{{ not criteria.wantsOpen ? ' active' : '' }}"
+               data-action="click->live-search#pick" data-param="onsale" data-value="">🔔 Ouverture à venir</a>
+            <a href="{{ path('app_alerts_search', base|merge({onsale: 'onsale', page: null})) }}"
+               class="iwt-pill{{ criteria.wantsOpen ? ' active' : '' }}"
+               data-action="click->live-search#pick" data-param="onsale" data-value="onsale">🎟️ Déjà en vente</a>
+        </div>
+
+        {# Ville + plage de dates du concert #}
+        <div class="iwt-toolbar">
+            <select name="city" class="iwt-select" style="padding-left: 12px" aria-label="Ville" data-action="change->live-search#search">
+                <option value="">Toutes les villes</option>
+                {% for c in cities %}
+                    <option value="{{ c }}" {{ criteria.city == c ? 'selected' }}>{{ c }}</option>
+                {% endfor %}
+                {% if criteria.city != '' and criteria.city not in cities %}
+                    <option value="{{ criteria.city }}" selected>{{ criteria.city }}</option>
+                {% endif %}
+            </select>
+        </div>
+        <div class="iwt-toolbar">
+            <input type="date" name="from" value="{{ criteria.from ? criteria.from|date('Y-m-d') : '' }}"
+                   class="input-field" style="flex: 1" aria-label="Concert à partir du" data-action="change->live-search#search">
+            <span class="text-xs fg-4">→</span>
+            <input type="date" name="to" value="{{ criteria.to ? criteria.to|date('Y-m-d') : '' }}"
+                   class="input-field" style="flex: 1" aria-label="Concert jusqu'au" data-action="change->live-search#search">
+        </div>
+
+        <input type="hidden" name="segment" value="{{ criteria.segment == 'Music' ? '' : criteria.segment }}">
+        <input type="hidden" name="onsale" value="{{ criteria.wantsOpen ? 'onsale' : '' }}">
+        <input type="hidden" name="mode" value="{{ criteria.byArtist ? '' : 'all' }}">
+        <noscript><button type="submit" class="btn-primary w-full">Rechercher</button></noscript>
+    </form>
+
+    <div id="tm-results" aria-live="polite">
+        {% include 'alerts/_results.html.twig' %}
+    </div>
+
+    <p class="text-[11px] text-center fg-4 pb-4">Contenu événementiel fourni par Ticketmaster. Dates d'ouverture en heure de Paris.</p>
+</div>
+{% endblock %}

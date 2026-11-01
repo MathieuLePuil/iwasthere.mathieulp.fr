@@ -38,6 +38,8 @@ class RetrySetlistImportCommand extends Command
                 $success++;
                 $io->writeln(sprintf('  ✓ Imported: %s', $event->getArtistName()));
             }
+            // Respect API rate limit (2 req/s on free plan)
+            usleep(600_000);
         }
 
         $io->success(sprintf('%d/%d setlists imported', $success, count($events)));

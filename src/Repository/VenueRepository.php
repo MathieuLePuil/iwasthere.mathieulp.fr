@@ -19,41 +19,29 @@ class VenueRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Venue[]
+     * Find a venue by name, ignoring case and surrounding whitespace,
+     * so we don't create identical duplicates ("Graspop", "graspop", "Graspop ").
      */
-    public function findByCity(string $city): array
+    public function findOneByName(string $name): ?Venue
     {
         return $this->createQueryBuilder('v')
-            ->andWhere('v.city = :city')
-            ->setParameter('city', $city)
-            ->orderBy('v.name', 'ASC')
+            ->where('LOWER(TRIM(v.name)) = LOWER(TRIM(:name))')
+            ->setParameter('name', $name)
+            ->setMaxResults(1)
             ->getQuery()
-            ->getResult();
+            ->getOneOrNullResult();
     }
 
     /**
      * @return Venue[]
      */
-    public function findByCountry(string $country): array
+    public function search(string $query, int $limit = 10): array
     {
         return $this->createQueryBuilder('v')
-            ->andWhere('v.country = :country')
-            ->setParameter('country', $country)
+            ->where('v.name LIKE :q')
+            ->setParameter('q', LikeEscaper::contains($query))
             ->orderBy('v.name', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return Venue[]
-     */
-    public function search(string $query): array
-    {
-        return $this->createQueryBuilder('v')
-            ->where('v.name LIKE :q OR v.city LIKE :q')
-            ->setParameter('q', '%' . $query . '%')
-            ->orderBy('v.name', 'ASC')
-            ->setMaxResults(10)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
     }

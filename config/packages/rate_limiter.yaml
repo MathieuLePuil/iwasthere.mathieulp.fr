@@ -1,0 +1,24 @@
+# Limites de débit sur ce qui peut être abusé sans compte ou en boucle.
+# Stockées dans cache.app (fichiers) : suffisant pour un seul serveur.
+framework:
+    rate_limiter:
+        # Un mail de réinitialisation par POST, sinon on arrose une boîte au choix.
+        forgot_password:
+            policy: sliding_window
+            limit: 3
+            interval: '15 minutes'
+        # Création de comptes en série depuis une même adresse.
+        register:
+            policy: sliding_window
+            limit: 5
+            interval: '1 hour'
+        # Invitations par email : un compte connecté pouvait servir de relais SMTP.
+        invite:
+            policy: sliding_window
+            limit: 10
+            interval: '1 day'
+        # Vérification de pseudo en direct : utile au clavier, énumération sinon.
+        username_check:
+            policy: token_bucket
+            limit: 30
+            rate: { interval: '1 minute', amount: 30 }

@@ -19,46 +19,45 @@ class EventRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Event[]
+     * L'événement déjà en base qui décrit la même sortie : même type, même jour,
+     * même lieu, même nom. Sert à rattacher un ajout à l'existant au lieu d'en
+     * créer un jumeau, pour que deux amis au même concert partagent bien la même
+     * ligne — c'est ce qui rend visible qu'ils y sont ensemble.
+     *
+     * Le nom est comparé sans casse ni espaces de bord ; un lieu absent ne
+     * s'apparie qu'avec un lieu absent. Sans lieu ni nom, on ne conclut rien :
+     * trop peu pour affirmer que c'est la même sortie.
      */
-    public function findByCategory(string $category): array
+    public function findDuplicate(Event $candidate): ?Event
     {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.category = :category')
-            ->setParameter('category', $category)
-            ->orderBy('e.date', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
+        $name = $candidate->getArtistName() ?? $candidate->getTeams() ?? $candidate->getTournamentName();
+        if ($name === null || trim($name) === '') {
+            return null;
+        }
 
-    /**
-     * @return Event[]
-     */
-    public function findByArtistName(string $artistName): array
-    {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.artistName = :artistName')
-            ->setParameter('artistName', $artistName)
-            ->orderBy('e.date', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
+        $qb = $this->createQueryBuilder('e')
+            ->where('e.type = :type')
+            ->andWhere('e.date = :date')
+            ->setParameter('type', $candidate->getType())
+            ->setParameter('date', $candidate->getDate())
+            ->setMaxResults(1);
 
-    /**
-     * @return Event[]
-     */
-    public function findPendingSetlistImports(): array
-    {
-        return $this->createQueryBuilder('e')
-            ->andWhere('e.category = :category')
-            ->andWhere('e.setlistSource IS NULL OR e.setlistSource = :source')
-            ->andWhere('e.setlistRetryCount < :maxRetry')
-            ->setParameter('category', 'music')
-            ->setParameter('source', 'setlist_fm')
-            ->setParameter('maxRetry', 3)
-            ->orderBy('e.date', 'ASC')
-            ->getQuery()
-            ->getResult();
+        if ($venue = $candidate->getVenue()) {
+            $qb->andWhere('e.venue = :venue')->setParameter('venue', $venue->getId()->toBinary());
+        } else {
+            $qb->andWhere('e.venue IS NULL');
+        }
+
+        // Le nom vit dans une colonne différente selon le type d'événement
+        $field = match (true) {
+            $candidate->getArtistName() !== null => 'artistName',
+            $candidate->getTeams() !== null => 'teams',
+            default => 'tournamentName',
+        };
+        $qb->andWhere(sprintf('LOWER(TRIM(e.%s)) = :name', $field))
+            ->setParameter('name', mb_strtolower(trim($name)));
+
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
     /**
@@ -105,7 +104,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT teams FROM event WHERE teams LIKE :q AND teams IS NOT NULL AND teams != "" LIMIT 30',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         $names = [];
@@ -128,7 +127,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT artist_name FROM event WHERE artist_name LIKE :q AND artist_name IS NOT NULL AND artist_name != "" ORDER BY artist_name LIMIT 10',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         return array_column($results, 'artist_name');
@@ -140,7 +139,7 @@ class EventRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $results = $conn->fetchAllAssociative(
             'SELECT DISTINCT tournament_name FROM event WHERE tournament_name LIKE :q AND tournament_name IS NOT NULL AND tournament_name != "" ORDER BY tournament_name LIMIT 10',
-            ['q' => '%' . $query . '%']
+            ['q' => LikeEscaper::contains($query)]
         );
 
         return array_column($results, 'tournament_name');
@@ -149,7 +148,7 @@ class EventRepository extends ServiceEntityRepository
     /**
      * @return Event[]
      */
-    public function search(string $query): array
+    public function search(string $query, int $limit = 10): array
     {
         $words = array_values(array_filter(array_map('trim', explode(' ', $query))));
         if (empty($words)) {
@@ -161,12 +160,12 @@ class EventRepository extends ServiceEntityRepository
 
         foreach ($words as $i => $word) {
             $p = 'w' . $i;
-            $qb->andWhere("e.artistName LIKE :$p OR e.tournamentName LIKE :$p OR v.name LIKE :$p OR v.city LIKE :$p OR e.teams LIKE :$p")
-               ->setParameter($p, '%' . $word . '%');
+            $qb->andWhere("e.artistName LIKE :$p OR e.tournamentName LIKE :$p OR v.name LIKE :$p OR e.teams LIKE :$p")
+               ->setParameter($p, LikeEscaper::contains($word));
         }
 
         return $qb->orderBy('e.date', 'DESC')
-            ->setMaxResults(10)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
     }

@@ -5,21 +5,37 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Repository\EventParticipationRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\StatsDetailService;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/stats')]
-class StatsController extends AbstractController
+class StatsController extends AppController
 {
     #[Route('', name: 'app_stats')]
     public function index(EventParticipationRepository $repo): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $stats = $repo->computeStats($user);
 
         return $this->render('stats/index.html.twig', ['stats' => $stats]);
+    }
+
+    #[Route('/{topic}', name: 'app_stats_detail')]
+    public function detail(string $topic, Request $request, StatsDetailService $details): Response
+    {
+        if (!in_array($topic, StatsDetailService::TOPICS, true)) {
+            throw $this->createNotFoundException();
+        }
+
+        $data = $details->compute($this->user(), $topic, $request->query->all());
+        if ($data === null) {
+            return $this->redirectToRoute('app_stats');
+        }
+
+        return $this->render('stats/detail/' . $topic . '.html.twig', ['data' => $data]);
     }
 }

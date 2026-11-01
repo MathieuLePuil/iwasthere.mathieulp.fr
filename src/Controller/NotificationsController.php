@@ -6,10 +6,10 @@ namespace App\Controller;
 
 use App\Entity\Friend;
 use App\Entity\Notification;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\NotificationRepository;
-use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,12 +18,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/notifications')]
-class NotificationsController extends AbstractController
+class NotificationsController extends AppController
 {
     #[Route('', name: 'app_notifications')]
     public function index(NotificationRepository $notifRepo, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $notifications = $notifRepo->findForUser($user, 30);
 
         foreach ($notifications as $notif) {
@@ -41,13 +41,13 @@ class NotificationsController extends AbstractController
     #[Route('/count', name: 'app_notifications_count', methods: ['GET'])]
     public function count(NotificationRepository $notifRepo): JsonResponse
     {
-        return $this->json(['count' => $notifRepo->countUnread($this->getUser())]);
+        return $this->json(['count' => $notifRepo->countUnread($this->user())]);
     }
 
     #[Route('/{id}/delete', name: 'app_notification_delete', methods: ['POST'])]
     public function delete(Notification $notification, EntityManagerInterface $em): Response
     {
-        if ($notification->getRecipient() !== $this->getUser()) {
+        if ($notification->getRecipient() !== $this->user()) {
             throw $this->createAccessDeniedException();
         }
         $em->remove($notification);
@@ -59,12 +59,7 @@ class NotificationsController extends AbstractController
     #[Route('/delete-all', name: 'app_notification_delete_all', methods: ['POST'])]
     public function deleteAll(NotificationRepository $notifRepo, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
-        $notifications = $notifRepo->findForUser($user, 200);
-        foreach ($notifications as $notif) {
-            $em->remove($notif);
-        }
-        $em->flush();
+        $notifRepo->deleteAllForUser($this->user());
 
         return $this->redirectToRoute('app_notifications');
     }
@@ -74,10 +69,10 @@ class NotificationsController extends AbstractController
         Friend $friend,
         EntityManagerInterface $em,
         NotificationRepository $notifRepo,
-        NotificationService $push,
+        NotificationDispatcher $notifier,
         Request $request,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -89,25 +84,21 @@ class NotificationsController extends AbstractController
             $em->remove($requestNotif);
         }
 
-        // Notify the sender that their request was accepted
-        $notif = new Notification();
-        $notif->setRecipient($friend->getOwner())
-            ->setType('friend_accepted')
-            ->setTitle('Demande d\'ami acceptée')
-            ->setBody('@' . $user->getUsername() . ' a accepté votre demande d\'ami.');
-        $em->persist($notif);
-
         $em->flush();
 
-        $push->sendNotification(
+        $notifier->dispatch(
+            $friend->getOwner(),
+            NotificationType::FriendAccepted,
             'Demande d\'ami acceptée',
-            '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            (string) $friend->getOwner()->getId(),
+            '@' . $user->getUsername() . ' a accepté votre demande d\'ami.',
+            $this->generateUrl('app_profile', ['tab' => 'amis']),
+            pushBody: '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
         );
 
         $this->addFlash('success', 'Demande d\'ami acceptée !');
 
         $redirect = $request->request->get('_redirect', '');
+
         return $this->redirectToRoute($redirect === 'profile' ? 'app_profile' : 'app_notifications', $redirect === 'profile' ? ['tab' => 'amis'] : []);
     }
 
@@ -118,7 +109,7 @@ class NotificationsController extends AbstractController
         NotificationRepository $notifRepo,
         Request $request,
     ): Response {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -129,11 +120,13 @@ class NotificationsController extends AbstractController
             $em->remove($requestNotif);
         }
 
-        $em->remove($friend);
+        // Conservée en « refused » : le demandeur ne pourra pas réessayer avant trente jours
+        $friend->setStatus('refused')->setCreatedAt(new \DateTimeImmutable());
         $em->flush();
         $this->addFlash('info', 'Demande d\'ami refusée.');
 
         $redirect = $request->request->get('_redirect', '');
+
         return $this->redirectToRoute($redirect === 'profile' ? 'app_profile' : 'app_notifications', $redirect === 'profile' ? ['tab' => 'amis'] : []);
     }
 }

@@ -7,14 +7,48 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Asset\Packages;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Twig\Environment;
 
 class PwaController extends AbstractController
 {
+    /**
+     * Page de repli servie par le service worker quand une page demandée n'est ni
+     * accessible (hors-ligne) ni déjà en cache. Volontairement publique et autonome
+     * (styles en ligne) : le SW la précache à l'installation, et elle doit s'afficher
+     * même si app.css n'a pas encore été mis en cache.
+     */
+    #[Route('/offline', name: 'app_offline')]
+    public function offline(): Response
+    {
+        return $this->render('pwa/offline.html.twig');
+    }
+
+    /**
+     * Le service worker, servi depuis un template pour y injecter sa version :
+     * l'empreinte du fichier source. Un changement de logique de cache change la
+     * version, et l'activation purge les anciens caches sans intervention.
+     * Cache-Control court : le navigateur revérifie le SW à chaque navigation, il
+     * doit trouver la nouvelle version vite après un déploiement.
+     */
+    #[Route('/sw.js', name: 'app_service_worker')]
+    public function serviceWorker(Environment $twig): Response
+    {
+        $source = $twig->getLoader()->getSourceContext('pwa/sw.js.twig')->getCode();
+
+        $response = $this->render('pwa/sw.js.twig', ['version' => substr(sha1($source), 0, 12)]);
+        $response->headers->set('Content-Type', 'application/javascript; charset=utf-8');
+        $response->headers->set('Cache-Control', 'public, max-age=300, must-revalidate');
+        $response->headers->set('Service-Worker-Allowed', '/');
+
+        return $response;
+    }
+
     #[Route('/manifest.json', name: 'app_manifest')]
     public function manifest(Packages $assets): JsonResponse
     {
-        $icon = fn(string $file, string $sizes, string $purpose = 'any') => [
+        $icon = fn (string $file, string $sizes, string $purpose = 'any') => [
             'src' => $assets->getUrl('images/icons/' . $file),
             'sizes' => $sizes,
             'type' => 'image/png',
@@ -25,7 +59,7 @@ class PwaController extends AbstractController
             'name' => 'IWasThere',
             'short_name' => 'IWasThere',
             'description' => 'Ton journal d\'expériences live',
-            'start_url' => '/',
+            'start_url' => '/home',
             'scope' => '/',
             'display' => 'standalone',
             'background_color' => '#0B0D10',

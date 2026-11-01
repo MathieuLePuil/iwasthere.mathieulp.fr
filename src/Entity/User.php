@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Event\EventType;
+use App\Notification\NotificationType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
+#[UniqueEntity(fields: ['email'], message: 'Un compte existe déjà avec cet email.')]
+#[UniqueEntity(fields: ['username'], message: 'Cet identifiant est déjà pris.')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -41,26 +46,60 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $bio = null;
 
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $profileVisibility = 'friends';
+    /**
+     * Équipe porte-bonheur par sport collectif, saisie librement : une entrée par
+     * sport, ex. ['football' => 'ESTAC', 'rugby' => 'Stade Français']. Sert au bilan
+     * sportif, où on la rapproche par nom des camps « A vs B » des matchs vus. Vide
+     * tant que l'utilisateur n'a rien choisi.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $favoriteTeams = [];
 
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $defaultEventVisibility = 'friends';
+    /**
+     * Audience de chaque partie du profil, indépendamment : une entrée par catégorie
+     * (voir PRIVACY_CATEGORIES), chaque valeur étant un niveau (voir PRIVACY_LEVELS).
+     * Ex. ['events' => 'friends', 'stats' => 'public', 'friends' => 'private'].
+     *
+     * Une clé absente vaut « amis » (getPrivacyLevel), ce qui reproduit l'ancien
+     * compte privé par défaut. Ce réglage ne régit que ce que montre la *page profil*
+     * (/p/{pseudo} et le profil dans l'app) : le feed et le classement continuent de
+     * ne filtrer que sur l'amitié, un ami y voit donc toujours l'activité.
+     *
+     * @var array<string, string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $privacySettings = [];
 
-    #[ORM\Column(options: ['default' => true])]
-    private bool $notificationsEnabled = true;
+    /** Thème de l'interface : 'dark', 'light' ou 'auto' (suit le réglage système) */
+    #[ORM\Column(length: 10, options: ['default' => 'dark'])]
+    private string $theme = 'dark';
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notifCompletionEnabled = false;
+    /**
+     * Push autorisés, par type de notification. Une clé absente vaut « activé » :
+     * un type ajouté plus tard est reçu sans avoir à retoucher les lignes existantes.
+     *
+     * @var array<string, bool>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $notifPrefs = [];
 
+    /** Heure d'envoi des rappels programmés (jour J, complétion), en heure française */
     #[ORM\Column(length: 5, nullable: true, options: ['default' => '08:00'])]
     private ?string $notifCompletionTime = '08:00';
 
+    /**
+     * Prévenir quand un artiste déjà vu (journal) annonce une date en France.
+     * Opt-in : c'est potentiellement une notification par artiste du journal
+     * et par tournée, on ne l'impose à personne. La wishlist (ArtistWatch)
+     * est l'autre source, explicite, du même signal.
+     */
     #[ORM\Column(options: ['default' => false])]
-    private bool $notifPresenceEnabled = false;
+    private bool $alertSeenArtists = false;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $notifFriendRequestEnabled = false;
+    /** Les rôles que l'admin peut attribuer ; voir getRoles() pour leur traduction Symfony. */
+    public const ROLES = ['user', 'superAdmin'];
 
     #[ORM\Column(length: 20, options: ['default' => 'user'])]
     private string $role = 'user';
@@ -70,6 +109,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $passwordResetTokenExpiresAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $feedLastSeenAt = null;
+
+    /** Année du Rewind débloqué, null si aucun */
+    #[ORM\Column(nullable: true)]
+    private ?int $rewindYear = null;
+
+    /** Date de déblocage : le Rewind reste visible un mois à partir de là */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $rewindUnlockedAt = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -169,50 +219,155 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getProfileVisibility(): string
+    /**
+     * Les sports collectifs où une équipe porte-bonheur a un sens (le tennis est individuel).
+     *
+     * @return list<string>
+     */
+    public static function collectiveSports(): array
     {
-        return $this->profileVisibility;
+        return array_map(
+            fn (EventType $t) => $t->value,
+            array_values(array_filter(EventType::cases(), fn (EventType $t) => $t->isCollective())),
+        );
     }
 
-    public function setProfileVisibility(string $profileVisibility): static
+    /** @return array<string, string> */
+    public function getFavoriteTeams(): array
     {
-        $this->profileVisibility = $profileVisibility;
+        return $this->favoriteTeams;
+    }
+
+    /**
+     * Ne retient que les sports collectifs connus et les noms non vides : une case
+     * laissée vide retire l'équipe de ce sport.
+     *
+     * @param array<string, string|null> $teams
+     */
+    public function setFavoriteTeams(array $teams): static
+    {
+        $clean = [];
+        foreach (self::collectiveSports() as $sport) {
+            $name = mb_substr(trim((string) ($teams[$sport] ?? '')), 0, 100);
+            if ($name !== '') {
+                $clean[$sport] = $name;
+            }
+        }
+        $this->favoriteTeams = $clean;
 
         return $this;
     }
 
-    public function getDefaultEventVisibility(): string
+    public function getFavoriteTeam(string $sport): ?string
     {
-        return $this->defaultEventVisibility;
+        return $this->favoriteTeams[$sport] ?? null;
     }
 
-    public function setDefaultEventVisibility(string $defaultEventVisibility): static
+    /** Les parties du profil dont on règle l'audience séparément. */
+    public const PRIVACY_CATEGORIES = ['events', 'stats', 'friends'];
+
+    /** Les audiences possibles, de la plus fermée à la plus ouverte. */
+    public const PRIVACY_LEVELS = ['private', 'friends', 'public'];
+
+    /** @return array<string, string> */
+    public function getPrivacySettings(): array
     {
-        $this->defaultEventVisibility = $defaultEventVisibility;
+        return $this->privacySettings;
+    }
+
+    /**
+     * Audience d'une catégorie. Une valeur absente ou invalide retombe sur « amis »,
+     * qui équivaut à l'ancien compte privé : visible des amis, caché des autres.
+     */
+    public function getPrivacyLevel(string $category): string
+    {
+        $level = $this->privacySettings[$category] ?? null;
+
+        return in_array($level, self::PRIVACY_LEVELS, true) ? $level : 'friends';
+    }
+
+    public function setPrivacyLevel(string $category, string $level): static
+    {
+        if (in_array($category, self::PRIVACY_CATEGORIES, true)
+            && in_array($level, self::PRIVACY_LEVELS, true)) {
+            $this->privacySettings[$category] = $level;
+        }
 
         return $this;
     }
 
-    public function isNotificationsEnabled(): bool
+    /**
+     * Le regardeur — décrit par « est-ce lui-même ? » et « sont-ils amis ? » — a-t-il
+     * le droit de voir cette catégorie ?
+     *
+     *  - public  : tout le monde, même déconnecté ;
+     *  - friends : lui-même et ses amis ;
+     *  - private : lui-même seulement.
+     */
+    public function canBeSeenBy(string $category, bool $isSelf, bool $areFriends): bool
     {
-        return $this->notificationsEnabled;
+        return match ($this->getPrivacyLevel($category)) {
+            'public'  => true,
+            'friends' => $isSelf || $areFriends,
+            'private' => $isSelf,
+            default   => $isSelf,
+        };
     }
 
-    public function setNotificationsEnabled(bool $notificationsEnabled): static
+    /**
+     * Raccourci historique : « les événements sont-ils ouverts à tout le monde ? ».
+     * Sert encore au noindex SEO, à l'affichage de la note sur la page événement et
+     * à l'admin, qui n'ont pas besoin de la granularité par catégorie.
+     */
+    public function isPublicProfile(): bool
     {
-        $this->notificationsEnabled = $notificationsEnabled;
+        return $this->getPrivacyLevel('events') === 'public';
+    }
+
+    public function getTheme(): string
+    {
+        return $this->theme;
+    }
+
+    public function setTheme(string $theme): static
+    {
+        $this->theme = $theme;
 
         return $this;
     }
 
-    public function isNotifCompletionEnabled(): bool
+    /** @return array<string, bool> */
+    public function getNotifPrefs(): array
     {
-        return $this->notifCompletionEnabled;
+        return $this->notifPrefs;
     }
 
-    public function setNotifCompletionEnabled(bool $notifCompletionEnabled): static
+    /** @param array<string, bool> $notifPrefs */
+    public function setNotifPrefs(array $notifPrefs): static
     {
-        $this->notifCompletionEnabled = $notifCompletionEnabled;
+        $this->notifPrefs = $notifPrefs;
+
+        return $this;
+    }
+
+    /**
+     * L'utilisateur veut-il un push pour ce type ? Activé tant qu'il n'a pas été
+     * décoché. Couper tout se fait en se désabonnant depuis les Paramètres, ce
+     * qui retire l'abonnement navigateur — il n'y a pas d'interrupteur en base.
+     */
+    public function wantsPush(NotificationType $type): bool
+    {
+        return (bool) ($this->notifPrefs[$type->value] ?? true);
+    }
+
+    public function isAlertSeenArtists(): bool
+    {
+        return $this->alertSeenArtists;
+    }
+
+    public function setAlertSeenArtists(bool $alertSeenArtists): static
+    {
+        $this->alertSeenArtists = $alertSeenArtists;
 
         return $this;
     }
@@ -225,30 +380,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setNotifCompletionTime(?string $notifCompletionTime): static
     {
         $this->notifCompletionTime = $notifCompletionTime;
-
-        return $this;
-    }
-
-    public function isNotifPresenceEnabled(): bool
-    {
-        return $this->notifPresenceEnabled;
-    }
-
-    public function setNotifPresenceEnabled(bool $notifPresenceEnabled): static
-    {
-        $this->notifPresenceEnabled = $notifPresenceEnabled;
-
-        return $this;
-    }
-
-    public function isNotifFriendRequestEnabled(): bool
-    {
-        return $this->notifFriendRequestEnabled;
-    }
-
-    public function setNotifFriendRequestEnabled(bool $notifFriendRequestEnabled): static
-    {
-        $this->notifFriendRequestEnabled = $notifFriendRequestEnabled;
 
         return $this;
     }
@@ -273,6 +404,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPasswordResetToken(?string $passwordResetToken): static
     {
         $this->passwordResetToken = $passwordResetToken;
+
         return $this;
     }
 
@@ -284,6 +416,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPasswordResetTokenExpiresAt(?\DateTimeImmutable $passwordResetTokenExpiresAt): static
     {
         $this->passwordResetTokenExpiresAt = $passwordResetTokenExpiresAt;
+
         return $this;
     }
 
@@ -292,6 +425,62 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->passwordResetToken !== null
             && $this->passwordResetTokenExpiresAt !== null
             && $this->passwordResetTokenExpiresAt > new \DateTimeImmutable();
+    }
+
+    public function getFeedLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->feedLastSeenAt;
+    }
+
+    public function setFeedLastSeenAt(?\DateTimeImmutable $feedLastSeenAt): static
+    {
+        $this->feedLastSeenAt = $feedLastSeenAt;
+
+        return $this;
+    }
+
+    public function getRewindYear(): ?int
+    {
+        return $this->rewindYear;
+    }
+
+    public function getRewindUnlockedAt(): ?\DateTimeImmutable
+    {
+        return $this->rewindUnlockedAt;
+    }
+
+    /** Débloque le Rewind d'une année ; la fenêtre d'un mois repart de maintenant. */
+    public function unlockRewind(int $year, ?\DateTimeImmutable $at = null): static
+    {
+        $this->rewindYear = $year;
+        $this->rewindUnlockedAt = $at ?? new \DateTimeImmutable();
+
+        return $this;
+    }
+
+    public function lockRewind(): static
+    {
+        $this->rewindYear = null;
+        $this->rewindUnlockedAt = null;
+
+        return $this;
+    }
+
+    /** Fin de la fenêtre de visibilité, un mois après le déblocage. */
+    public function getRewindExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->rewindUnlockedAt?->modify('+1 month');
+    }
+
+    /**
+     * Le Rewind est-il visible ? Il s'efface de lui-même au bout d'un mois :
+     * rien ne le verrouille en base, c'est la date de déblocage qui fait foi.
+     */
+    public function isRewindAvailable(): bool
+    {
+        $expires = $this->getRewindExpiresAt();
+
+        return $this->rewindYear !== null && $expires !== null && $expires > new \DateTimeImmutable();
     }
 
     public function getCreatedAt(): \DateTimeImmutable

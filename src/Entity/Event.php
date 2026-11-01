@@ -9,6 +9,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: EventRepository::class)]
+#[ORM\Index(name: 'idx_event_date', columns: ['date'])]
+#[ORM\Index(name: 'idx_event_duplicate', columns: ['type', 'date', 'venue_id'])]
+#[ORM\Index(name: 'idx_event_creator', columns: ['created_by_user_id'])]
 class Event
 {
     #[ORM\Id]
@@ -29,15 +32,18 @@ class Event
     #[ORM\Column]
     private \DateTimeImmutable $date;
 
-    #[ORM\Column(type: 'uuid', nullable: true)]
-    private ?Uuid $venueId = null;
+    #[ORM\Column(type: 'time_immutable', nullable: true)]
+    private ?\DateTimeImmutable $startTime = null;
 
     #[ORM\ManyToOne(targetEntity: Venue::class)]
-    #[ORM\JoinColumn(name: 'venue_id', referencedColumnName: 'id', nullable: true)]
+    #[ORM\JoinColumn(name: 'venue_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Venue $venue = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $artistName = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $artistImageUrl = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $tournamentName = null;
@@ -47,6 +53,12 @@ class Event
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $tourName = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $finalScore = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $winner = null;
 
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $setlist = null;
@@ -141,16 +153,31 @@ class Event
         return $this;
     }
 
-    public function getVenueId(): ?Uuid
+    /** Même convention que le statut de participation : date >= aujourd'hui ⇒ à venir */
+    public function isPast(): bool
     {
-        return $this->venueId;
+        return $this->date < new \DateTimeImmutable('today');
     }
 
-    public function setVenueId(?Uuid $venueId): static
+    public function getStartTime(): ?\DateTimeImmutable
     {
-        $this->venueId = $venueId;
+        return $this->startTime;
+    }
+
+    public function setStartTime(?\DateTimeImmutable $startTime): static
+    {
+        $this->startTime = $startTime;
 
         return $this;
+    }
+
+    /** Date + heure de début ; défaut 21h (musique) ou 16h (sport) si non renseignée */
+    public function getStartDateTime(): \DateTimeImmutable
+    {
+        $time = $this->startTime?->format('H:i')
+            ?? ($this->category === 'sport' ? '16:00' : '21:00');
+
+        return new \DateTimeImmutable($this->date->format('Y-m-d') . ' ' . $time);
     }
 
     public function getVenue(): ?Venue
@@ -161,7 +188,6 @@ class Event
     public function setVenue(?Venue $venue): static
     {
         $this->venue = $venue;
-        $this->venueId = $venue?->getId();
 
         return $this;
     }
@@ -173,7 +199,20 @@ class Event
 
     public function setArtistName(?string $artistName): static
     {
-        $this->artistName = $artistName;
+        $artistName = $artistName !== null ? preg_replace('/^\s+|\s+$/u', '', $artistName) : null;
+        $this->artistName = $artistName !== '' ? $artistName : null;
+
+        return $this;
+    }
+
+    public function getArtistImageUrl(): ?string
+    {
+        return $this->artistImageUrl;
+    }
+
+    public function setArtistImageUrl(?string $artistImageUrl): static
+    {
+        $this->artistImageUrl = $artistImageUrl;
 
         return $this;
     }
@@ -214,6 +253,84 @@ class Event
         return $this;
     }
 
+    public function getFinalScore(): ?string
+    {
+        return $this->finalScore;
+    }
+
+    public function setFinalScore(?string $finalScore): static
+    {
+        $this->finalScore = $finalScore;
+
+        return $this;
+    }
+
+    public function getWinner(): ?string
+    {
+        return $this->winner;
+    }
+
+    public function setWinner(?string $winner): static
+    {
+        $this->winner = $winner;
+
+        return $this;
+    }
+
+    /**
+     * Score line ready for display: both sides, the score and the winning
+     * side (1, 2 or null on draw/unknown). Tennis scores are set-based
+     * ("6/2 6/2"), the other sports use a plain "2 - 0" total.
+     * Returns null when there is no score or the teams can't be split.
+     *
+     * A null winner stays ambiguous on purpose: it covers a real draw ("1 - 1") as much
+     * as a score nobody could rank (any tennis match without its Vainqueur checkbox).
+     * Callers that want to announce a draw have to check the score themselves.
+     */
+    public function getScoreline(): ?array
+    {
+        if (!$this->finalScore || !$this->teams || !str_contains($this->teams, ' vs ')) {
+            return null;
+        }
+        [$team1, $team2] = array_map('trim', explode(' vs ', $this->teams, 2));
+
+        // Explicit winner ('1'/'2' from the checkbox; legacy rows may hold a name)
+        if ($this->winner !== null && $this->winner !== '') {
+            $explicit = match (trim($this->winner)) {
+                '1' => 1,
+                '2' => 2,
+                default => strcasecmp(trim($this->winner), $team1) === 0 ? 1
+                    : (strcasecmp(trim($this->winner), $team2) === 0 ? 2 : null),
+            };
+            if ($explicit !== null) {
+                return [
+                    'team1' => $team1,
+                    'team2' => $team2,
+                    'score' => trim($this->finalScore),
+                    'winner' => $explicit,
+                ];
+            }
+        }
+
+        // A tennis score is written from the winner's side: "6/1 7/6" reads the same
+        // whether the winner is named first or second (checked against every row in the
+        // database — the leading number wins 17 times out of 17, while the winner itself
+        // splits 8/9). So the score cannot say who won: only the Vainqueur checkbox
+        // knows, and without it we leave the winner unknown rather than flip a coin.
+        // The other sports do record "team1 - team2", which compares fine.
+        $cmp = 0;
+        if ($this->type !== 'tennis' && preg_match('/^\s*(\d+)\s*-\s*(\d+)\s*$/', $this->finalScore, $m)) {
+            $cmp = (int) $m[1] <=> (int) $m[2];
+        }
+
+        return [
+            'team1' => $team1,
+            'team2' => $team2,
+            'score' => trim($this->finalScore),
+            'winner' => $cmp === 0 ? null : ($cmp > 0 ? 1 : 2),
+        ];
+    }
+
     public function getSetlist(): ?array
     {
         return $this->setlist;
@@ -242,7 +359,7 @@ class Event
     public function getSetlistNormalized(): array
     {
         return array_map(
-            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            fn ($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
             $this->setlist ?? []
         );
     }
@@ -250,7 +367,7 @@ class Event
     public function getSetlistEncoresNormalized(): array
     {
         return array_map(
-            fn($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
+            fn ($s) => is_string($s) ? ['name' => $s, 'tape' => false, 'info' => null, 'with' => null] : $s,
             $this->setlistEncores ?? []
         );
     }
@@ -330,6 +447,28 @@ class Event
     public function getEditHistory(): array
     {
         return $this->editHistory;
+    }
+
+    /** Les cinquante dernières modifications, la plus récente en dernier. */
+    public const EDIT_HISTORY_MAX = 50;
+
+    /**
+     * Consigne une modification d'un champ partagé : qui, quand, de quoi à quoi.
+     * Tout participant peut corriger un événement ; c'est ce qui permet de savoir
+     * qui a changé une date ou un nom, et de revenir dessus.
+     */
+    public function recordEdit(Uuid $by, string $field, ?string $from, ?string $to): static
+    {
+        $this->editHistory[] = [
+            'by'    => (string) $by,
+            'at'    => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+            'field' => $field,
+            'from'  => $from,
+            'to'    => $to,
+        ];
+        $this->editHistory = array_slice($this->editHistory, -self::EDIT_HISTORY_MAX);
+
+        return $this;
     }
 
     public function setEditHistory(array $editHistory): static

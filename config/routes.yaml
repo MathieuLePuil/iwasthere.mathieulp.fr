@@ -7,5 +7,13 @@
 # To list all registered routes, run the following command:
 #   bin/console debug:router
 
+# Redirection temporaire en attendant la landing page : la racine renvoie
+# vers l'accueil applicatif (/home).
+app_root:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController
+    defaults:
+        route: app_home
+
 controllers:
     resource: routing.controllers

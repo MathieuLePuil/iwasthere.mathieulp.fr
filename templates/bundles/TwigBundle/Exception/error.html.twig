@@ -1,0 +1,21 @@
+{# Page d'erreur générique (500 et le reste), dans le thème et avec la navigation :
+   une 500 brute de Symfony, sans bouton retour, laissait la PWA installée sans issue.
+   Les 404 et 403 ont leur propre gabarit ; celui-ci sert de repli. #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Erreur {{ status_code }} — IWasThere{% endblock %}
+
+{% block body %}
+<div class="px-5 pt-16 pb-10 text-center" style="max-width: 24rem; margin: 0 auto">
+    <div class="text-5xl mb-4">{% block glyph %}⚡{% endblock %}</div>
+    <h1 class="text-xl font-semibold fg-1 tracking-title mb-2">{% block heading %}Quelque chose a cassé{% endblock %}</h1>
+    <p class="text-sm fg-3 leading-relaxed mb-6">
+        {% block message %}C'est de notre côté, pas du tien. Réessaie dans un instant ; si ça persiste, préviens-nous.{% endblock %}
+    </p>
+    <div class="flex flex-col gap-2">
+        <a href="{{ app.user ? path('app_home') : path('app_login') }}" class="btn-primary py-3 no-underline">Retour à l'accueil</a>
+        {% block secondary %}{% endblock %}
+    </div>
+    <p class="text-xs fg-4 mt-8 font-mono-iwt">{{ status_code }} · {{ status_text }}</p>
+</div>
+{% endblock %}

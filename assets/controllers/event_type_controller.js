@@ -13,6 +13,8 @@ export default class extends Controller {
 
     selectMusic() {
         document.getElementById('input-category').value = 'music';
+        const artistInput = document.querySelector('#music-fields input[name="artist_name"]');
+        if (artistInput) artistInput.required = true;
         document.getElementById('music-fields').classList.remove('hidden');
         document.getElementById('sport-fields').classList.add('hidden');
         document.getElementById('type-selector-music').classList.remove('hidden');
@@ -38,6 +40,8 @@ export default class extends Controller {
 
     selectSport() {
         document.getElementById('input-category').value = 'sport';
+        const artistInput = document.querySelector('#music-fields input[name="artist_name"]');
+        if (artistInput) artistInput.required = false;
         document.getElementById('sport-fields').classList.remove('hidden');
         document.getElementById('music-fields').classList.add('hidden');
         document.getElementById('type-selector-sport').classList.remove('hidden');
@@ -85,11 +89,17 @@ export default class extends Controller {
         if (tennis) tennis.classList.toggle('hidden', !isTennis);
 
         if (!isTennis) {
-            const isPlayer = checked.value === 'tennis';
             const label1 = document.getElementById('score-label-team1');
             const label2 = document.getElementById('score-label-team2');
-            if (label1) label1.textContent = checked.value === 'tennis' ? 'Joueur 1' : 'Équipe 1';
-            if (label2) label2.textContent = checked.value === 'tennis' ? 'Joueur 2' : 'Équipe 2';
+            if (label1) label1.textContent = 'Équipe 1';
+            if (label2) label2.textContent = 'Équipe 2';
         }
+
+        // Winner checkbox labels live in the page's inline script
+        if (typeof window.syncWinnerLabels === 'function') window.syncWinnerLabels();
+        // Changer de sport masque ou révèle le bloc tennis : l'exigence de vainqueur doit
+        // suivre. Sans ça, quitter le tennis laisse une contrainte sur des cases devenues
+        // invisibles — le navigateur refuse l'envoi sans pouvoir afficher le message.
+        if (typeof window.syncWinnerRequired === 'function') window.syncWinnerRequired();
     }
 }

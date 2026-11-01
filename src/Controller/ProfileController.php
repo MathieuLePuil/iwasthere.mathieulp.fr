@@ -4,37 +4,54 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Badge\BadgeService;
 use App\Entity\Friend;
-use App\Entity\Notification;
 use App\Entity\User;
+use App\Notification\NotificationDispatcher;
+use App\Notification\NotificationType;
 use App\Repository\EventParticipationRepository;
 use App\Repository\FriendRepository;
 use App\Repository\UserRepository;
 use App\Service\AvatarService;
-use App\Service\NotificationService;
+use App\Service\InCommonService;
+use App\Service\LeaderboardService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted('ROLE_USER')]
 #[Route('/profile')]
-class ProfileController extends AbstractController
+class ProfileController extends AppController
 {
     #[Route('', name: 'app_profile')]
-    public function index(Request $request, FriendRepository $friendRepo, EventParticipationRepository $partRepo): Response
-    {
-        $user = $this->getUser();
+    public function index(
+        Request $request,
+        FriendRepository $friendRepo,
+        EventParticipationRepository $partRepo,
+        BadgeService $badges,
+        LeaderboardService $leaderboard,
+    ): Response {
+        $user = $this->user();
         $friends = $friendRepo->findConfirmedFriends($user);
         $pendingRequests = $friendRepo->findPendingReceived($user);
         $sentRequests = $friendRepo->findPendingSent($user);
         $totalEvents = $partRepo->countByUser($user);
         $avgRating = $partRepo->getAvgRating($user);
+        // Normalisé ici plutôt que laissé brut : le template n'affiche un onglet
+        // qu'à l'identique, un `tab` fantaisiste doit retomber sur le profil et non
+        // sur une page vide.
+        $tab = $request->query->get('tab', 'profil');
+        if (!in_array($tab, ['profil', 'amis', 'classement'], true)) {
+            $tab = 'profil';
+        }
+        $year = (int) (new \DateTimeImmutable())->format('Y');
 
         return $this->render('profile/index.html.twig', [
             'friends' => $friends,
@@ -42,25 +59,43 @@ class ProfileController extends AbstractController
             'sent_requests' => $sentRequests,
             'total_events' => $totalEvents,
             'avg_rating' => $avgRating,
-            'tab' => $request->query->get('tab', 'profil'),
+            'tab' => $tab,
+            // Les badges relisent tout l'historique : inutile de payer ce balayage
+            // quand l'onglet Amis est affiché et qu'ils ne seront pas rendus.
+            'badges' => $tab === 'profil' ? $badges->forUser($user) : null,
+            'leaderboard' => $tab === 'classement' ? $leaderboard->forUser($user, $year) : null,
+            'leaderboard_year' => $year,
+        ]);
+    }
+
+    /**
+     * Déclarée avant /{username}, sinon « succes » serait pris pour un pseudo.
+     */
+    #[Route('/succes', name: 'app_profile_badges')]
+    public function badges(BadgeService $badges): Response
+    {
+        return $this->render('profile/badges.html.twig', [
+            'badges' => $badges->forUser($this->user()),
         ]);
     }
 
     #[Route('/avatar', name: 'app_profile_avatar', methods: ['POST'])]
     public function avatar(Request $request, AvatarService $avatarService, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         $file = $request->files->get('avatar');
 
         if (!$file) {
             $this->addFlash('error', 'Aucun fichier reçu.');
+
             return $this->redirectToRoute('app_profile');
         }
 
-        $path = $avatarService->saveUploadedFile($file, (string) $user->getId());
+        $path = $avatarService->save($file, $user);
 
         if ($path === null) {
             $this->addFlash('error', 'Impossible de sauvegarder l\'image. Formats acceptés : JPEG, PNG, WebP, GIF.');
+
             return $this->redirectToRoute('app_profile');
         }
 
@@ -68,13 +103,14 @@ class ProfileController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Photo de profil mise à jour !');
+
         return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/search', name: 'app_profile_search')]
     public function search(Request $request, UserRepository $userRepo, FriendRepository $friendRepo): Response
     {
-        $currentUser = $this->getUser();
+        $currentUser = $this->user();
         $q = $request->query->get('q', '');
         // Strip @ prefix so users can search by @username
         if (str_starts_with($q, '@')) {
@@ -96,24 +132,34 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/add/{id}', name: 'app_friend_add', methods: ['POST'])]
-    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, NotificationService $push): Response
+    public function addFriend(User $targetUser, EntityManagerInterface $em, FriendRepository $friendRepo, NotificationDispatcher $notifier): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
 
         if ($targetUser === $user) {
             $this->addFlash('error', 'Tu ne peux pas t\'ajouter toi-même.');
+
             return $this->redirectToRoute('app_profile_search');
         }
 
         $existing = $friendRepo->findRelationship($user, $targetUser);
         if ($existing) {
-            if ($existing->getStatus() === 'refused') {
-                $em->remove($existing);
-                $em->flush();
-            } else {
+            if ($existing->getStatus() !== 'refused') {
                 $this->addFlash('info', 'Une relation existe déjà avec cet utilisateur.');
+
                 return $this->redirectToRoute('app_profile_search');
             }
+            // Un refus tient trente jours : sans ça, la demande refusée revenait dans
+            // la seconde, avec sa notification et son push. Celui qui a refusé, lui,
+            // peut toujours faire le premier pas.
+            $refusedMe = $existing->getOwner() === $user;
+            if ($refusedMe && $existing->getCreatedAt() > new \DateTimeImmutable('-30 days')) {
+                $this->addFlash('info', 'Ta demande n\'a pas été acceptée. Tu pourras la renvoyer dans quelques semaines.');
+
+                return $this->redirectToRoute('app_profile_search');
+            }
+            $em->remove($existing);
+            $em->flush();
         }
 
         $friend = new Friend();
@@ -124,42 +170,39 @@ class ProfileController extends AbstractController
         $em->persist($friend);
         $em->flush();
 
-        $notif = new Notification();
-        $notif->setRecipient($targetUser)
-            ->setType('friend_request')
-            ->setTitle('Nouvelle demande d\'ami')
-            ->setBody('@' . $user->getUsername() . ' veut vous ajouter en ami.')
-            ->setData(['friendId' => (string) $friend->getId()]);
-        $em->persist($notif);
-        $em->flush();
-
-        $push->sendNotification(
+        $notifier->dispatch(
+            $targetUser,
+            NotificationType::FriendRequest,
             'Nouvelle demande d\'ami',
-            '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
-            (string) $targetUser->getId(),
+            '@' . $user->getUsername() . ' veut vous ajouter en ami.',
+            $this->generateUrl('app_notifications'),
+            ['friendId' => (string) $friend->getId()],
+            pushBody: '@' . $user->getUsername() . ' veut t\'ajouter en ami.',
         );
 
         $this->addFlash('success', 'Demande d\'ami envoyée à @' . $targetUser->getUsername() . ' !');
+
         return $this->redirectToRoute('app_profile_search');
     }
 
     #[Route('/friend/remove/{id}', name: 'app_friend_remove', methods: ['POST'])]
     public function removeFriend(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getOwner() !== $user && $friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
         $em->remove($friend);
         $em->flush();
         $this->addFlash('success', 'Ami supprimé.');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
     #[Route('/friend/cancel/{id}', name: 'app_friend_cancel', methods: ['POST'])]
     public function cancelFriendRequest(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getOwner() !== $user) {
             throw $this->createAccessDeniedException();
         }
@@ -171,56 +214,66 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/friend/accept/{id}', name: 'app_friend_accept', methods: ['POST'])]
-    public function acceptFriend(Friend $friend, EntityManagerInterface $em, NotificationService $push): Response
+    public function acceptFriend(Friend $friend, EntityManagerInterface $em, NotificationDispatcher $notifier): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
         $friend->setStatus('confirmed');
 
-        $notif = new Notification();
-        $notif->setRecipient($friend->getOwner())
-            ->setType('friend_accepted')
-            ->setTitle('Demande d\'ami acceptée')
-            ->setBody('@' . $user->getUsername() . ' a accepté votre demande d\'ami.');
-        $em->persist($notif);
         $em->flush();
 
-        $push->sendNotification(
+        $notifier->dispatch(
+            $friend->getOwner(),
+            NotificationType::FriendAccepted,
             'Demande d\'ami acceptée',
-            '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
-            (string) $friend->getOwner()->getId(),
+            '@' . $user->getUsername() . ' a accepté votre demande d\'ami.',
+            $this->generateUrl('app_profile', ['tab' => 'amis']),
+            pushBody: '@' . $user->getUsername() . ' a accepté ta demande d\'ami.',
         );
 
         $this->addFlash('success', 'Ami ajouté !');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
     #[Route('/friend/refuse/{id}', name: 'app_friend_refuse', methods: ['POST'])]
     public function refuseFriend(Friend $friend, EntityManagerInterface $em): Response
     {
-        $user = $this->getUser();
+        $user = $this->user();
         if ($friend->getFriendUser() !== $user) {
             throw $this->createAccessDeniedException();
         }
-        $em->remove($friend);
+        // Conservée en « refused » plutôt que supprimée : c'est ce qui empêche le
+        // demandeur de réessayer aussitôt (voir addFriend).
+        $friend->setStatus('refused')->setCreatedAt(new \DateTimeImmutable());
         $em->flush();
         $this->addFlash('info', 'Demande refusée.');
+
         return $this->redirectToRoute('app_profile', ['tab' => 'amis']);
     }
 
     #[Route('/invite', name: 'app_profile_invite', methods: ['POST'])]
-    public function invite(Request $request, MailerInterface $mailer): Response
+    public function invite(Request $request, MailerInterface $mailer, RateLimiterFactoryInterface $inviteLimiter): Response
     {
         $emailAddress = trim((string) $request->request->get('email', ''));
 
         if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
             $this->addFlash('error', 'Adresse email invalide.');
+
             return $this->redirectToRoute('app_profile');
         }
 
-        $inviter = $this->getUser();
+        $inviter = $this->user();
+
+        // Dix par jour et par compte : au-delà, ce n'est plus une invitation, c'est
+        // un relais de courrier au nom du domaine.
+        if (!$inviteLimiter->create((string) $inviter->getId())->consume()->isAccepted()) {
+            $this->addFlash('error', 'Tu as atteint la limite d\'invitations pour aujourd\'hui. Réessaie demain.');
+
+            return $this->redirectToRoute('app_profile');
+        }
         $registerUrl = $this->generateUrl('app_register', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $html = $this->renderView('emails/friend_invite.html.twig', [
@@ -229,7 +282,7 @@ class ProfileController extends AbstractController
         ]);
 
         $email = (new Email())
-            ->from('noreply@iwasthere.app')
+            ->from(new Address('noreply@iwasthereapp.app', 'IWasThere'))
             ->to($emailAddress)
             ->subject($inviter->getDisplayName() . ' t\'invite sur IWasThere !')
             ->html($html);
@@ -244,6 +297,193 @@ class ProfileController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
+    #[Route('/{username}/invite-events', name: 'app_profile_invite_events', methods: ['GET', 'POST'])]
+    public function inviteToEvents(
+        string $username,
+        Request $request,
+        UserRepository $userRepo,
+        FriendRepository $friendRepo,
+        EventParticipationRepository $partRepo,
+        EntityManagerInterface $em,
+        NotificationDispatcher $notifier,
+    ): Response {
+        $friendUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$friendUser) {
+            throw $this->createNotFoundException();
+        }
+
+        $user = $this->user();
+        if ($friendUser === $user || !$friendRepo->areFriends($user, $friendUser)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $friendId = (string) $friendUser->getId();
+
+        // Events where the friend already has their own participation
+        $friendEventIds = [];
+        foreach ($partRepo->findAllByUser($friendUser) as $p) {
+            $friendEventIds[(string) $p->getEvent()->getId()] = true;
+        }
+
+        // My participations where the friend isn't already tagged or participating
+        $eligible = [];
+        foreach ($partRepo->findAllByUser($user) as $p) {
+            if (isset($friendEventIds[(string) $p->getEvent()->getId()])) {
+                continue;
+            }
+            $alreadyTagged = false;
+            foreach ($p->getFriends() as $f) {
+                if (($f['type'] ?? '') === 'app' && ($f['userId'] ?? '') === $friendId) {
+                    $alreadyTagged = true;
+                    break;
+                }
+            }
+            if (!$alreadyTagged) {
+                $eligible[(string) $p->getId()] = $p;
+            }
+        }
+
+        if ($request->isMethod('POST')) {
+            $selectedIds = $request->request->all('participations');
+            $count = 0;
+
+            foreach ($selectedIds as $id) {
+                $participation = $eligible[$id] ?? null;
+                if (!$participation) {
+                    continue;
+                }
+
+                $friends = $participation->getFriends();
+                $friends[] = [
+                    'type'        => 'app',
+                    'userId'      => $friendId,
+                    'username'    => $friendUser->getUsername(),
+                    'displayName' => $friendUser->getDisplayName(),
+                ];
+                $participation->setFriends($friends);
+
+                $event = $participation->getEvent();
+                $notifier->record(
+                    $friendUser,
+                    NotificationType::FriendTaggedInEvent,
+                    $user->getDisplayName() . ' t\'a ajouté à un événement',
+                    $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    data: [
+                        'eventId'         => (string) $event->getId(),
+                        'participationId' => (string) $participation->getId(),
+                        'eventName'       => $event->getArtistName() ?? $event->getTournamentName() ?? 'Événement',
+                    ],
+                );
+                $count++;
+            }
+
+            if ($count > 0) {
+                $em->flush();
+
+                // Un seul push pour tout le lot ; le fil garde une entrée par
+                // événement, chacune avec son accepter/refuser.
+                $notifier->push(
+                    $friendUser,
+                    NotificationType::FriendTaggedInEvent,
+                    $user->getDisplayName() . ' t\'a ajouté à ' . ($count > 1 ? $count . ' événements' : 'un événement'),
+                    'Consulte tes notifications pour confirmer ta présence.',
+                    $this->generateUrl('app_notifications'),
+                );
+
+                $this->addFlash('success', $friendUser->getDisplayName() . ' a été invité' . ($count > 1 ? ' à ' . $count . ' événements' : ' à 1 événement') . ' !');
+            } else {
+                $this->addFlash('info', 'Aucun événement sélectionné.');
+            }
+
+            return $this->redirectToRoute('app_profile_view', ['username' => $friendUser->getUsername()]);
+        }
+
+        return $this->render('profile/invite_events.html.twig', [
+            'friend_user'    => $friendUser,
+            'participations' => array_values($eligible),
+        ]);
+    }
+
+    #[Route('/{username}/en-commun', name: 'app_profile_in_common')]
+    public function inCommon(
+        string $username,
+        UserRepository $userRepo,
+        FriendRepository $friendRepo,
+        InCommonService $inCommon,
+    ): Response {
+        $profileUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$profileUser) {
+            throw $this->createNotFoundException();
+        }
+
+        // L'amitié suffit : un compte privé ne l'est pas vis-à-vis de ses amis.
+        $user = $this->user();
+        if ($profileUser === $user || !$friendRepo->areFriends($user, $profileUser)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        return $this->render('profile/in_common.html.twig', [
+            'profile_user' => $profileUser,
+            'data' => $inCommon->forUsers($user, $profileUser),
+        ]);
+    }
+
+    #[Route('/{username}/events', name: 'app_profile_view_events')]
+    public function viewEvents(
+        string $username,
+        Request $request,
+        UserRepository $userRepo,
+        EventParticipationRepository $partRepo,
+        FriendRepository $friendRepo,
+    ): Response {
+        $profileUser = $userRepo->findOneBy(['username' => $username]);
+        if (!$profileUser) {
+            throw $this->createNotFoundException();
+        }
+
+        $currentUser = $this->user();
+        $isSelf = $profileUser === $currentUser;
+        $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
+
+        // L'historique complet suit l'audience « événements » du profil.
+        $canViewHistory = $profileUser->canBeSeenBy('events', $isSelf, $areFriends);
+
+        if (!$canViewHistory) {
+            return $this->redirectToRoute('app_profile_view', ['username' => $username]);
+        }
+
+        $tab = $request->query->get('tab', 'past') === 'upcoming' ? 'upcoming' : 'past';
+        $type = $request->query->get('type', '');
+        $year = $request->query->get('year', '');
+        $sort = $request->query->get('sort', 'date'); // date, rating
+        $perPage = 20;
+
+        $pastCount = $partRepo->countHistory($profileUser, 'past', $type, $year);
+        $upcomingCount = $partRepo->countHistory($profileUser, 'upcoming', $type, $year);
+
+        $total = $tab === 'upcoming' ? $upcomingCount : $pastCount;
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min(max(1, $request->query->getInt('page', 1)), $totalPages);
+
+        $participations = $partRepo->findHistoryPage($profileUser, $tab, $type, $year, $page, $perPage, $sort);
+
+        return $this->render('profile/view_events.html.twig', [
+            'profile_user'   => $profileUser,
+            'is_self'        => $isSelf,
+            'participations' => $participations,
+            'tab'            => $tab,
+            'filter_type'    => $type,
+            'filter_year'    => $year,
+            'sort_by'        => $sort,
+            'years'          => $partRepo->findHistoryYears($profileUser),
+            'past_count'     => $pastCount,
+            'upcoming_count' => $upcomingCount,
+            'page'           => $page,
+            'total_pages'    => $totalPages,
+            'total'          => $total,
+        ]);
+    }
+
     #[Route('/{username}', name: 'app_profile_view')]
     public function view(string $username, UserRepository $userRepo, EventParticipationRepository $partRepo, FriendRepository $friendRepo): Response
     {
@@ -252,26 +492,31 @@ class ProfileController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        $currentUser = $this->getUser();
+        $currentUser = $this->user();
         $isSelf = $profileUser === $currentUser;
         $areFriends = $friendRepo->areFriends($currentUser, $profileUser);
         $relationship = $friendRepo->findRelationship($currentUser, $profileUser);
 
-        $canViewHistory = $isSelf
-            || $profileUser->getProfileVisibility() === 'public'
-            || ($profileUser->getProfileVisibility() === 'friends' && $areFriends);
+        // Chaque partie du profil a son audience : événements, stats et liste d'amis
+        // s'affichent indépendamment selon ce que le regardeur a le droit de voir.
+        $canSeeEvents = $profileUser->canBeSeenBy('events', $isSelf, $areFriends);
+        $canSeeStats = $profileUser->canBeSeenBy('stats', $isSelf, $areFriends);
+        $canSeeFriends = $profileUser->canBeSeenBy('friends', $isSelf, $areFriends);
 
-        $events = $canViewHistory ? $partRepo->findByUser($profileUser, 10) : [];
-        $totalEvents = $canViewHistory ? $partRepo->countByUser($profileUser) : null;
+        $events = $canSeeEvents ? $partRepo->findByUser($profileUser, 10) : [];
+        $totalEvents = $canSeeStats ? $partRepo->countByUser($profileUser) : null;
 
         return $this->render('profile/view.html.twig', [
             'profile_user' => $profileUser,
             'is_self' => $isSelf,
             'are_friends' => $areFriends,
             'relationship' => $relationship,
-            'can_view_history' => $canViewHistory,
+            'can_see_events' => $canSeeEvents,
+            'can_see_stats' => $canSeeStats,
+            'can_see_friends' => $canSeeFriends,
             'events' => $events,
             'total_events' => $totalEvents,
+            'friends' => $canSeeFriends ? $friendRepo->findConfirmedFriends($profileUser) : [],
         ]);
     }
 }

@@ -26,9 +26,6 @@ class EventParticipation
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false)]
     private User $user;
 
-    #[ORM\Column(length: 20)]
-    private string $status;
-
     #[ORM\Column(nullable: true)]
     private ?int $rating = null;
 
@@ -38,24 +35,11 @@ class EventParticipation
     #[ORM\Column(nullable: true)]
     private ?int $duration = null;
 
-#[ORM\Column(type: 'json')]
+    #[ORM\Column(type: 'json')]
     private array $friends = [];
 
-    #[ORM\Column(type: 'json')]
-    private array $photos = [];
-
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $finalScore = null;
-
-    #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $intermediateScores = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $winner = null;
-
-    #[ORM\Column(length: 20, options: ['default' => 'friends'])]
-    private string $visibility = 'friends';
-
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $imageUrl = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -99,16 +83,10 @@ class EventParticipation
         return $this;
     }
 
-    public function getStatus(): string
+    /** Même convention que Event::isPast() : la date fait foi, rien n'est stocké. */
+    public function isPast(): bool
     {
-        return $this->status;
-    }
-
-    public function setStatus(string $status): static
-    {
-        $this->status = $status;
-
-        return $this;
+        return $this->event->isPast();
     }
 
     public function getRating(): ?int
@@ -147,7 +125,7 @@ class EventParticipation
         return $this;
     }
 
-public function getFriends(): array
+    public function getFriends(): array
     {
         return $this->friends;
     }
@@ -159,62 +137,14 @@ public function getFriends(): array
         return $this;
     }
 
-    public function getPhotos(): array
+    public function getImageUrl(): ?string
     {
-        return $this->photos;
+        return $this->imageUrl;
     }
 
-    public function setPhotos(array $photos): static
+    public function setImageUrl(?string $imageUrl): static
     {
-        $this->photos = $photos;
-
-        return $this;
-    }
-
-    public function getFinalScore(): ?string
-    {
-        return $this->finalScore;
-    }
-
-    public function setFinalScore(?string $finalScore): static
-    {
-        $this->finalScore = $finalScore;
-
-        return $this;
-    }
-
-    public function getIntermediateScores(): ?array
-    {
-        return $this->intermediateScores;
-    }
-
-    public function setIntermediateScores(?array $intermediateScores): static
-    {
-        $this->intermediateScores = $intermediateScores;
-
-        return $this;
-    }
-
-    public function getWinner(): ?string
-    {
-        return $this->winner;
-    }
-
-    public function setWinner(?string $winner): static
-    {
-        $this->winner = $winner;
-
-        return $this;
-    }
-
-    public function getVisibility(): string
-    {
-        return $this->visibility;
-    }
-
-    public function setVisibility(string $visibility): static
-    {
-        $this->visibility = $visibility;
+        $this->imageUrl = $imageUrl;
 
         return $this;
     }
